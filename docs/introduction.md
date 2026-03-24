@@ -220,7 +220,7 @@ In your React component:
 import * as React from 'react';
 import { FluentProvider, webLightTheme, Button } from '@fluentui/react-components';
 import { ProvisioningDialog } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/provisioning';
+import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/core';
 import { myPlan } from './provisioning-plan';
 
 const MyWebPart: React.FC<{ context: WebPartContext }> = ({ context }) => {
@@ -290,14 +290,16 @@ This documentation is organized into the following guides:
 |----------|-------------|
 | [Provisioning Schema](./provisioning-schema.md) | Complete reference for plan structure, action types, and parameters |
 | [SPFx Engine](./spfx-engine.md) | Engine API, execution model, and error handling |
+| [Schema Extraction](./extraction.md) | Extract schemas from existing SharePoint lists and generate plans |
 | [ProvisioningDialog](./provisioning-dialog.md) | Dialog component props, events, and customization |
 | [Property Pane Fields](./property-pane-fields.md) | PropertyPaneProvisioningField and PropertyPaneSiteSelectorField |
 
 ### Recommended Reading Order
 
 1. **New users**: Start with this introduction, then read [Provisioning Schema](./provisioning-schema.md)
-2. **UI integration**: Read [ProvisioningDialog](./provisioning-dialog.md) and [Property Pane Fields](./property-pane-fields.md)
-3. **Advanced usage**: Deep dive into [SPFx Engine](./spfx-engine.md) for programmatic control
+2. **Schema extraction**: Read [Schema Extraction](./extraction.md) to learn how to extract existing list schemas
+3. **UI integration**: Read [ProvisioningDialog](./provisioning-dialog.md) and [Property Pane Fields](./property-pane-fields.md)
+4. **Advanced usage**: Deep dive into [SPFx Engine](./spfx-engine.md) for programmatic control
 
 ## Support
 

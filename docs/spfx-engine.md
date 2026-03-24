@@ -384,7 +384,7 @@ The library provides React hooks for managing provisioning engine state in compo
 
 ### useSPFxProvisioningEngine
 
-The primary hook for provisioning operations in React components:
+The primary hook for provisioning operations in React components. It handles engine lifecycle, state management, and cleanup automatically.
 
 ```tsx
 import { 
@@ -394,61 +394,234 @@ import {
 } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
 ```
 
-#### Options
+#### Options Interface
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
-| `context` | `BaseComponentContext` | ✓ | SPFx component context |
+| `context` | `BaseComponentContext` | ✓ | SPFx component context (web part or extension) |
 | `planTemplate` | `ProvisioningPlan` | ✓ | Provisioning plan to execute |
-| `logger` | `Logger` | ✓ | Logger instance |
-| `targetSiteUrl` | `string` | - | Target site URL (defaults to current site) |
-| `initialScope` | `SPScope` | - | Initial scope for the engine |
-| `resetKey` | `number` | - | Increment to reset engine state |
+| `logger` | `Logger` | ✓ | Logger instance for operation logging |
+| `targetSiteUrl` | `string` | - | Target site URL. If omitted, uses current site from context |
+| `initialScope` | `SPScope` | - | Pre-configured scope with PnPjs handles |
 | `engineOptions` | `EngineOptions` | - | Additional engine configuration |
+| `resetKey` | `unknown` | - | Change this value to force engine recreation |
+
+#### Options Details
+
+**context** (Required)
+
+The SPFx component context provides access to the SharePoint environment:
+
+```typescript
+// In a web part
+const { snapshot, run } = useSPFxProvisioningEngine({
+  context: this.context, // WebPartContext
+  planTemplate: myPlan,
+  logger
+});
+
+// In an extension (e.g., ApplicationCustomizer)
+const { snapshot, run } = useSPFxProvisioningEngine({
+  context: this.context, // ApplicationCustomizerContext
+  planTemplate: myPlan,
+  logger
+});
+```
+
+**targetSiteUrl** (Optional)
+
+Provision to a different site than the current context:
+
+```typescript
+const { run } = useSPFxProvisioningEngine({
+  context,
+  planTemplate: myPlan,
+  logger,
+  // Provision to a different site
+  targetSiteUrl: 'https://contoso.sharepoint.com/sites/target-site'
+});
+```
+
+**initialScope** (Optional)
+
+Provide pre-configured PnPjs handles for advanced scenarios:
+
+```typescript
+import { Web } from '@pnp/sp/webs';
+
+const targetWeb = Web([sp.web, targetSiteUrl]);
+
+const { run } = useSPFxProvisioningEngine({
+  context,
+  planTemplate: myPlan,
+  logger,
+  initialScope: {
+    web: targetWeb
+    // spfi, site, list can also be provided
+  }
+});
+```
+
+**engineOptions** (Optional)
+
+Configure engine behavior:
+
+```typescript
+const { run } = useSPFxProvisioningEngine({
+  context,
+  planTemplate: myPlan,
+  logger,
+  engineOptions: {
+    // Continue even if some actions fail
+    continueOnActionError: false,
+    // Enable permission checks before execution
+    enablePreflightPermissions: true
+  }
+});
+```
+
+**resetKey** (Optional)
+
+Force engine recreation when this value changes. Useful for resetting state:
+
+```typescript
+const [resetCounter, setResetCounter] = React.useState(0);
+
+const { snapshot, run } = useSPFxProvisioningEngine({
+  context,
+  planTemplate: myPlan,
+  logger,
+  resetKey: resetCounter
+});
+
+// Reset engine state
+const handleReset = () => setResetCounter(prev => prev + 1);
+```
 
 #### Return Value
 
 ```typescript
-type UseSPFxProvisioningEngineReturn = Readonly<{
+interface UseSPFxProvisioningEngineReturn {
   /** Current engine snapshot (undefined until first update) */
   snapshot: EngineSnapshotTyped<ProvisioningResultLight> | undefined;
   
-  /** Start provisioning execution */
-  run: () => Promise<EngineSnapshot>;
+  /** Start provisioning execution. Returns final snapshot. */
+  run: () => Promise<EngineSnapshotTyped<ProvisioningResultLight>>;
   
-  /** Cancel current operation */
+  /** Request cooperative cancellation */
   cancel: () => void;
   
-  /** Run compliance check */
+  /** Check compliance without making changes */
   checkCompliance: (policy?: CompliancePolicy) => Promise<ComplianceReport>;
-}>;
+}
 ```
 
-#### Example
+**snapshot**
+
+The current engine state, updated in real-time during execution:
+
+```typescript
+const { snapshot } = useSPFxProvisioningEngine({ /* ... */ });
+
+// Check execution status
+const isIdle = snapshot?.status === 'idle';
+const isRunning = snapshot?.status === 'running';
+const isComplete = snapshot?.status === 'completed';
+const hasFailed = snapshot?.status === 'failed';
+
+// Access progress
+const progress = snapshot?.summary;
+console.log(`${progress?.succeeded}/${progress?.total} actions completed`);
+
+// Access trace for detailed action info
+const failedActions = snapshot?.trace.filter(t => t.status === 'failed');
+```
+
+**run()**
+
+Executes the provisioning plan. Safe to call multiple times - subsequent calls are no-ops while running:
+
+```typescript
+const { run, snapshot } = useSPFxProvisioningEngine({ /* ... */ });
+
+const handleProvision = async () => {
+  const finalSnapshot = await run();
+  
+  if (finalSnapshot.status === 'completed') {
+    alert('Provisioning completed successfully!');
+  } else if (finalSnapshot.status === 'failed') {
+    alert(`Provisioning failed: ${finalSnapshot.error?.message}`);
+  }
+};
+```
+
+**cancel()**
+
+Requests cooperative cancellation. The engine will stop at the next safe point:
+
+```typescript
+const { run, cancel, snapshot } = useSPFxProvisioningEngine({ /* ... */ });
+
+// Cancel button handler
+const handleCancel = () => {
+  cancel();
+  // snapshot.status will become 'cancelled' when cancellation is complete
+};
+```
+
+**checkCompliance()**
+
+Checks if the current SharePoint state matches the plan without making changes:
+
+```typescript
+const { checkCompliance } = useSPFxProvisioningEngine({ /* ... */ });
+
+const handleCheckCompliance = async () => {
+  const report = await checkCompliance();
+  
+  if (report.overall === 'compliant') {
+    console.log('Site matches the plan');
+  } else if (report.overall === 'non_compliant') {
+    const drifted = report.items.filter(i => i.outcome === 'non_compliant');
+    console.log('Drift detected:', drifted);
+  }
+};
+```
+
+#### Usage Patterns
+
+**Basic Provisioning UI**
 
 ```tsx
+import * as React from 'react';
+import { Button, Spinner, ProgressBar } from '@fluentui/react-components';
 import { useSPFxProvisioningEngine } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import type { Logger, ProvisioningPlan } from '@apvee/spfx-actionable-provisioning/provisioning';
+import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/core';
 
-const MyComponent: React.FC<{ context: WebPartContext }> = ({ context }) => {
-  const { snapshot, run, cancel, checkCompliance } = useSPFxProvisioningEngine({
+const ProvisioningPanel: React.FC<{ context: WebPartContext; plan: ProvisioningPlan }> = ({ context, plan }) => {
+  const logger = React.useMemo(() => createLogger({ level: 'info', sink: consoleSink }), []);
+  
+  const { snapshot, run, cancel } = useSPFxProvisioningEngine({
     context,
-    targetSiteUrl: 'https://contoso.sharepoint.com/sites/target',
-    planTemplate: myPlan,
-    logger,
-    resetKey: 0 // Increment to reset engine state
+    planTemplate: plan,
+    logger
   });
 
   const isRunning = snapshot?.status === 'running';
-  
+  const progress = snapshot?.summary;
+
   return (
     <div>
-      <p>Status: {snapshot?.status}</p>
-      <p>Progress: {snapshot?.summary.succeeded}/{snapshot?.summary.total}</p>
+      {isRunning && progress && (
+        <ProgressBar value={progress.succeeded / progress.total} />
+      )}
       
-      <Button onClick={run} disabled={isRunning}>
+      <p>Status: {snapshot?.status ?? 'Ready'}</p>
+      
+      <Button appearance="primary" onClick={run} disabled={isRunning}>
         Run Provisioning
       </Button>
+      
       <Button onClick={cancel} disabled={!isRunning}>
         Cancel
       </Button>
@@ -457,9 +630,77 @@ const MyComponent: React.FC<{ context: WebPartContext }> = ({ context }) => {
 };
 ```
 
+**With Compliance Check Before Provisioning**
+
+```tsx
+const ProvisioningWithCheck: React.FC<Props> = ({ context, plan }) => {
+  const { snapshot, run, checkCompliance } = useSPFxProvisioningEngine({
+    context,
+    planTemplate: plan,
+    logger
+  });
+  const [complianceReport, setComplianceReport] = React.useState<ComplianceReport | null>(null);
+
+  const handleCheckAndProvision = async () => {
+    // First check compliance
+    const report = await checkCompliance();
+    setComplianceReport(report);
+    
+    if (report.overall === 'compliant') {
+      // Already in desired state, skip provisioning
+      alert('Site is already configured correctly');
+      return;
+    }
+    
+    // Proceed with provisioning
+    await run();
+  };
+
+  return (
+    <Button onClick={handleCheckAndProvision}>
+      Check & Provision
+    </Button>
+  );
+};
+```
+
+**Multiple Plans with Reset**
+
+```tsx
+const MultiPlanProvisioning: React.FC<Props> = ({ context, plans }) => {
+  const [selectedPlanIndex, setSelectedPlanIndex] = React.useState(0);
+  const [resetKey, setResetKey] = React.useState(0);
+
+  const { snapshot, run } = useSPFxProvisioningEngine({
+    context,
+    planTemplate: plans[selectedPlanIndex],
+    logger,
+    resetKey // Forces engine recreation when plan changes
+  });
+
+  const handlePlanChange = (index: number) => {
+    setSelectedPlanIndex(index);
+    setResetKey(prev => prev + 1); // Reset engine for new plan
+  };
+
+  return (
+    <div>
+      <Dropdown
+        selectedKey={selectedPlanIndex}
+        onChange={(_, option) => handlePlanChange(option.key as number)}
+        options={plans.map((p, i) => ({ key: i, text: p.title }))}
+      />
+      <Button onClick={run}>Run Selected Plan</Button>
+    </div>
+  );
+};
+```
+
+---
+
 ### useProvisioningDerivedState
 
-A utility hook that derives UI-friendly state from engine snapshots:
+A utility hook that transforms raw engine snapshots into UI-friendly state. It handles memoization to prevent unnecessary re-renders.
 
 ```tsx
 import { 
@@ -468,22 +709,25 @@ import {
 } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
 ```
 
-#### Usage
+#### Purpose
 
-```tsx
-const { snapshot } = useSPFxProvisioningEngine({ /* ... */ });
+The `useProvisioningDerivedState` hook solves common UI patterns:
 
-const { summary, logEntries } = useProvisioningDerivedState(snapshot);
+1. **Log entries**: Converts trace data into displayable log entries
+2. **Summary**: Provides counts and progress info in a convenient format
+3. **Memoization**: Prevents re-computation when snapshot reference changes but content hasn't
 
-// summary: ProvisioningUiSummary | undefined
-// logEntries: ReadonlyArray<ProvisioningLogEntry>
-```
+#### Input
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `snapshot` | `EngineSnapshotTyped<ProvisioningResultLight> \| undefined` | Engine snapshot from `useSPFxProvisioningEngine` |
 
 #### Return Value
 
 ```typescript
 type ProvisioningDerivedState = Readonly<{
-  /** UI-friendly summary with counts and status */
+  /** UI summary with status and counts */
   summary?: ProvisioningUiSummary;
   
   /** Log entries for display in a log panel */
@@ -491,7 +735,122 @@ type ProvisioningDerivedState = Readonly<{
 }>;
 ```
 
-This hook memoizes the derived state to prevent unnecessary re-renders.
+**ProvisioningUiSummary**
+
+```typescript
+type ProvisioningUiSummary = Readonly<{
+  /** Current engine status */
+  engineStatus: EngineStatus;
+  
+  /** Whether the engine is currently executing */
+  isRunning: boolean;
+  
+  /** Progress info (available while running) */
+  progress?: ProvisioningUiProgress;
+  
+  /** Action counts */
+  counts: {
+    total: number;
+    succeeded: number;
+    failed: number;
+    skipped: number;
+    pending: number;
+  };
+}>;
+```
+
+**ProvisioningLogEntry**
+
+```typescript
+type ProvisioningLogEntry = {
+  /** Unique entry ID */
+  id: string;
+  
+  /** Entry kind (always 'provisioning') */
+  kind: 'provisioning';
+  
+  /** Entry timestamp */
+  timestamp: Date;
+  
+  /** Action status */
+  status: 'pending' | 'running' | 'succeeded' | 'failed' | 'skipped';
+  
+  /** Action verb (e.g., 'createSPList') */
+  verb: string;
+  
+  /** Action path in the plan (e.g., '0.1.2') */
+  path: ActionPath;
+  
+  /** Action result (if completed) */
+  result?: ProvisioningResultLight;
+  
+  /** Error (if failed) */
+  error?: Error;
+};
+```
+
+#### Usage Example
+
+```tsx
+import { 
+  useSPFxProvisioningEngine,
+  useProvisioningDerivedState
+} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+
+const ProvisioningLog: React.FC<Props> = ({ context, plan }) => {
+  const { snapshot, run } = useSPFxProvisioningEngine({
+    context,
+    planTemplate: plan,
+    logger
+  });
+
+  // Derive UI-friendly state from snapshot
+  const { summary, logEntries } = useProvisioningDerivedState(snapshot);
+
+  return (
+    <div>
+      {/* Summary panel */}
+      {summary && (
+        <div>
+          <p>Status: {summary.engineStatus}</p>
+          <p>Progress: {summary.counts.succeeded}/{summary.counts.total}</p>
+          {summary.progress && (
+            <p>{summary.progress.text}</p>
+          )}
+        </div>
+      )}
+
+      {/* Log panel */}
+      <div style={{ maxHeight: 300, overflow: 'auto' }}>
+        {logEntries.map(entry => (
+          <div key={entry.id} className={`log-${entry.status}`}>
+            <span>{entry.timestamp.toLocaleTimeString()}</span>
+            <span>{entry.verb}</span>
+            <span>{entry.status}</span>
+            {entry.error && <span className="error">{entry.error.message}</span>}
+          </div>
+        ))}
+      </div>
+
+      <Button onClick={run}>Run</Button>
+    </div>
+  );
+};
+```
+
+#### When to Use
+
+Use `useProvisioningDerivedState` when you need:
+
+- A log panel showing action progress
+- A summary dashboard with counts
+- Memoized derivatives to optimize rendering
+
+You may **not** need this hook if you:
+
+- Only need basic status (`snapshot?.status`)
+- Only need simple progress (`snapshot?.summary`)
+- Have custom formatting requirements (access `snapshot` directly)
 
 ---
 
