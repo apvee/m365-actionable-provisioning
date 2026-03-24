@@ -17,7 +17,6 @@ Comprehensive documentation is available in the [docs](./docs) folder:
 | [Introduction](./docs/introduction.md) | Getting started guide, installation, and quick start |
 | [Provisioning Schema](./docs/provisioning-schema.md) | Complete reference for plan structure and action types |
 | [SPFx Engine](./docs/spfx-engine.md) | Engine API, execution model, and error handling |
-| [Schema Extraction](./docs/extraction.md) | Extract schemas from existing SharePoint lists |
 | [ProvisioningDialog](./docs/provisioning-dialog.md) | Dialog component props, events, and customization |
 | [Property Pane Fields](./docs/property-pane-fields.md) | PropertyPaneProvisioningField and PropertyPaneSiteSelectorField |
 

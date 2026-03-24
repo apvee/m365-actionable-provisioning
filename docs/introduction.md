@@ -290,16 +290,14 @@ This documentation is organized into the following guides:
 |----------|-------------|
 | [Provisioning Schema](./provisioning-schema.md) | Complete reference for plan structure, action types, and parameters |
 | [SPFx Engine](./spfx-engine.md) | Engine API, execution model, and error handling |
-| [Schema Extraction](./extraction.md) | Extract schemas from existing SharePoint lists and generate plans |
 | [ProvisioningDialog](./provisioning-dialog.md) | Dialog component props, events, and customization |
 | [Property Pane Fields](./property-pane-fields.md) | PropertyPaneProvisioningField and PropertyPaneSiteSelectorField |
 
 ### Recommended Reading Order
 
 1. **New users**: Start with this introduction, then read [Provisioning Schema](./provisioning-schema.md)
-2. **Schema extraction**: Read [Schema Extraction](./extraction.md) to learn how to extract existing list schemas
-3. **UI integration**: Read [ProvisioningDialog](./provisioning-dialog.md) and [Property Pane Fields](./property-pane-fields.md)
-4. **Advanced usage**: Deep dive into [SPFx Engine](./spfx-engine.md) for programmatic control
+2. **UI integration**: Read [ProvisioningDialog](./provisioning-dialog.md) and [Property Pane Fields](./property-pane-fields.md)
+3. **Advanced usage**: Deep dive into [SPFx Engine](./spfx-engine.md) for programmatic control
 
 ## Support
 
