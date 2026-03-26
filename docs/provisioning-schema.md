@@ -385,11 +385,33 @@ Deletes a SharePoint list.
 ```typescript
 {
   verb: "deleteSPList",
+  
+  // Required
   listName: string,        // Internal list name
-  siteUrl?: string,
-  webUrl?: string
+  
+  // Optional
+  webUrl?: string,         // Web URL (for targeting specific web)
+  recycle?: boolean        // Send to recycle bin (default: true)
 }
 ```
+
+| Property | Type | Required | Default | Description |
+|----------|------|----------|---------|-------------|
+| `listName` | `string` | ✓ | - | Internal name of the list to delete |
+| `webUrl` | `string` | - | Current web | Web URL containing the list |
+| `recycle` | `boolean` | - | `true` | If true, sends to recycle bin; if false, permanently deletes |
+
+**Example:**
+
+```typescript
+{
+  verb: "deleteSPList",
+  listName: "oldRequests",
+  recycle: true  // Can be restored from recycle bin
+}
+```
+
+> **Warning**: Set `recycle: false` with extreme caution—this permanently deletes all list data.
 
 ### enableSPListRating
 
@@ -398,7 +420,31 @@ Enables ratings on a list (subaction within `createSPList` or `modifySPList`).
 ```typescript
 {
   verb: "enableSPListRating",
-  ratingType: "Likes" | "Ratings"
+  ratingType: "Likes" | "Stars"
+}
+```
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `ratingType` | `"Likes" \| "Stars"` | ✓ | Type of rating to enable |
+
+- **Likes**: Simple like/unlike toggle (recommended for modern sites)
+- **Stars**: 1-5 star rating scale
+
+**Example:**
+
+```typescript
+{
+  verb: "createSPList",
+  listName: "ideas",
+  title: "Ideas",
+  template: 100,
+  subactions: [
+    {
+      verb: "enableSPListRating",
+      ratingType: "Likes"
+    }
+  ]
 }
 ```
 
@@ -414,6 +460,175 @@ Field actions create, modify, or delete columns. The verb used depends on contex
 | `addSPField` | List (createSPList/modifySPList subaction) | Creates a list column |
 | `modifySPField` | Site or List | Modifies an existing field |
 | `deleteSPField` | Site or List | Deletes a field |
+
+### Field Actions Overview
+
+When creating fields in SharePoint, choosing the correct verb is important:
+
+#### When to Use `createSPSiteColumn`
+
+- Creating a **reusable column** at the site level
+- Column will be added to **content types** or **multiple lists**
+- Column appears in the **Site Columns gallery**
+- Used within `modifySPSite` subactions
+
+#### When to Use `addSPField`
+
+- Creating a column **specific to one list**
+- Column is **not reusable** across the site
+- Column exists **only within the target list**
+- Used within `createSPList` or `modifySPList` subactions
+
+#### Decision Matrix
+
+| Scenario | Verb | Rationale |
+|----------|------|----------|
+| Field reused across lists | `createSPSiteColumn` | Create once, add to lists via content types |
+| List-specific field | `addSPField` | No need for site-level visibility |
+| Field in content type | `createSPSiteColumn` | Content types require site columns |
+| Quick list customization | `addSPField` | Simplest approach for single lists |
+
+### addSPField
+
+Creates a field directly on a SharePoint list. Use this within `createSPList` or `modifySPList` subactions.
+
+```typescript
+{
+  verb: "addSPField",
+  
+  // Required
+  fieldType: FieldType,    // "Text", "Number", "Choice", etc.
+  fieldName: string,       // Internal name (no spaces)
+  displayName: string,     // Display name shown in UI
+  
+  // Common optional
+  group?: string,          // Field group (for organization)
+  required?: boolean,      // Whether field is required
+  description?: string,    // Field description
+  hidden?: boolean,        // Hide from forms
+  defaultValue?: any,      // Default value (type varies by fieldType)
+  
+  // List-only properties
+  addToDefaultView?: boolean,    // Add column to default view
+  showInDisplayForm?: boolean,   // Show in display form
+  showInEditForm?: boolean,      // Show in edit form
+  showInNewForm?: boolean,       // Show in new item form
+  
+  // Validation
+  validationFormula?: string,    // Validation formula
+  validationMessage?: string,    // Custom validation message
+  enforceUniqueValues?: boolean, // Require unique values
+  indexed?: boolean              // Index for performance
+}
+```
+
+| Property | Type | Required | Default | Description |
+|----------|------|----------|---------|-------------|
+| `fieldType` | `FieldType` | ✓ | - | Field type (see Supported Field Types) |
+| `fieldName` | `string` | ✓ | - | Internal name (no spaces, no special chars) |
+| `displayName` | `string` | ✓ | - | Display name shown in UI |
+| `addToDefaultView` | `boolean` | - | `false` | Automatically add to list's default view |
+| `showInDisplayForm` | `boolean` | - | `true` | Show field in display form |
+| `showInEditForm` | `boolean` | - | `true` | Show field in edit form |
+| `showInNewForm` | `boolean` | - | `true` | Show field in new item form |
+
+**Example:**
+
+```typescript
+{
+  verb: "createSPList",
+  listName: "projects",
+  title: "Projects",
+  template: 100,
+  subactions: [
+    {
+      verb: "addSPField",
+      fieldType: "Text",
+      fieldName: "ProjectCode",
+      displayName: "Project Code",
+      required: true,
+      maxLength: 10,
+      enforceUniqueValues: true,
+      addToDefaultView: true
+    },
+    {
+      verb: "addSPField",
+      fieldType: "Choice",
+      fieldName: "Status",
+      displayName: "Status",
+      choices: ["Not Started", "In Progress", "Completed"],
+      defaultChoice: "Not Started",
+      addToDefaultView: true
+    }
+  ]
+}
+```
+
+### createSPSiteColumn
+
+Creates a site column (field at the web level). Use this within `modifySPSite` subactions.
+
+```typescript
+{
+  verb: "createSPSiteColumn",
+  
+  // Required
+  fieldType: FieldType,    // "Text", "Number", "Choice", etc.
+  fieldName: string,       // Internal name (no spaces)
+  displayName: string,     // Display name
+  
+  // Common optional
+  group?: string,          // Site column group (for organization)
+  required?: boolean,      // Whether field is required
+  description?: string,    // Field description
+  hidden?: boolean,        // Hide from site column gallery
+  id?: string,             // Fixed GUID (for stable reference)
+  
+  // Validation
+  validationFormula?: string,    // Validation formula
+  validationMessage?: string,    // Custom validation message
+  enforceUniqueValues?: boolean, // Require unique values
+  indexed?: boolean              // Index for performance
+}
+```
+
+> **Note**: Site columns do NOT support list-only properties like `addToDefaultView`, `showInDisplayForm`, etc.
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `fieldType` | `FieldType` | ✓ | Field type (see Supported Field Types) |
+| `fieldName` | `string` | ✓ | Internal name (no spaces, no special chars) |
+| `displayName` | `string` | ✓ | Display name shown in UI |
+| `group` | `string` | - | Site column group for organization |
+| `id` | `string` | - | Fixed GUID for stable reference across environments |
+
+**Example:**
+
+```typescript
+{
+  verb: "modifySPSite",
+  siteUrl: "{parameter:TenantUrl}/sites/{parameter:ProjectName}",
+  subactions: [
+    {
+      verb: "createSPSiteColumn",
+      fieldType: "Text",
+      fieldName: "ProjectCode",
+      displayName: "Project Code",
+      group: "Custom Columns",
+      maxLength: 20,
+      required: true
+    },
+    {
+      verb: "createSPSiteColumn",
+      fieldType: "User",
+      fieldName: "ProjectManager",
+      displayName: "Project Manager",
+      group: "Custom Columns",
+      selectionMode: "PeopleOnly"
+    }
+  ]
+}
+```
 
 ### Supported Field Types
 

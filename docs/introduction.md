@@ -220,7 +220,7 @@ In your React component:
 import * as React from 'react';
 import { FluentProvider, webLightTheme, Button } from '@fluentui/react-components';
 import { ProvisioningDialog } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/provisioning';
+import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/core';
 import { myPlan } from './provisioning-plan';
 
 const MyWebPart: React.FC<{ context: WebPartContext }> = ({ context }) => {
