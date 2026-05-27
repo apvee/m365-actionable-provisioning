@@ -4,9 +4,9 @@
  * @module
  */
 
-export { addSPFieldSchema, addSPFieldSchema_List } from "./add-sp-field.schema";
+export { addSPFieldSchema } from "./add-sp-field.schema";
 export type { AddSPFieldPayload } from "./add-sp-field.schema";
-export { createSPSiteColumnSchema, createSPSiteColumnSchema_Site } from "./create-sp-site-column.schema";
+export { createSPSiteColumnSchema } from "./create-sp-site-column.schema";
 export type { CreateSPSiteColumnPayload } from "./create-sp-site-column.schema";
 export { deleteSPFieldSchema, deleteSPFieldSchema_List, deleteSPFieldSchema_Site } from "./delete-sp-field.schema";
 export type { DeleteSPFieldPayload } from "./delete-sp-field.schema";

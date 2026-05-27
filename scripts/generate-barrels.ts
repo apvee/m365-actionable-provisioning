@@ -169,12 +169,12 @@ async function main(): Promise<void> {
     const dryRun = args.includes("--dry-run");
 
     const project = new Project({
-        tsConfigFilePath: path.resolve(__dirname, "../tsconfig.json"),
+        tsConfigFilePath: path.resolve(__dirname, "../tsconfig.base.json"),
     });
 
-    // Find all directories with TypeScript files (excluding node_modules, dist, etc.)
-    const directories = await glob("src/**/", {
-        ignore: ["**/node_modules/**", "**/dist/**", "**/__tests__/**"],
+    // Find package source directories with TypeScript files (excluding generated output).
+    const directories = await glob("packages/*/src/**/", {
+        ignore: ["**/node_modules/**", "**/dist/**", "**/lib/**", "**/__tests__/**"],
     });
 
     for (const dir of directories) {

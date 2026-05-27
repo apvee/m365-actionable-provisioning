@@ -3,9 +3,9 @@ import { Button, Card, CardHeader, FluentProvider, IdPrefixProvider, Text, Title
 
 import type { ITestProvisioningProps } from './ITestProvisioningProps';
 
-import { createLogger, consoleSink } from '../../../core/logger';
-import { ProvisioningDialog } from '../../../provisioning-ui';
-import type { ProvisioningCompletedEvent } from '../../../provisioning-ui/components';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
+import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
+import type { ProvisioningCompletedEvent } from '@apvee/spfx-m365-actionable-provisioning';
 import examplePlan from '../test-plans/complete-plan';
 
 const useStyles = makeStyles({

@@ -8,8 +8,8 @@ import {
 } from '@fluentui/react-components';
 import { Stack } from '@apvee/react-layout-kit';
 
-import type { ComplianceReport } from '../../../core/compliance';
-import { computeComplianceOverall } from '../../../core/compliance';
+import type { ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
+import { computeComplianceOverall } from '@apvee/m365-actionable-provisioning/core';
 import type { KPIBadgeSpec } from './KPIDisplay.types';
 import type { ComplianceViewProps, ComplianceViewStrings } from './ComplianceView.types';
 import type { DialogUiError } from './ProvisioningDialog.state';

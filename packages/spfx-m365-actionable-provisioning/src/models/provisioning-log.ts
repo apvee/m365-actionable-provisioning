@@ -4,8 +4,8 @@
  * @packageDocumentation
  */
 
-import type { ActionPath } from '../../core/trace';
-import type { ProvisioningResultLight } from '../../provisioning';
+import type { ActionPath } from '@apvee/m365-actionable-provisioning/core';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 import type { BaseLogEntry } from './log-entry';
 

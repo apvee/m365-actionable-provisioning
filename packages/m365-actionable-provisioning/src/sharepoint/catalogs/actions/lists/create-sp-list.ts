@@ -23,7 +23,7 @@ import type { PermissionCheckResult } from "../../../../core/permissions";
 import { normalizeError } from "../../../../core";
 import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
 import { pickDefined } from "../../../utils/object-utils";
-import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "./base.helpers";
+import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../shared/domains/lists";
 
 import { createSPListSchema, type CreateSPListPayload } from "../../schemas/lists/create-sp-list.schema";
 

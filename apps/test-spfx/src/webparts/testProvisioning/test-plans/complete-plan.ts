@@ -1,5 +1,5 @@
 
-import { ProvisioningPlan } from "../../../provisioning/catalogs";
+import { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 export const examplePlan: ProvisioningPlan = {
     schemaVersion: "1.0",

@@ -13,7 +13,7 @@
  * Primitive JSON value types.
  * 
  * @remarks
- * Includes null for JSON compatibility despite TypeScript deprecation warnings.
+ * Includes null for JSON compatibility.
  * Undefined is included for optional property handling.
  * 
  * @public

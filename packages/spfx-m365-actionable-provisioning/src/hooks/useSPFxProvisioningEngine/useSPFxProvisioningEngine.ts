@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Web } from '@pnp/sp/webs';
 import '@pnp/sp/webs';
 
-import { SPFxProvisioningEngine } from '../../../provisioning';
-import type { EngineSnapshotTyped } from '../../../core/engine';
-import type { ProvisioningResultLight } from '../../../provisioning';
+import { SPFxProvisioningEngine } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/sharepoint';
 import { normalizeUrl } from '../../utils/url';
 
 import { useSPInstance } from '../useSPInstance/useSPInstance';

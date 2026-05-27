@@ -3,7 +3,6 @@
  *
  * @remarks
  * Provides functions for finding and resolving SharePoint lists.
- * Extracted from catalogs/actions/lists/base.helpers.ts for reuse.
  *
  * @module provisioning/shared/domains/lists/list-lookup
  * @internal

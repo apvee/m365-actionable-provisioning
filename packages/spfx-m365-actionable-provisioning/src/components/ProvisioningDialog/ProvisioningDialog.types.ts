@@ -6,10 +6,10 @@
 
 import type { BaseComponentContext } from '@microsoft/sp-component-base';
 
-import type { ProvisioningPlan } from "../../../provisioning/catalogs";
-import type { EngineStatus } from '../../../core/engine';
-import type { Logger } from '../../../core/logger';
-import type { CompliancePolicy } from '../../../core/compliance';
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { EngineStatus } from '@apvee/m365-actionable-provisioning/core';
+import type { Logger } from '@apvee/m365-actionable-provisioning/core';
+import type { CompliancePolicy } from '@apvee/m365-actionable-provisioning/core';
 
 import type { ConfirmDialogStrings } from '../ConfirmDialog/ConfirmDialog.types';
 import type { LogPanelProps, LogPanelStrings, ProvisioningLogEntryStrings } from '../LogPanel/LogPanel.types';

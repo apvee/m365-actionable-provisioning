@@ -6,8 +6,8 @@
 
 import type { BaseComponentContext } from '@microsoft/sp-component-base';
 
-import type { ProvisioningPlan } from "../../../provisioning/catalogs";
-import type { Logger } from '../../../core/logger';
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { Logger } from '@apvee/m365-actionable-provisioning/core';
 import type { ProvisioningDialogStrings } from '../../components';
 import type { TemplateAppliedState } from '../../models';
 
@@ -38,12 +38,6 @@ export type PropertyPaneProvisioningFieldProps = Readonly<{
    * (and may be synchronized from compliance checks).
    */
   effectiveState?: TemplateAppliedState;
-
-  /**
-   * Template applied-state value.
-   * @deprecated Use `effectiveState`.
-   */
-  value?: TemplateAppliedState;
 
   /** Enables the "Check compliance" button inside ProvisioningDialog (defaults to true). */
   enableComplianceCheck?: boolean;
@@ -116,4 +110,3 @@ export type PropertyPaneProvisioningFieldViewProps = Readonly<{
 
   onEffectiveStateChange: (next: TemplateAppliedState) => void;
 }>;
-

@@ -25,7 +25,7 @@ import "@pnp/sp/security/web";
 
 import { resolveTargetWeb } from "../../../utils/sp-utils";
 
-import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "./base.helpers";
+import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../shared/domains/lists";
 
 import { deleteSPListSchema, type DeleteSPListPayload } from "../../schemas/lists/delete-sp-list.schema";
 

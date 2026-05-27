@@ -35,7 +35,7 @@ import {
     extractFieldId,
     getFieldByNameOrTitle,
     updateFieldDisplayName,
-} from "./field-utils";
+} from "../../../shared/domains/fields/field-lookup";
 
 import { normalizeError } from "../../../../core";
 import type { ComplianceActionCheckResult, ComplianceRuntimeContext } from "../../../../core/action";
@@ -606,4 +606,3 @@ export async function checkFieldCompliance(
         };
     }
 }
-

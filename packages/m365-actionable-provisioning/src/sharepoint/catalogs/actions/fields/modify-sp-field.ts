@@ -34,7 +34,7 @@ import "@pnp/sp/lists";
 import {
     applyFieldViewSettings,
     getFieldByNameOrTitle,
-} from "./field-utils";
+} from "../../../shared/domains/fields/field-lookup";
 
 /* ========================================
    ACTION DEFINITION

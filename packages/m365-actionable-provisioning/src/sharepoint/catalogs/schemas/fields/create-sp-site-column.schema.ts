@@ -124,13 +124,6 @@ export const createSPSiteColumnSchema = z.discriminatedUnion("fieldType", [
 ]);
 
 /**
- * Alias for site subaction usage.
- * @deprecated Use `createSPSiteColumnSchema` directly.
- */
-export const createSPSiteColumnSchema_Site = createSPSiteColumnSchema;
-
-/**
  * Payload type for `createSPSiteColumn` action.
  */
 export type CreateSPSiteColumnPayload = z.infer<typeof createSPSiteColumnSchema>;
-

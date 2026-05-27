@@ -4,8 +4,8 @@
  * @packageDocumentation
  */
 
-import type { ActionPath } from '../../core/trace';
-import type { ComplianceOutcome } from '../../core/compliance';
+import type { ActionPath } from '@apvee/m365-actionable-provisioning/core';
+import type { ComplianceOutcome } from '@apvee/m365-actionable-provisioning/core';
 
 import type { BaseLogEntry } from './log-entry';
 

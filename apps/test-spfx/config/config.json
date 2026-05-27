@@ -13,6 +13,6 @@
   },
   "externals": {},
   "localizedResources": {
-    "SPFxProvisioningUIStrings": "lib/provisioning-ui/loc/{locale}.js"
+    "SPFxProvisioningUIStrings": "../../packages/spfx-m365-actionable-provisioning/lib/loc/{locale}.js"
   }
 }

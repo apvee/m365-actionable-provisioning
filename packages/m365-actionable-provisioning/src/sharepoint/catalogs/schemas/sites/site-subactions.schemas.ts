@@ -4,7 +4,7 @@ import { createSPListSchema } from "../lists/create-sp-list.schema";
 import { modifySPListSchema } from "../lists/modify-sp-list.schema";
 import { deleteSPListSchema } from "../lists/delete-sp-list.schema";
 import {
-  createSPSiteColumnSchema_Site,
+  createSPSiteColumnSchema,
 } from "../fields/create-sp-site-column.schema";
 import {
   modifySPFieldSchema_Site,
@@ -17,7 +17,7 @@ const siteListActionSchemas = [createSPListSchema, modifySPListSchema, deleteSPL
 
 const siteSubactionSchemas = [
   ...siteListActionSchemas,
-  createSPSiteColumnSchema_Site,
+  createSPSiteColumnSchema,
   modifySPFieldSchema_Site,
   deleteSPFieldSchema_Site,
 ] as const;

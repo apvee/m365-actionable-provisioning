@@ -121,13 +121,6 @@ export const addSPFieldSchema = z.discriminatedUnion("fieldType", [
 ]);
 
 /**
- * Alias for list subaction usage.
- * @deprecated Use `addSPFieldSchema` directly.
- */
-export const addSPFieldSchema_List = addSPFieldSchema;
-
-/**
  * Payload type for `addSPField` action.
  */
 export type AddSPFieldPayload = z.infer<typeof addSPFieldSchema>;
-

@@ -1,4 +1,4 @@
-import type { ComplianceReport } from '../../../core/compliance';
+import type { ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
 
 import type { ProvisioningDialogMode } from './ProvisioningDialog.types';
 

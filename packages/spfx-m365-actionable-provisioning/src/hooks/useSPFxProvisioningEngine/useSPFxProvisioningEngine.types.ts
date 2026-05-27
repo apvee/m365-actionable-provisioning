@@ -1,10 +1,10 @@
 import type { BaseComponentContext } from '@microsoft/sp-component-base';
 
-import type { ProvisioningPlan } from "../../../provisioning/catalogs";
-import type { CompliancePolicy, ComplianceReport } from '../../../core/compliance';
-import type { EngineOptions, EngineSnapshotTyped } from '../../../core/engine';
-import type { Logger } from '../../../core/logger';
-import type { ProvisioningResultLight, SPScope } from '../../../provisioning';
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { CompliancePolicy, ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
+import type { EngineOptions, EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
+import type { Logger } from '@apvee/m365-actionable-provisioning/core';
+import type { ProvisioningResultLight, SPScope } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 export interface UseSPFxProvisioningEngineOptions {
   context: BaseComponentContext;

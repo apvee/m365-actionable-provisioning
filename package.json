@@ -1,48 +1,25 @@
 {
-  "name": "@apvee/spfx-actionable-provisioning",
-  "description": "Action-based provisioning library for SPFx that lets you define reusable SharePoint templates as an ordered set of composable actions (e.g., createSPList, modifySPList, and more) and run them consistently across sites. It also includes ready-to-use React controls to build UI experiences for executing provisioning flows directly in your SPFx solutions.",
-  "keywords": [
-    "spfx",
-    "sharepoint",
-    "pnpjs",
-    "provisioning",
-    "actions",
-    "automation"
-  ],
+  "name": "spfx-actionable-provisioning-monorepo",
   "version": "0.0.1",
   "private": true,
+  "description": "Monorepo for Apvee M365 actionable provisioning packages and the SPFx demo app.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "engines": {
     "node": ">=22.14.0 < 23.0.0"
   },
-  "main": "lib/index.js",
   "scripts": {
-    "build": "gulp bundle",
-    "clean": "gulp clean",
-    "test": "gulp test",
-    "postinstall": "npx tsx scripts/post-install.ts",
+    "build": "npm run build:m365 && npm run build:spfx && npm run build:test-spfx",
+    "build:m365": "npm run build -w @apvee/m365-actionable-provisioning",
+    "build:spfx": "npm run build -w @apvee/spfx-m365-actionable-provisioning",
+    "build:test-spfx": "npm run build -w test-spfx",
+    "clean": "npm run clean --workspaces --if-present",
+    "serve:test-spfx": "npm run serve -w test-spfx",
     "generate:barrels": "npx tsx scripts/generate-barrels.ts",
     "generate:barrels:dry": "npx tsx scripts/generate-barrels.ts --dry-run",
     "generate:barrels:strict": "npx tsx scripts/generate-barrels.ts --require-public"
-  },
-  "dependencies": {
-    "@apvee/react-layout-kit": "^1.2.0",
-    "@fluentui/react": "^8.106.4",
-    "@fluentui/react-components": "^9.72.9",
-    "@fluentui/react-icons": "^2.0.316",
-    "@fluentui/react-migration-v8-v9": "^9.9.18",
-    "@fluentui/react-motion-components-preview": "^0.14.2",
-    "@microsoft/sp-component-base": "1.21.1",
-    "@microsoft/sp-core-library": "1.21.1",
-    "@microsoft/sp-lodash-subset": "1.21.1",
-    "@microsoft/sp-office-ui-fabric-core": "1.21.1",
-    "@microsoft/sp-property-pane": "1.21.1",
-    "@microsoft/sp-webpart-base": "1.21.1",
-    "@pnp/graph": "^4.17.0",
-    "@pnp/sp": "^4.17.0",
-    "react": "17.0.1",
-    "react-dom": "17.0.1",
-    "tslib": "2.3.1",
-    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@microsoft/eslint-config-spfx": "1.21.1",

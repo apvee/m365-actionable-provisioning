@@ -25,7 +25,7 @@ import "@pnp/sp/security/web";
 
 import { resolveTargetWeb } from "../../../utils/sp-utils";
 
-import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "./base.helpers";
+import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../shared/domains/lists";
 import { modifySPListSchema, type ModifySPListPayload } from "../../schemas/lists/modify-sp-list.schema";
 import { buildModifyListUpdateProps } from "./list-update.helpers";
 import { compareProperties } from "../shared/compliance-compare";

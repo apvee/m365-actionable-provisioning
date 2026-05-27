@@ -1,114 +1,38 @@
-# @apvee/spfx-actionable-provisioning
+# Apvee M365 Actionable Provisioning
 
-Schema-first provisioning engine for SPFx, built on PnPjs and Zod.
+Monorepo for the Apvee actionable provisioning packages.
 
-The repository contains:
-- A generic provisioning engine (DFS execution + tracing + permissions preflight)
-- A SharePoint action catalog (sites, lists, fields) designed to run from SPFx
+## Packages
 
-![@apvee/spfx-actionable-provisioning demo](./docs/demo.gif)
+| Workspace | Package | Purpose |
+| --- | --- | --- |
+| `packages/m365-actionable-provisioning` | `@apvee/m365-actionable-provisioning` | Schema-first provisioning core plus SharePoint action catalog and engines. |
+| `packages/spfx-m365-actionable-provisioning` | `@apvee/spfx-m365-actionable-provisioning` | Reusable SPFx React UI, hooks, property pane fields, and localization wiring. |
+| `apps/test-spfx` | `test-spfx` | SPFx demo app that consumes the two packages through npm workspaces. |
 
-## Documentation
-
-Comprehensive documentation is available in the [docs](./docs) folder:
-
-| Document | Description |
-|----------|-------------|
-| [Introduction](./docs/introduction.md) | Getting started guide, installation, and quick start |
-| [Provisioning Schema](./docs/provisioning-schema.md) | Complete reference for plan structure and action types |
-| [SPFx Engine](./docs/spfx-engine.md) | Engine API, execution model, and error handling |
-| [ProvisioningDialog](./docs/provisioning-dialog.md) | Dialog component props, events, and customization |
-| [Property Pane Fields](./docs/property-pane-fields.md) | PropertyPaneProvisioningField and PropertyPaneSiteSelectorField |
-
-### Quick Start
-
-```typescript
-import { ProvisioningDialog } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/core';
-
-// In your React component
-<ProvisioningDialog
-  open={isDialogOpen}
-  onClose={() => setOpen(false)}
-  context={this.context}
-  planTemplate={myPlan}
-  logger={createLogger({ level: 'debug', sink: consoleSink })}
-  targetSiteUrl="https://contoso.sharepoint.com/sites/project"
-/>
-```
-
-See the [Introduction](./docs/introduction.md) for complete setup instructions.
-
-## Core concepts
-
-### Plans are schema-governed
-Each action is validated by a Zod schema before execution. Actions may contain `subactions`, which execute with a derived scope.
-
-### Scope is an in-memory execution context
-The engine passes a `scopeIn` into each action and merges an action-produced `scopeDelta` into `scopeOut`.
-
-For SharePoint provisioning, the scope is intentionally **handle-based**:
-- `spfi`: configured SPFI instance (auth + behaviors)
-- `site?`: PnPjs `ISite` handle
-- `web?`: PnPjs `IWeb` handle
-- `list?`: PnPjs `IList` handle
-
-Parent actions (e.g. `createSPList`) set `web`/`list` in `scopeDelta`, and subactions reuse these handles.
-This avoids repeated resolution calls (no more storing `siteUrl`, `webUrl`, `listId`, `listName` in scope).
-
-### Merge semantics (important)
-Scope merging is **instance-safe**:
-- Only "plain objects" are deep-merged
-- Non-plain objects (including PnPjs handles) are treated as atomic values ("last wins")
-
-This is what allows PnPjs instances to live inside scope safely.
-
-## SharePoint actions
-
-The main SharePoint catalog is defined in `src/provisioning/catalogs/sp-catalog.ts`.
-Supported patterns:
-- Site actions can contain list + site-field subactions
-- List actions can contain list-field subactions
-- Field actions route automatically based on scope:
-  - if `scopeIn.list` exists → operate on list fields and allow view/form flags
-  - otherwise → operate on root-web (site columns) and ignore list-only flags
-
-## Example plan
-
-See `src/webparts/testProvisioning/examplePlan.ts` for a full example. A minimal sketch:
-
-```ts
-[
-  {
-    verb: "modifySPSite",
-    siteUrl: "https://tenant.sharepoint.com/sites/engineering",
-    title: "Engineering",
-    subactions: [
-      {
-        verb: "createSPList",
-        listName: "engineeringRequests",
-        title: "Engineering Requests",
-        template: 100,
-        subactions: [
-          {
-            verb: "createSPField",
-            fieldType: "Text",
-            fieldName: "RequestTitle",
-            displayName: "Request Title",
-            required: true,
-            addToDefaultView: true,
-          },
-        ],
-      },
-    ],
-  },
-]
-```
-
-## Dev commands
+## Common Commands
 
 ```bash
 npm install
+npm run build:m365
+npm run build:spfx
+npm run build:test-spfx
 npm run build
-gulp serve
 ```
+
+## Import Surface
+
+```typescript
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+
+import {
+  ProvisioningDialog,
+  PropertyPaneProvisioningField,
+  PropertyPaneSiteSelectorField,
+} from '@apvee/spfx-m365-actionable-provisioning';
+```
+
+## Documentation
+
+The detailed documentation is in [docs](./docs). Some examples still describe SharePoint-specific behavior, now exposed through `@apvee/m365-actionable-provisioning/sharepoint`.

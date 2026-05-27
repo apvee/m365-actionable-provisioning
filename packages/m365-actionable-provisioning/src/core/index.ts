@@ -8,6 +8,7 @@ export { ActionDefinition, defaultActionResultSchema } from "./action";
 export type { ActionNodeBase, ActionNode, ActionResult, ActionRuntimeContext, ComplianceRuntimeContext, ComplianceActionCheckResult, AnyActionDefinition } from "./action";
 export type { ActionCatalog } from "./catalog";
 export type { ComplianceOutcome, ComplianceOverall, CompliancePolicy, ComplianceItem, ComplianceReport } from "./compliance";
+export { computeComplianceOverall } from "./compliance";
 export { ProvisioningEngineBase } from "./engine";
 export type { EngineStatus, EngineSnapshot, EngineSnapshotTyped, EngineOptions } from "./engine";
 export type { JsonPrimitive, JsonReadonlyObject, JsonReadonlyArray, JsonValue, JsonObject, JsonArray } from "./json";

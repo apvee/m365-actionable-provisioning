@@ -19,7 +19,7 @@ import { deleteSPFieldSchema, type DeleteSPFieldPayload } from "../../schemas/fi
 import "@pnp/sp/fields";
 import "@pnp/sp/lists";
 
-import { getFieldByNameOrTitle } from "./field-utils";
+import { getFieldByNameOrTitle } from "../../../shared/domains/fields/field-lookup";
 
 /* ========================================
    ACTION DEFINITION

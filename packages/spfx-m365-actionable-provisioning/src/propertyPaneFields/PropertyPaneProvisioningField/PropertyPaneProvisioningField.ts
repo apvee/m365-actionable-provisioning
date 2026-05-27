@@ -16,7 +16,7 @@ import {
   IdPrefixProvider,
 } from '@fluentui/react-components';
 
-import { consoleSink, createLogger, type Logger } from '../../../core/logger';
+import { consoleSink, createLogger, type Logger } from '@apvee/m365-actionable-provisioning/core';
 
 import type { TemplateAppliedState } from '../../models';
 
@@ -69,7 +69,7 @@ export function PropertyPaneProvisioningField(
   props: PropertyPaneProvisioningFieldProps
 ): IPropertyPaneField<PropertyPaneProvisioningFieldInternalProps> {
   let changeCallbackRef: ((targetProperty?: string, newValue?: unknown) => void) | undefined;
-  let currentValue: TemplateAppliedState | undefined = props.effectiveState ?? props.value;
+  let currentValue: TemplateAppliedState | undefined = props.effectiveState;
   let lastElem: HTMLElement | undefined;
 
   const themeController = createPropertyPaneThemeController(props.context, () => {

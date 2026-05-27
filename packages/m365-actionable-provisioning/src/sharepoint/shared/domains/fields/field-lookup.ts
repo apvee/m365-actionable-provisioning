@@ -3,7 +3,6 @@
  *
  * @remarks
  * Provides functions for finding, checking, and updating SharePoint fields.
- * Extracted from catalogs/actions/fields/field-utils.ts for reuse.
  *
  * @module provisioning/shared/domains/fields/field-lookup
  * @internal

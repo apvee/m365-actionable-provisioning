@@ -3,7 +3,6 @@
  *
  * @remarks
  * Provides functions for probing list-related permissions.
- * Extracted from catalogs/actions/lists/base.helpers.ts for reuse.
  *
  * @module provisioning/shared/domains/lists/list-permissions
  * @internal

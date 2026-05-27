@@ -5,9 +5,9 @@
  * @packageDocumentation
  */
 
-import type { ActionPath } from '../../core/trace';
-import type { ComplianceReport } from '../../core/compliance';
-import type { ComplianceTrace } from '../../core/trace';
+import type { ActionPath } from '@apvee/m365-actionable-provisioning/core';
+import type { ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
+import type { ComplianceTrace } from '@apvee/m365-actionable-provisioning/core';
 import type { ComplianceLogEntry } from '../models';
 
 const isSubactionPath = (path: string): boolean => path.includes('/');

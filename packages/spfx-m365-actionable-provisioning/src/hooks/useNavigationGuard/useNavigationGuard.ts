@@ -34,7 +34,7 @@ export const useNavigationGuard = (isActive: boolean): void => {
         const handleBeforeUnload = (event: BeforeUnloadEvent): string => {
             event.preventDefault();
             event.returnValue = ''; // Required for Chrome compatibility
-            return ''; // Legacy browser support
+            return '';
         };
 
         window.addEventListener('beforeunload', handleBeforeUnload);

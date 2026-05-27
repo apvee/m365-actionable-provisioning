@@ -13,7 +13,7 @@ This module provides a declarative approach to SharePoint provisioning through:
 ## Architecture
 
 ```
-src/provisioning/
+packages/m365-actionable-provisioning/src/sharepoint/
 ├── index.ts          # Public API barrel export
 ├── engines/          # Provisioning engine implementations
 ├── types/            # Type definitions (SPScope, SPRuntimeContext, etc.)
@@ -41,10 +41,12 @@ src/provisioning/
 ## Usage
 
 ```typescript
-import { PnPjsProvisioningEngine, type SPScope } from "./provisioning";
+import { SharePointProvisioningEngine, type SPScope } from "@apvee/m365-actionable-provisioning/sharepoint";
+import { createLogger, consoleSink } from "@apvee/m365-actionable-provisioning/core";
 
-const engine = new PnPjsProvisioningEngine({
+const engine = new SharePointProvisioningEngine({
   spfi: rootSPFI,
+  initialScope: {},
   planTemplate: provisioningPlan,
   logger: createLogger({ level: "info", sink: consoleSink }),
 });

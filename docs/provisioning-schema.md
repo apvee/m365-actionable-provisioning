@@ -1,6 +1,6 @@
 # Provisioning Schema Reference
 
-This document provides a complete reference for the `@apvee/spfx-actionable-provisioning` schema model, including plan structure, action types, parameters, and field definitions.
+This document provides a complete reference for the `@apvee/m365-actionable-provisioning` schema model, including plan structure, action types, parameters, and field definitions.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@ A provisioning plan is a JSON object validated by Zod schemas. The root structur
 ### Schema Definition
 
 ```typescript
-import type { ProvisioningPlan } from '@apvee/spfx-actionable-provisioning/provisioning';
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 interface ProvisioningPlan {
   schemaVersion?: string;  // Defaults to "1.0"
@@ -862,7 +862,7 @@ import {
   // Type
   type SupportedSchemaVersion,
   type ProvisioningPlan,
-} from '@apvee/spfx-actionable-provisioning/provisioning';
+} from '@apvee/m365-actionable-provisioning/sharepoint';
 ```
 
 ### provisioningPlanSchema
@@ -870,7 +870,7 @@ import {
 The root Zod schema for validating entire provisioning plans:
 
 ```typescript
-import { provisioningPlanSchema } from '@apvee/spfx-actionable-provisioning/provisioning';
+import { provisioningPlanSchema } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 // Validate a plan
 const result = provisioningPlanSchema.safeParse(myPlan);
@@ -884,7 +884,7 @@ if (!result.success) {
 The Zod schema for validating individual actions:
 
 ```typescript
-import { actionsSchema } from '@apvee/spfx-actionable-provisioning/provisioning';
+import { actionsSchema } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 // Validate an action
 const result = actionsSchema.safeParse(myAction);
@@ -925,7 +925,7 @@ import {
   CreateSPSiteColumnAction,
   ModifySPFieldAction,
   DeleteSPFieldAction,
-} from '@apvee/spfx-actionable-provisioning/provisioning';
+} from '@apvee/m365-actionable-provisioning/sharepoint';
 ```
 
 ### Action Schemas (Advanced)
@@ -944,7 +944,7 @@ import {
   createSPSiteColumnSchema,
   modifySPFieldSchema,
   deleteSPFieldSchema,
-} from '@apvee/spfx-actionable-provisioning/provisioning';
+} from '@apvee/m365-actionable-provisioning/sharepoint';
 ```
 
 ---
@@ -954,7 +954,7 @@ import {
 ### Example 1: Communication Site with Lists
 
 ```typescript
-import type { ProvisioningPlan } from '@apvee/spfx-actionable-provisioning/provisioning';
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 export const engineeringPortalPlan: ProvisioningPlan = {
   schemaVersion: "1.0",

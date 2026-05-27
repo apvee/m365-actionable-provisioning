@@ -18,8 +18,8 @@ import {
 } from '@fluentui/react-components';
 import { Flex } from '@apvee/react-layout-kit';
 
-import type { ProvisioningPlan } from "../../../provisioning/catalogs";
-import type { ComplianceReport } from '../../../core/compliance';
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
 
 import {
   ProvisioningDialog,

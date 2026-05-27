@@ -3,7 +3,7 @@
  *
  * @remarks
  * Defines the Zod schemas for validating SharePoint provisioning plans.
- * Supports schema versioning for backward compatibility and future evolution.
+ * Supports schema versioning for existing plans and future evolution.
  *
  * **Key Exports:**
  * - `provisioningPlanSchema` - Complete plan schema with version validation
@@ -35,7 +35,7 @@ import {
  *
  * @remarks
  * Used when no schemaVersion is specified in a provisioning plan.
- * Ensures backward compatibility with existing plans.
+ * Ensures existing plans without an explicit schema version keep using version 1.0.
  *
  * @public
  */
@@ -131,7 +131,7 @@ function validateSchemaVersion(version: string): boolean {
  * - Validation that rejects unsupported versions
  * - Standard plan fields (title, description, version, parameters, actions)
  *
- * **Backward Compatibility:**
+ * **Default Versioning:**
  * Plans without a `schemaVersion` field automatically default to "1.0".
  *
  * **Version Format:**
@@ -147,7 +147,7 @@ function validateSchemaVersion(version: string): boolean {
  * };
  *
  * // Plan without schema version (defaults to "1.0")
- * const legacyPlan = {
+ * const planWithoutSchemaVersion = {
  *   version: "1.0.0",
  *   actions: [{ verb: "createSPSite", ... }]
  * };

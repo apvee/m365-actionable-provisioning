@@ -58,13 +58,13 @@ The `ProvisioningDialog` component provides:
 ## Import
 
 ```typescript
-import { ProvisioningDialog } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
 import type { 
   ProvisioningDialogProps,
   ProvisioningDialogStrings,
   ProvisioningCompletedEvent,
   ProvisioningRunOutcome 
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
 ```
 
 ---
@@ -128,8 +128,8 @@ import {
   webLightTheme, 
   Button 
 } from '@fluentui/react-components';
-import { ProvisioningDialog } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/provisioning';
+import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/sharepoint';
 import type { WebPartContext } from '@microsoft/sp-webpart-base';
 import { myPlan } from './provisioning-plan';
 
@@ -299,7 +299,7 @@ const [open, setOpen] = React.useState(false);
 Called when a provisioning run finishes (success, failure, or cancellation):
 
 ```tsx
-import type { ProvisioningCompletedEvent } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+import type { ProvisioningCompletedEvent } from '@apvee/spfx-m365-actionable-provisioning';
 
 const handleProvisioningCompleted = React.useCallback(
   (ev: ProvisioningCompletedEvent) => {
@@ -524,9 +524,9 @@ import {
   tokens,
   webLightTheme
 } from '@fluentui/react-components';
-import { ProvisioningDialog } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import type { ProvisioningCompletedEvent } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/provisioning';
+import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
+import type { ProvisioningCompletedEvent } from '@apvee/spfx-m365-actionable-provisioning';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/sharepoint';
 import { provisioningPlan } from './plans/provisioning-plan';
 
 interface IMyWebPartProps {

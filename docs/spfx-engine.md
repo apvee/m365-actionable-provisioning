@@ -62,7 +62,7 @@ The `SPFxProvisioningEngine` is the main entry point for programmatic provisioni
 import { 
   SPFxProvisioningEngine,
   type SPFxProvisioningEngineOptions 
-} from '@apvee/spfx-actionable-provisioning/provisioning';
+} from '@apvee/m365-actionable-provisioning/sharepoint';
 ```
 
 ### Constructor Options
@@ -103,8 +103,8 @@ interface SPFxProvisioningEngineOptions {
 
 ```typescript
 import { spfi, SPFx } from '@pnp/sp';
-import { SPFxProvisioningEngine } from '@apvee/spfx-actionable-provisioning/provisioning';
-import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/provisioning';
+import { SPFxProvisioningEngine } from '@apvee/m365-actionable-provisioning/sharepoint';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/sharepoint';
 import { myPlan } from './provisioning-plan';
 
 // Create SPFI instance with SPFx context
@@ -391,7 +391,7 @@ import {
   useSPFxProvisioningEngine,
   type UseSPFxProvisioningEngineOptions,
   type UseSPFxProvisioningEngineReturn
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
 ```
 
 #### Options Interface
@@ -595,8 +595,8 @@ const handleCheckCompliance = async () => {
 ```tsx
 import * as React from 'react';
 import { Button, Spinner, ProgressBar } from '@fluentui/react-components';
-import { useSPFxProvisioningEngine } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/core';
+import { useSPFxProvisioningEngine } from '@apvee/spfx-m365-actionable-provisioning';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
 
 const ProvisioningPanel: React.FC<{ context: WebPartContext; plan: ProvisioningPlan }> = ({ context, plan }) => {
   const logger = React.useMemo(() => createLogger({ level: 'info', sink: consoleSink }), []);
@@ -706,7 +706,7 @@ A utility hook that transforms raw engine snapshots into UI-friendly state. It h
 import { 
   useProvisioningDerivedState,
   type ProvisioningDerivedState
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
 ```
 
 #### Purpose
@@ -795,7 +795,7 @@ type ProvisioningLogEntry = {
 import { 
   useSPFxProvisioningEngine,
   useProvisioningDerivedState
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
 
 const ProvisioningLog: React.FC<Props> = ({ context, plan }) => {
   const { snapshot, run } = useSPFxProvisioningEngine({
@@ -930,7 +930,7 @@ const spEngine = engine.sharepointEngine;
 Create a custom logger for specific logging needs:
 
 ```typescript
-import { createLogger, type LogSink } from '@apvee/spfx-actionable-provisioning/provisioning';
+import { createLogger, type LogSink } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 // Custom sink that sends logs to Application Insights
 const appInsightsSink: LogSink = (level, message, context) => {
@@ -1008,7 +1008,7 @@ This section documents utility functions and types for advanced use cases.
 
 ### Utility Functions
 
-Import from `@apvee/spfx-actionable-provisioning/provisioning-ui`:
+Import from `@apvee/spfx-m365-actionable-provisioning`:
 
 #### buildProvisioningLogEntriesFromSnapshot
 

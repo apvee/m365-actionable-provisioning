@@ -1,13 +1,11 @@
 // Field schemas - direct imports from source files
 export {
   addSPFieldSchema,
-  addSPFieldSchema_List,
   type AddSPFieldPayload,
 } from "./fields/add-sp-field.schema";
 
 export {
   createSPSiteColumnSchema,
-  createSPSiteColumnSchema_Site,
   type CreateSPSiteColumnPayload,
 } from "./fields/create-sp-site-column.schema";
 

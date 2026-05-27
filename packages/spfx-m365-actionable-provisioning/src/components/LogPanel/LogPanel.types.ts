@@ -1,5 +1,5 @@
 import type { ComplianceLogEntry, ProvisioningLogEntry } from '../../models';
-import type { SkipReason } from '../../../provisioning';
+import type { SkipReason } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 export type ProvisioningLogEntryStrings = Readonly<{
   pendingLabel: string;

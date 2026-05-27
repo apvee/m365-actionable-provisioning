@@ -61,7 +61,7 @@ Property Pane
 ```typescript
 import { 
   PropertyPaneProvisioningField 
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
 ```
 
 ### Function Signature
@@ -83,7 +83,6 @@ function PropertyPaneProvisioningField(
 | `targetSiteUrl` | `string` | ✗ | Current site | Target site URL |
 | `label` | `string` | ✗ | Localized default | Field label |
 | `effectiveState` | `TemplateAppliedState` | ✗ | - | Current effective state |
-| `value` | `TemplateAppliedState` | ✗ | - | State value (deprecated, use `effectiveState`) |
 | `enableComplianceCheck` | `boolean` | ✗ | `true` | Enable compliance check button |
 | `complianceAutoRunOnOpen` | `boolean` | ✗ | `true` | Auto-run compliance on dialog open |
 | `confirmDeprovisionRun` | `boolean` | ✗ | `false` | Require confirmation for deprovision |
@@ -107,8 +106,8 @@ import {
 } from '@microsoft/sp-property-pane';
 import { 
   PropertyPaneProvisioningField 
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import type { TemplateAppliedState } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
+import type { TemplateAppliedState } from '@apvee/spfx-m365-actionable-provisioning';
 import { provisioningPlan } from './plans/provisioning-plan';
 
 export interface IMyWebPartProps {
@@ -190,7 +189,7 @@ PropertyPaneProvisioningField('provisioningState', {
 import { 
   PropertyPaneSiteSelectorField,
   type PropertyPaneSiteSelectorFieldProps
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
 ```
 
 ### Function Signature
@@ -229,7 +228,7 @@ The field provides three selection modes:
 ```typescript
 import { 
   PropertyPaneSiteSelectorField 
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
 
 export interface IMyWebPartProps {
   targetSiteUrl?: string;
@@ -292,7 +291,7 @@ PropertyPaneSiteSelectorField('targetSiteUrl', {
 ### Web Part Properties Interface
 
 ```typescript
-import type { TemplateAppliedState } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+import type { TemplateAppliedState } from '@apvee/spfx-m365-actionable-provisioning';
 
 export interface IEngineeringWebPartProps {
   description: string;
@@ -323,8 +322,8 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { 
   PropertyPaneProvisioningField, 
   PropertyPaneSiteSelectorField 
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import type { TemplateAppliedState } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
+import type { TemplateAppliedState } from '@apvee/spfx-m365-actionable-provisioning';
 
 import { provisioningPlan, deprovisioningPlan } from './plans';
 import EngineeringWebPart from './components/EngineeringWebPart';
@@ -395,7 +394,7 @@ export default class EngineeringWebPart extends BaseClientSideWebPart<IEngineeri
                   provisioningActionPlan: provisioningPlan,
                   deprovisioningActionPlan: deprovisioningPlan,
                   targetSiteUrl: this.properties.targetSiteUrl,
-                  value: this.properties.propertyPaneProvisioningState,
+                  effectiveState: this.properties.propertyPaneProvisioningState,
                   appearance: 'filled',
                   enableComplianceCheck: true,
                   complianceAutoRunOnOpen: true,

@@ -1,0 +1,68 @@
+{
+  "name": "@apvee/spfx-m365-actionable-provisioning",
+  "version": "0.0.1",
+  "description": "Reusable SPFx UI, hooks, and property pane controls for M365 actionable provisioning.",
+  "keywords": [
+    "spfx",
+    "m365",
+    "sharepoint",
+    "provisioning",
+    "fluentui"
+  ],
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "scripts",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "npm run clean && tsc -p tsconfig.json && node scripts/copy-loc.cjs",
+    "clean": "node -e \"require('fs').rmSync('lib', { recursive: true, force: true })\"",
+    "postinstall": "node scripts/post-install.cjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "tslib": "2.3.1"
+  },
+  "peerDependencies": {
+    "@apvee/m365-actionable-provisioning": "0.0.1",
+    "@apvee/react-layout-kit": "^1.2.0",
+    "@fluentui/react": "^8.106.4",
+    "@fluentui/react-components": "^9.72.9",
+    "@fluentui/react-icons": "^2.0.316",
+    "@fluentui/react-migration-v8-v9": "^9.9.18",
+    "@fluentui/react-motion-components-preview": "^0.14.2",
+    "@microsoft/sp-component-base": "1.21.1",
+    "@microsoft/sp-core-library": "1.21.1",
+    "@microsoft/sp-property-pane": "1.21.1",
+    "@microsoft/sp-webpart-base": "1.21.1",
+    "@pnp/sp": "^4.17.0",
+    "react": "17.0.1",
+    "react-dom": "17.0.1"
+  },
+  "devDependencies": {
+    "@apvee/m365-actionable-provisioning": "0.0.1",
+    "@apvee/react-layout-kit": "^1.2.0",
+    "@fluentui/react": "^8.106.4",
+    "@fluentui/react-components": "^9.72.9",
+    "@fluentui/react-icons": "^2.0.316",
+    "@fluentui/react-migration-v8-v9": "^9.9.18",
+    "@fluentui/react-motion-components-preview": "^0.14.2",
+    "@microsoft/sp-component-base": "1.21.1",
+    "@microsoft/sp-core-library": "1.21.1",
+    "@microsoft/sp-property-pane": "1.21.1",
+    "@microsoft/sp-webpart-base": "1.21.1",
+    "@pnp/sp": "^4.17.0",
+    "react": "17.0.1",
+    "react-dom": "17.0.1"
+  }
+}

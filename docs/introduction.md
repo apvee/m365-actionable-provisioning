@@ -1,14 +1,14 @@
-# Introduction to @apvee/spfx-actionable-provisioning
+# Introduction to @apvee/m365-actionable-provisioning
 
 > **Schema-first provisioning for SharePoint Framework**
 
 This library provides a powerful, type-safe provisioning engine for SPFx, built on [PnPjs](https://pnp.github.io/pnpjs/) v4 and [Zod](https://zod.dev/) v4. It enables declarative site and list provisioning with built-in compliance checking and a ready-to-use UI for SPFx web parts.
 
-![@apvee/spfx-actionable-provisioning demo](./demo.gif)
+![@apvee/m365-actionable-provisioning demo](./demo.gif)
 
 ## Overview
 
-`@apvee/spfx-actionable-provisioning` follows a **schema-first architecture** where every provisioning action is validated against Zod schemas before execution. This ensures:
+`@apvee/m365-actionable-provisioning` follows a **schema-first architecture** where every provisioning action is validated against Zod schemas before execution. This ensures:
 
 - **Type Safety**: Full TypeScript support with inferred types from schemas
 - **Validation**: Runtime validation prevents malformed plans from executing
@@ -58,7 +58,7 @@ This library provides a powerful, type-safe provisioning engine for SPFx, built 
 A provisioning plan is a JSON object that declares what SharePoint resources to create or modify. Plans are **declarative**—you describe the desired state, and the engine handles the execution.
 
 ```typescript
-import type { ProvisioningPlan } from '@apvee/spfx-actionable-provisioning/provisioning';
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 const plan: ProvisioningPlan = {
   schemaVersion: "1.0",
@@ -129,7 +129,7 @@ Before using this library, ensure your environment meets these requirements:
 | Node.js | ≥22.14.0, <23.0.0 | Required for development |
 | SPFx | 1.21+ | SharePoint Framework runtime |
 | TypeScript | ~5.3.3 | Strict mode enabled |
-| PnPjs | v4 | `@pnp/sp`, `@pnp/graph` |
+| PnPjs | v4 | `@pnp/sp` |
 | Zod | ^4.2.1 | Schema validation |
 | Fluent UI 9 | Latest | `@fluentui/react-components` |
 | React | 17.0.1 | SPFx 1.21 peer dependency |
@@ -154,7 +154,7 @@ The provisioning operations will succeed or fail based on what the current user 
 Install the package via npm:
 
 ```bash
-npm install @apvee/spfx-actionable-provisioning
+npm install @apvee/m365-actionable-provisioning @apvee/spfx-m365-actionable-provisioning
 ```
 
 ### Peer Dependencies
@@ -162,7 +162,7 @@ npm install @apvee/spfx-actionable-provisioning
 Ensure you have the required peer dependencies:
 
 ```bash
-npm install @pnp/sp @pnp/graph @fluentui/react-components zod
+npm install @pnp/sp @fluentui/react-components zod
 ```
 
 ### TypeScript Configuration
@@ -185,7 +185,7 @@ Add the library to your `tsconfig.json` if using path aliases:
 Create a plan file (`provisioning-plan.ts`):
 
 ```typescript
-import type { ProvisioningPlan } from '@apvee/spfx-actionable-provisioning/provisioning';
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 export const myPlan: ProvisioningPlan = {
   schemaVersion: "1.0",
@@ -219,8 +219,8 @@ In your React component:
 ```tsx
 import * as React from 'react';
 import { FluentProvider, webLightTheme, Button } from '@fluentui/react-components';
-import { ProvisioningDialog } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/core';
+import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
 import { myPlan } from './provisioning-plan';
 
 const MyWebPart: React.FC<{ context: WebPartContext }> = ({ context }) => {
@@ -255,7 +255,7 @@ In your web part class:
 import { 
   PropertyPaneProvisioningField, 
   PropertyPaneSiteSelectorField 
-} from '@apvee/spfx-actionable-provisioning/provisioning-ui';
+} from '@apvee/spfx-m365-actionable-provisioning';
 
 protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
   return {

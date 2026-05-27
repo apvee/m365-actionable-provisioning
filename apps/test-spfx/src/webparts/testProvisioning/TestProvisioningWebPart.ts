@@ -10,8 +10,8 @@ import { IReadonlyTheme } from '@microsoft/sp-component-base';
 
 import TestProvisioning from './components/TestProvisioning';
 import { ITestProvisioningProps } from './components/ITestProvisioningProps';
-import { PropertyPaneProvisioningField, PropertyPaneSiteSelectorField } from '../../provisioning-ui/propertyPaneFields';
-import type { TemplateAppliedState } from '../../provisioning-ui';
+import { PropertyPaneProvisioningField, PropertyPaneSiteSelectorField } from '@apvee/spfx-m365-actionable-provisioning';
+import type { TemplateAppliedState } from '@apvee/spfx-m365-actionable-provisioning';
 import { deprovisioningPlan, provisioningPlan } from './test-plans/demo-plans';
 
 export interface ITestProvisioningWebPartProps {
@@ -22,30 +22,11 @@ export interface ITestProvisioningWebPartProps {
   lastProvisioningState?: TemplateAppliedState;
   /** Persisted outcome of the last provisioning run from the property pane field. */
   propertyPaneLastProvisioningState?: TemplateAppliedState;
-
-  // Backward-compatibility (old property names).
-  templateAppliedState?: TemplateAppliedState;
-  propertyPaneTemplateAppliedState?: TemplateAppliedState;
 }
 
 export default class TestProvisioningWebPart extends BaseClientSideWebPart<ITestProvisioningWebPartProps> {
 
-  private ensurePropertiesMigrated(): void {
-    if (this.properties.lastProvisioningState === undefined && this.properties.templateAppliedState !== undefined) {
-      this.properties.lastProvisioningState = this.properties.templateAppliedState;
-    }
-
-    if (
-      this.properties.propertyPaneLastProvisioningState === undefined &&
-      this.properties.propertyPaneTemplateAppliedState !== undefined
-    ) {
-      this.properties.propertyPaneLastProvisioningState = this.properties.propertyPaneTemplateAppliedState;
-    }
-  }
-
   public render(): void {
-    this.ensurePropertiesMigrated();
-
     const element: React.ReactElement<ITestProvisioningProps> = React.createElement(
       TestProvisioning,
       {
@@ -70,7 +51,6 @@ export default class TestProvisioningWebPart extends BaseClientSideWebPart<ITest
   }
 
   protected override onInit(): Promise<void> {
-    this.ensurePropertiesMigrated();
     return Promise.resolve();
   }
 
@@ -119,7 +99,7 @@ export default class TestProvisioningWebPart extends BaseClientSideWebPart<ITest
                   provisioningActionPlan: provisioningPlan,
                   deprovisioningActionPlan: deprovisioningPlan,
                   targetSiteUrl: this.properties.provisioningSiteUrl,
-                  value: this.properties.propertyPaneLastProvisioningState,
+                  effectiveState: this.properties.propertyPaneLastProvisioningState,
                   appearance: 'filled',
                   confirmDeprovisionRun: true
                 }),

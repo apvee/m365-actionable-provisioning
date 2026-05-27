@@ -5,7 +5,7 @@
  * @packageDocumentation
  */
 
-import type { ProvisioningPlan } from "../../../provisioning/catalogs";
+import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 export type Mode = 'provision' | 'deprovision' | 'compliance';
 

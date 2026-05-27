@@ -67,7 +67,7 @@ import { resolveTargetWeb } from "../../../sp-utils";
 import { createSPContentTypeSchema, type CreateSPContentTypePayload } from "../../schemas/content-types";
 
 // Import from shared helpers for common patterns
-import { probeManageListsPermission, resolveWebUrlString } from "../lists/base.helpers";
+import { probeManageListsPermission, resolveWebUrlString } from "../../../shared/domains/lists";
 
 /**
  * CreateSPContentType action implementation.
@@ -230,7 +230,7 @@ const spfi = spOrResult;
 ### Permission Checking
 
 ```typescript
-import { probeManageListsPermission } from "../lists/base.helpers";
+import { probeManageListsPermission } from "../../../shared/domains/lists";
 
 // Reuse list permission helper
 return probeManageListsPermission(web, effectiveWebUrl);
@@ -239,7 +239,7 @@ return probeManageListsPermission(web, effectiveWebUrl);
 ### Field Operations
 
 ```typescript
-import { getFieldByNameOrTitle, checkFieldExists } from "../fields/field-utils";
+import { getFieldByNameOrTitle, checkFieldExists } from "../../../shared/domains/fields";
 
 // Check if field exists
 const exists = await checkFieldExists(container, fieldName);

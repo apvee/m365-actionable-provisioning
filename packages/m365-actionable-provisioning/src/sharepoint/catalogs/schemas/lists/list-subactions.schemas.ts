@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import {
-  addSPFieldSchema_List,
+  addSPFieldSchema,
 } from "../fields/add-sp-field.schema";
 import {
   modifySPFieldSchema_List,
@@ -13,7 +13,7 @@ import {
 import { enableSPListRatingSchema } from "./enable-sp-list-rating.schema";
 
 const listSubactionSchemas = [
-  addSPFieldSchema_List,
+  addSPFieldSchema,
   modifySPFieldSchema_List,
   deleteSPFieldSchema_List,
   enableSPListRatingSchema,

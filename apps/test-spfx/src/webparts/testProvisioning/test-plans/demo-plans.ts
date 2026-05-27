@@ -1,4 +1,4 @@
-import { ProvisioningPlan } from '../../../provisioning/catalogs';
+import { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
 
 /**
  * Provisioning template used by the TestProvisioning webpart.
