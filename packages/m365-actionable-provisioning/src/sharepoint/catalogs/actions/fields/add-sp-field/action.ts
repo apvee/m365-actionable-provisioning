@@ -10,11 +10,11 @@
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
 
-import { addSPFieldSchema, type AddSPFieldPayload } from "../../schemas/fields/add-sp-field.schema";
-import { handleFieldCreation, checkFieldCompliance } from "./field-handler";
+import { addSPFieldSchema, type AddSPFieldPayload } from "./schema";
+import { handleFieldCreation, checkFieldCompliance } from "../_shared/field-handler";
 
 /* ========================================
    ACTION DEFINITION
@@ -32,12 +32,15 @@ import { handleFieldCreation, checkFieldCompliance } from "./field-handler";
 export class AddSPFieldAction extends ActionDefinition<
     "addSPField",
     typeof addSPFieldSchema,
-    SPScope
+    M365Scope,
+    ProvisioningResultLight,
+    M365Clients
 > {
     readonly verb = "addSPField";
     readonly actionSchema = addSPFieldSchema;
+    readonly requiredClients = ["spfi"] as const;
 
-    override async handler(ctx: SPRuntimeContext<AddSPFieldPayload>): Promise<SPActionResult> {
+    async handler(ctx: M365RuntimeContext<AddSPFieldPayload>): Promise<M365ActionResult> {
         return handleFieldCreation({
             def: ctx.action.payload,
             scopeIn: ctx.scopeIn,
@@ -45,10 +48,9 @@ export class AddSPFieldAction extends ActionDefinition<
         });
     }
 
-    override async checkCompliance(
-        ctx: ComplianceRuntimeContext<SPScope, AddSPFieldPayload>
-    ): Promise<ComplianceActionCheckResult<SPScope>> {
+    async checkCompliance(
+        ctx: ComplianceRuntimeContext<M365Scope, AddSPFieldPayload, M365Clients>
+    ): Promise<ComplianceActionCheckResult<M365Scope>> {
         return checkFieldCompliance(ctx);
     }
 }
-

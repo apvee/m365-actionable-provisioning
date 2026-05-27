@@ -1,137 +1,78 @@
 # SharePoint Provisioning Catalogs
 
-This folder contains the SharePoint provisioning action catalog for the PnPjs Provisioning library.
+This folder contains the SharePoint action catalog used by the unified M365
+provisioning engine.
 
 ## Folder Structure
 
-```
+```text
 catalogs/
-├── index.ts                    # Barrel export (public API)
-├── provisioning.schema.ts      # Schema definitions + versioning
-├── action.registry.ts          # Lazy action registry
-├── schemas/                    # Individual action schemas
-│   ├── index.ts
-│   ├── fields/                 # Field action schemas
-│   ├── lists/                  # List action schemas
-│   ├── shared/                 # Shared schema components
-│   └── sites/                  # Site action schemas
-└── actions/                    # Action handler implementations
-    ├── fields/                 # Field action handlers
-    ├── lists/                  # List action handlers
-    ├── shared/                 # Shared action utilities
-    └── sites/                  # Site action handlers
+  index.ts                    # Barrel export
+  action-definitions.ts       # Definitions derived from action modules
+  provisioning.schema.ts      # Root SharePoint action schema composition
+  schemas.ts                  # Public compatibility facade for schemas
+  actions/
+    action-module.ts          # Lightweight action module metadata
+    action-modules.ts         # Ordered built-in action module list
+    _composition/             # Site/list subaction schema composition
+    _shared/schemas/          # Shared schema primitives
+    shared/                   # Cross-action runtime utilities
+    fields/
+      <action>/
+        action.ts
+        schema.ts
+        index.ts
+      _shared/
+    lists/
+      <action>/
+        action.ts
+        schema.ts
+        index.ts
+      _shared/
+    sites/
+      <action>/
+        action.ts
+        schema.ts
+        index.ts
 ```
 
 ## Architecture
 
-### Schema / Registry Separation
+Each concrete action owns its own schema and handler. The action folder exports an
+action module containing:
 
-The catalog architecture follows separation of concerns:
+- `verb`
+- `schema`
+- `definition`
+- `placements`
+- optional `schemasByPlacement`
 
-1. **Schema Layer** (`provisioning.schema.ts`)
-   - Zod schema definitions for validation
-   - Schema versioning support
-   - Action composition into provisioning plan schema
+Catalog-level files only compose these modules:
 
-2. **Registry Layer** (`action.registry.ts`)
-   - Factory-based action registration
-   - Lazy instantiation of handlers
-   - Singleton caching per verb
+- `action-definitions.ts` maps modules to runtime definitions
+- `provisioning.schema.ts` composes root-level schemas
+- `_composition/*` composes site/list subaction schemas
+- `schemas.ts` re-exports public schema symbols without owning implementation
 
-### Version Support
-
-The schema supports versioning via the `schemaVersion` field:
-
-- Default version: `"1.0"`
-- Backward compatible: Plans without `schemaVersion` default to `"1.0"`
-- Version format: `major.minor` (e.g., `"1.0"`, `"2.0"`)
-
-### Lazy Loading
-
-Action handlers are registered as factory functions and only instantiated when first accessed:
-
-```typescript
-// No handlers instantiated yet
-import { actionRegistry } from "./catalogs";
-
-// Handler created on first access
-const handler = actionRegistry.get("createSPSite");
-
-// Cached for subsequent calls
-const same = actionRegistry.get("createSPSite"); // Returns cached instance
-```
+This keeps the engine concrete and avoids provider-style indirection while
+removing the old drift between schema registration and handler registration.
 
 ## Public API
 
-Import from the barrel export:
-
-```typescript
+```ts
 import {
-  // Schema
-  provisioningPlanSchema,
-  actionsSchema,
-  type ProvisioningPlan,
-  
-  // Registry
-  actionRegistry,
-  
-  // Version constants
-  DEFAULT_SCHEMA_VERSION,
-  SUPPORTED_SCHEMA_VERSIONS,
+  sharePointActionsSchema,
+  sharePointActionDefinitions,
 } from "./catalogs";
 ```
 
-## Internal APIs
+## Adding Actions
 
-The following are marked `@internal` and should not be used directly:
-
-- `ActionRegistry` class (use `actionRegistry` singleton)
-- Root action schema composition functions
-- Parameter validation schemas
+See `actions/ADDING_ACTIONS.md`.
 
 ## Shared Utilities
 
-Action handlers leverage shared utilities from the `../shared/` folder to reduce code duplication:
-
-### SPFI Guards (`shared/spfi-guard.ts`)
-
-```typescript
-import { requireSpfi, getSpfiOrUnverifiable } from "../shared";
-
-// For operations that MUST have SPFI (throws if missing)
-const sp = requireSpfi(runtime);
-
-// For operations that return "unverifiable" if SPFI missing
-const spOrResult = getSpfiOrUnverifiable(runtime, action);
-if (isUnverifiableResult(spOrResult)) {
-  return spOrResult; // Return early with unverifiable result
-}
-```
-
-### Compliance Helpers (`shared/compliance-helpers.ts`)
-
-```typescript
-import { compliant, nonCompliant, unverifiableMissingPrereq } from "../shared";
-
-// Standardized result creation
-return compliant(action, summary);
-return nonCompliant(action, summary, details);
-return unverifiableMissingPrereq(action, "List not found");
-```
-
-### Domain-Specific Helpers
-
-- **`shared/domains/lists/`** - List lookup, permission probing
-- **`shared/domains/sites/`** - Site utilities  
-- **`shared/domains/fields/`** - Field lookup, existence checks, updates
-
-See `../shared/README.md` for comprehensive documentation.
-
-## Adding New Actions
-
-1. Create schema in `schemas/<category>/`
-2. Create handler in `actions/<category>/`
-3. **Use shared helpers** from `../shared/` for common operations
-4. Register factory in `action.registry.ts`
-5. Add schema to root action discriminated union in `provisioning.schema.ts`
-6. Export from `schemas/index.ts` and `catalogs/index.ts`
+Action handlers use SharePoint domain helpers from `sharepoint/shared/domains`
+for lookup, permission probing and field/list operations. Keep reusable
+SharePoint behavior there; keep action-specific mapping and payload handling in
+the action folder.

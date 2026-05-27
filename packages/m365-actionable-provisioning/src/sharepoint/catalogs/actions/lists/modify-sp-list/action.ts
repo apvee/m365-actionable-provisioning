@@ -10,25 +10,25 @@
  * 
  * Allows field subactions.
  *
- * The Zod schema for this action is defined in `catalogs/schemas/lists`.
+ * The Zod schema for this action is co-located in `schema.ts`.
  * 
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { PermissionCheckResult } from "../../../../core/permissions";
-import { normalizeError } from "../../../../core";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { PermissionCheckResult } from "../../../../../core/permissions";
+import { normalizeError } from "../../../../../core";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
 
 import "@pnp/sp/lists";
 import "@pnp/sp/security/web";
 
-import { resolveTargetWeb } from "../../../utils/sp-utils";
+import { resolveTargetWeb } from "../../../../utils/sp-utils";
 
-import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../shared/domains/lists";
-import { modifySPListSchema, type ModifySPListPayload } from "../../schemas/lists/modify-sp-list.schema";
-import { buildModifyListUpdateProps } from "./list-update.helpers";
-import { compareProperties } from "../shared/compliance-compare";
+import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../../shared/domains/lists";
+import { modifySPListSchema, type ModifySPListPayload } from "./schema";
+import { buildModifyListUpdateProps } from "./update-props";
+import { compareProperties } from "../../shared/compliance-compare";
 
 /* ========================================
    ACTION DEFINITION
@@ -52,10 +52,13 @@ import { compareProperties } from "../shared/compliance-compare";
 export class ModifySPListAction extends ActionDefinition<
   "modifySPList",
   typeof modifySPListSchema,
-  SPScope
+  M365Scope,
+  ProvisioningResultLight,
+  M365Clients
 > {
   readonly verb = "modifySPList";
   readonly actionSchema = modifySPListSchema;
+  readonly requiredClients = ["spfi"] as const;
 
   /**
    * Checks permissions for list modification.
@@ -67,11 +70,11 @@ export class ModifySPListAction extends ActionDefinition<
    * Resolves the target web URL (payload → scope → SPFI site URL) and runs a best-effort
    * permission probe for `ManageLists`.
    */
-  override async checkPermissions(
-    ctx: SPRuntimeContext<ModifySPListPayload>
+  async checkPermissions(
+    ctx: M365RuntimeContext<ModifySPListPayload>
   ): Promise<PermissionCheckResult> {
     const scopeIn = ctx.scopeIn;
-    const spfi = scopeIn.spfi;
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       return { decision: "deny", message: "SPFI instance not available in scope" };
     }
@@ -96,11 +99,11 @@ export class ModifySPListAction extends ActionDefinition<
    * - If the list doesn't exist, the action returns a "skipped" result (no throw).
    * - If it exists, it updates the provided properties via `list.update()`.
    */
-  override async handler(
-    ctx: SPRuntimeContext<ModifySPListPayload>
-  ): Promise<SPActionResult> {
+  async handler(
+    ctx: M365RuntimeContext<ModifySPListPayload>
+  ): Promise<M365ActionResult> {
     const scopeIn = ctx.scopeIn;
-    const spfi = scopeIn.spfi;
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       throw new Error("SPFI instance not available in scope");
     }
@@ -171,10 +174,10 @@ export class ModifySPListAction extends ActionDefinition<
     };
   }
 
-  override async checkCompliance(
-    ctx: ComplianceRuntimeContext<SPScope, ModifySPListPayload>
-  ): Promise<ComplianceActionCheckResult<SPScope>> {
-    const spfi = ctx.scopeIn.spfi;
+  async checkCompliance(
+    ctx: ComplianceRuntimeContext<M365Scope, ModifySPListPayload, M365Clients>
+  ): Promise<ComplianceActionCheckResult<M365Scope>> {
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       return { outcome: "unverifiable", reason: "missing_prerequisite", message: "SPFI instance not available in scope" };
     }

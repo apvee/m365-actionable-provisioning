@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
 import type { ProvisioningRunOutcome } from '../../components/ProvisioningDialog/ProvisioningDialog.types';
 import type { DialogOrchestrationOptions, DialogOrchestrationReturn } from './useDialogOrchestration.types';
 

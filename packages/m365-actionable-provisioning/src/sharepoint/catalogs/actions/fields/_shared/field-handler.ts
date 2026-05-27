@@ -11,10 +11,10 @@
  * @packageDocumentation
  */
 
-import type { BaseFieldPayload } from "../../schemas/fields/field-base.schema";
-import type { SPScope, SPActionResult } from "../../../types";
-import type { ActionRuntimeContext } from "../../../../core/action";
-import { pickDefined } from "../../../utils/object-utils";
+import type { BaseFieldPayload } from "./field-base-schema";
+import type { M365Scope, M365ActionResult } from "../../../../../m365";
+import type { ActionRuntimeContext } from "../../../../../core/action";
+import { pickDefined } from "../../../../utils/object-utils";
 
 import {
     ChoiceFieldFormatType,
@@ -35,10 +35,10 @@ import {
     extractFieldId,
     getFieldByNameOrTitle,
     updateFieldDisplayName,
-} from "../../../shared/domains/fields/field-lookup";
+} from "../../../../shared/domains/fields/field-lookup";
 
-import { normalizeError } from "../../../../core";
-import type { ComplianceActionCheckResult, ComplianceRuntimeContext } from "../../../../core/action";
+import { normalizeError } from "../../../../../core";
+import type { ComplianceActionCheckResult, ComplianceRuntimeContext } from "../../../../../core/action";
 
 /* ========================================
    FIELD HANDLER CONTEXT
@@ -51,9 +51,9 @@ export interface FieldHandlerContext {
     /** The field definition payload (without verb) */
     def: BaseFieldPayload;
     /** The scope containing web and optionally list */
-    scopeIn: SPScope;
+    scopeIn: M365Scope;
     /** Logger for status messages */
-    logger: ActionRuntimeContext<SPScope, BaseFieldPayload>["logger"];
+    logger: ActionRuntimeContext<M365Scope, BaseFieldPayload>["logger"];
 }
 
 /* ========================================
@@ -70,7 +70,7 @@ export interface FieldHandlerContext {
  * @param ctx - The field handler context
  * @returns The action result
  */
-export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<SPActionResult> {
+export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M365ActionResult> {
     const { def, scopeIn, logger } = ctx;
     const resource = def.fieldName;
 
@@ -577,8 +577,8 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<SPA
  * @returns The compliance check result
  */
 export async function checkFieldCompliance(
-    ctx: ComplianceRuntimeContext<SPScope, BaseFieldPayload>
-): Promise<ComplianceActionCheckResult<SPScope>> {
+    ctx: ComplianceRuntimeContext<M365Scope, BaseFieldPayload>
+): Promise<ComplianceActionCheckResult<M365Scope>> {
     const def = ctx.action.payload;
     const resource = def.fieldName;
 

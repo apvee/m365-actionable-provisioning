@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-import { draftVersionVisibilitySchema, listNameSchema } from "./base.schemas";
-import { listSubactionSchema } from "./list-subactions.schemas";
+import { subactionsOf } from "../../_shared/schemas/action-schemas";
+import { draftVersionVisibilitySchema, listNameSchema } from "../_shared/base-schemas";
+import { listSubactionSchema } from "../../_composition/list-subactions-schema";
 
 export const modifySPListSchema = z.object({
   verb: z.literal("modifySPList"),
@@ -24,7 +25,7 @@ export const modifySPListSchema = z.object({
   irmExpire: z.boolean().optional(),
   irmReject: z.boolean().optional(),
 
-  subactions: z.array(listSubactionSchema).optional(),
+  subactions: subactionsOf(listSubactionSchema),
 });
 
 export type ModifySPListPayload = z.infer<typeof modifySPListSchema>;

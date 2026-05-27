@@ -1,6 +1,6 @@
 # Introduction to @apvee/m365-actionable-provisioning
 
-> **Schema-first provisioning for SharePoint Framework**
+> **Schema-first provisioning for Microsoft 365 and SharePoint Framework**
 
 This library provides a powerful, type-safe provisioning engine for SPFx, built on [PnPjs](https://pnp.github.io/pnpjs/) v4 and [Zod](https://zod.dev/) v4. It enables declarative site and list provisioning with built-in compliance checking and a ready-to-use UI for SPFx web parts.
 
@@ -36,7 +36,8 @@ This library provides a powerful, type-safe provisioning engine for SPFx, built 
 │                              │                                  │
 │                              ▼                                  │
 │  ┌────────────────────────────────────────────────────────────┐ │
-│  │                  SPFxProvisioningEngine                    │ │
+│  │                ProvisioningEngine                          │ │
+│  │  ├─ clients: { spfi, graphClient }                         │ │
 │  │  ├─ run(): Execute provisioning plan                       │ │
 │  │  ├─ checkCompliance(): Drift detection                     │ │
 │  │  └─ subscribe(): Real-time progress                        │ │
@@ -44,7 +45,7 @@ This library provides a powerful, type-safe provisioning engine for SPFx, built 
 │                              │                                  │
 │                              ▼                                  │
 │  ┌────────────────────────────────────────────────────────────┐ │
-│  │                  ProvisioningPlan (JSON)                   │ │
+│  │                  M365ProvisioningPlan (JSON)                   │ │
 │  │  ├─ schemaVersion, version, parameters                     │ │
 │  │  └─ actions: [createSPSite, modifySPSite, ...]             │ │
 │  └────────────────────────────────────────────────────────────┘ │
@@ -58,9 +59,9 @@ This library provides a powerful, type-safe provisioning engine for SPFx, built 
 A provisioning plan is a JSON object that declares what SharePoint resources to create or modify. Plans are **declarative**—you describe the desired state, and the engine handles the execution.
 
 ```typescript
-import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 
-const plan: ProvisioningPlan = {
+const plan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
   version: "1.0.0",
   parameters: [
@@ -185,9 +186,9 @@ Add the library to your `tsconfig.json` if using path aliases:
 Create a plan file (`provisioning-plan.ts`):
 
 ```typescript
-import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 
-export const myPlan: ProvisioningPlan = {
+export const myPlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
   version: "1.0.0",
   parameters: [

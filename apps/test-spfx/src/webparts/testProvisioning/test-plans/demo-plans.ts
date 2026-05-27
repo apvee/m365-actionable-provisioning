@@ -1,4 +1,4 @@
-import { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 
 /**
  * Provisioning template used by the TestProvisioning webpart.
@@ -7,7 +7,7 @@ import { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint
  * - customers
  * - orders (lookup -> customers)
  */
-export const provisioningPlan: ProvisioningPlan = {
+export const provisioningPlan: M365ProvisioningPlan = {
   schemaVersion: '1.0',
   version: '1.0.0',
   parameters: [
@@ -97,7 +97,7 @@ export const provisioningPlan: ProvisioningPlan = {
  *
  * Deletes the same lists created by provisioningPlan, in a safe order.
  */
-export const deprovisioningPlan: ProvisioningPlan = {
+export const deprovisioningPlan: M365ProvisioningPlan = {
   schemaVersion: '1.0',
   version: '1.0.0',
   parameters: [

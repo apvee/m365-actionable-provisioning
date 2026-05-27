@@ -13,7 +13,7 @@
 
 import { z } from "zod";
 
-import { asSiteFieldSchema } from "../shared/field-variants.schemas";
+import { asSiteFieldSchema } from "../../_shared/schemas/field-variants-schemas";
 
 import {
     baseFieldTextSchema,
@@ -30,67 +30,13 @@ import {
     baseFieldLocationSchema,
     baseFieldImageSchema,
     baseFieldDateTimeSchema,
-} from "./field-base.schema";
+} from "../_shared/field-base-schema";
 
 /* ========================================
    createSPSiteColumn - Site Context Schemas
    ======================================== */
 
-const createSPSiteColumnTextSchema = asSiteFieldSchema(baseFieldTextSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnMultilineTextSchema = asSiteFieldSchema(baseFieldMultilineTextSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnNumberSchema = asSiteFieldSchema(baseFieldNumberSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnCurrencySchema = asSiteFieldSchema(baseFieldCurrencySchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnBooleanSchema = asSiteFieldSchema(baseFieldBooleanSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnChoiceSchema = asSiteFieldSchema(baseFieldChoiceSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnMultiChoiceSchema = asSiteFieldSchema(baseFieldMultiChoiceSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnUserSchema = asSiteFieldSchema(baseFieldUserSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnLookupSchema = asSiteFieldSchema(baseFieldLookupSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnUrlSchema = asSiteFieldSchema(baseFieldUrlSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnCalculatedSchema = asSiteFieldSchema(baseFieldCalculatedSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnLocationSchema = asSiteFieldSchema(baseFieldLocationSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnImageSchema = asSiteFieldSchema(baseFieldImageSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
-
-const createSPSiteColumnDateTimeSchema = asSiteFieldSchema(baseFieldDateTimeSchema).extend({
-    verb: z.literal("createSPSiteColumn"),
-});
+const createSPSiteColumnVerb = "createSPSiteColumn";
 
 /* ========================================
    EXPORTED SCHEMAS
@@ -107,20 +53,20 @@ const createSPSiteColumnDateTimeSchema = asSiteFieldSchema(baseFieldDateTimeSche
  * - No `showInNewForm`
  */
 export const createSPSiteColumnSchema = z.discriminatedUnion("fieldType", [
-    createSPSiteColumnTextSchema,
-    createSPSiteColumnMultilineTextSchema,
-    createSPSiteColumnNumberSchema,
-    createSPSiteColumnCurrencySchema,
-    createSPSiteColumnBooleanSchema,
-    createSPSiteColumnChoiceSchema,
-    createSPSiteColumnMultiChoiceSchema,
-    createSPSiteColumnUserSchema,
-    createSPSiteColumnLookupSchema,
-    createSPSiteColumnUrlSchema,
-    createSPSiteColumnCalculatedSchema,
-    createSPSiteColumnLocationSchema,
-    createSPSiteColumnImageSchema,
-    createSPSiteColumnDateTimeSchema,
+    asSiteFieldSchema(baseFieldTextSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldMultilineTextSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldNumberSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldCurrencySchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldBooleanSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldChoiceSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldMultiChoiceSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldUserSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldLookupSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldUrlSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldCalculatedSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldLocationSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldImageSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
+    asSiteFieldSchema(baseFieldDateTimeSchema).extend({ verb: z.literal(createSPSiteColumnVerb) }),
 ]);
 
 /**

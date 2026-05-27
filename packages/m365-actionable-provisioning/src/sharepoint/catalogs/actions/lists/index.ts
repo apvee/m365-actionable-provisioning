@@ -4,9 +4,36 @@
  * @module
  */
 
-export { CreateSPListAction } from "./create-sp-list";
-export { DeleteSPListAction } from "./delete-sp-list";
-export { EnableSPListRatingAction } from "./enable-sp-list-rating";
-export { buildModifyListUpdateProps } from "./list-update.helpers";
-export type { BuiltListUpdateProps } from "./list-update.helpers";
-export { ModifySPListAction } from "./modify-sp-list";
+export {
+  createSPListActionModule,
+  CreateSPListAction,
+  createSPListSchema,
+  DraftVersionVisibility,
+  type CreateSPListPayload,
+} from "./create-sp-list";
+export {
+  deleteSPListActionModule,
+  DeleteSPListAction,
+  deleteSPListSchema,
+  type DeleteSPListPayload,
+} from "./delete-sp-list";
+export {
+  enableSPListRatingActionModule,
+  EnableSPListRatingAction,
+  enableSPListRatingSchema,
+  type EnableSPListRatingPayload,
+} from "./enable-sp-list-rating";
+export {
+  buildModifyListUpdateProps,
+  modifySPListActionModule,
+  ModifySPListAction,
+  modifySPListSchema,
+  type BuiltListUpdateProps,
+  type ModifySPListPayload,
+} from "./modify-sp-list";
+export {
+  descriptionSchema,
+  displayNameSchema,
+  draftVersionVisibilitySchema,
+  listNameSchema,
+} from "./_shared/base-schemas";

@@ -7,23 +7,23 @@
  * Root-level action that can contain subactions.
  * Propagates PnPjs site/web handles to child actions via scope.
  *
- * The Zod schema for this action is defined in `catalogs/schemas/sites`.
+ * The Zod schema for this action is co-located in `schema.ts`.
  *
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { PermissionCheckResult } from "../../../../core/permissions";
-import { normalizeError } from "../../../../core";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { PermissionCheckResult } from "../../../../../core/permissions";
+import { normalizeError } from "../../../../../core";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
 import type { ICreateCommSiteProps, ICreateTeamSiteProps, ISiteCreationResponse } from "@pnp/sp/sites/types";
 import { Web } from "@pnp/sp/webs";
 import { Site } from "@pnp/sp/sites";
 import "@pnp/sp/sites";
 import "@pnp/sp/webs";
 
-import { resolveTargetWeb } from "../../../utils/sp-utils";
-import { createSPSiteSchema, type CreateSPSitePayload } from "../../schemas/sites/create-sp-site.schema";
+import { resolveTargetWeb } from "../../../../utils/sp-utils";
+import { createSPSiteSchema, type CreateSPSitePayload } from "./schema";
 
 /* ========================================
    ACTION DEFINITION
@@ -58,10 +58,13 @@ import { createSPSiteSchema, type CreateSPSitePayload } from "../../schemas/site
 export class CreateSPSiteAction extends ActionDefinition<
     "createSPSite",
     typeof createSPSiteSchema,
-    SPScope
+    M365Scope,
+    ProvisioningResultLight,
+    M365Clients
 > {
     readonly verb = "createSPSite";
     readonly actionSchema = createSPSiteSchema;
+    readonly requiredClients = ["spfi"] as const;
 
     /**
      * Checks permissions for site creation.
@@ -79,14 +82,14 @@ export class CreateSPSiteAction extends ActionDefinition<
      * - Assumes if context works, user has sufficient permissions
      * - Note: Does not perform deep tenant admin check to avoid extra API calls
      */
-    override async checkPermissions(
-        ctx: SPRuntimeContext<CreateSPSitePayload>
+    async checkPermissions(
+        ctx: M365RuntimeContext<CreateSPSitePayload>
     ): Promise<PermissionCheckResult> {
         const { siteType } = ctx.action.payload;
 
         // Intentionally side-effect free: preflight/JIT permission checks must not mutate scope.
         // We still resolve the effective target web so the message is informative.
-        const spfi = ctx.scopeIn.spfi;
+        const spfi = ctx.clients.spfi;
         if (spfi) {
             await resolveTargetWeb({ spfi, webUrl: ctx.action.payload.url });
         }
@@ -97,10 +100,10 @@ export class CreateSPSiteAction extends ActionDefinition<
         };
     }
 
-    override async checkCompliance(
-        ctx: ComplianceRuntimeContext<SPScope, CreateSPSitePayload>
-    ): Promise<ComplianceActionCheckResult<SPScope>> {
-        const spfi = ctx.scopeIn.spfi;
+    async checkCompliance(
+        ctx: ComplianceRuntimeContext<M365Scope, CreateSPSitePayload, M365Clients>
+    ): Promise<ComplianceActionCheckResult<M365Scope>> {
+        const spfi = ctx.clients.spfi;
         if (!spfi) {
             return { outcome: "unverifiable", reason: "missing_prerequisite", message: "SPFI instance not available in scope" };
         }
@@ -149,11 +152,11 @@ export class CreateSPSiteAction extends ActionDefinition<
     * - `site`: PnPjs Site handle bound to the created site
     * - `web`: PnPjs Web handle bound to the created site's root web
      */
-    override async handler(
-        ctx: SPRuntimeContext<CreateSPSitePayload>
-    ): Promise<SPActionResult> {
+    async handler(
+        ctx: M365RuntimeContext<CreateSPSitePayload>
+    ): Promise<M365ActionResult> {
         const payload = ctx.action.payload;
-        const spfi = ctx.scopeIn.spfi;
+        const spfi = ctx.clients.spfi;
         if (!spfi) {
             throw new Error("SPFI instance not available in scope");
         }
@@ -321,7 +324,7 @@ export class CreateSPSiteAction extends ActionDefinition<
      * @internal
      */
     private async pollSiteStatus(
-        ctx: SPRuntimeContext<CreateSPSitePayload>,
+        ctx: M365RuntimeContext<CreateSPSitePayload>,
         siteUrl: string,
         maxAttempts = 30,
         intervalMs = 10000
@@ -334,7 +337,7 @@ export class CreateSPSiteAction extends ActionDefinition<
                 // Use PnPjs site.exists() as proxy for status check
                 // Full REST endpoint would be: /_api/SPSiteManager/status?url='...'
                 // For now, we try to access the site to check if it's ready
-                const spfi = ctx.scopeIn.spfi;
+                const spfi = ctx.clients.spfi;
                 if (!spfi) {
                     throw new Error("SPFI instance not available in scope during polling");
                 }

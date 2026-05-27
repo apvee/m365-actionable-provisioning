@@ -13,7 +13,6 @@ Provides reusable functions for:
 
 | File | Description |
 |------|-------------|
-| index.ts | Barrel export |
 | field-lookup.ts | Field lookup and manipulation utilities |
 
 ## Key Functions

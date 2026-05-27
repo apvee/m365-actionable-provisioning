@@ -13,25 +13,25 @@
  *
  * Allows field subactions.
  *
- * The Zod schema for this action is defined in `catalogs/schemas/lists`.
+ * The Zod schema for this action is co-located in `schema.ts`.
  * 
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { PermissionCheckResult } from "../../../../core/permissions";
-import { normalizeError } from "../../../../core";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
-import { pickDefined } from "../../../utils/object-utils";
-import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../shared/domains/lists";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { PermissionCheckResult } from "../../../../../core/permissions";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { pickDefined } from "../../../../utils/object-utils";
+import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../../shared/domains/lists";
+import { actionExecuted, actionSkipped, compliant, nonCompliant, unverifiable, unverifiableError } from "../../_shared/action-results";
 
-import { createSPListSchema, type CreateSPListPayload } from "../../schemas/lists/create-sp-list.schema";
+import { createSPListSchema, type CreateSPListPayload } from "./schema";
 
 import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/security/web";
 import { IListInfo } from "@pnp/sp/lists";
-import { resolveTargetWeb } from "../../../utils/sp-utils";
+import { resolveTargetWeb } from "../../../../utils/sp-utils";
 
 /* ========================================
    ACTION DEFINITION
@@ -55,10 +55,13 @@ import { resolveTargetWeb } from "../../../utils/sp-utils";
 export class CreateSPListAction extends ActionDefinition<
   "createSPList",
   typeof createSPListSchema,
-  SPScope
+  M365Scope,
+  ProvisioningResultLight,
+  M365Clients
 > {
   readonly verb = "createSPList";
   readonly actionSchema = createSPListSchema;
+  readonly requiredClients = ["spfi"] as const;
 
   /**
    * Checks permissions for list creation.
@@ -70,11 +73,11 @@ export class CreateSPListAction extends ActionDefinition<
    * Resolves the target web URL (payload → scope → SPFI site URL) and runs a best-effort
    * permission probe for `ManageLists`.
    */
-  override async checkPermissions(
-    ctx: SPRuntimeContext<CreateSPListPayload>
+  async checkPermissions(
+    ctx: M365RuntimeContext<CreateSPListPayload>
   ): Promise<PermissionCheckResult> {
     const scopeIn = ctx.scopeIn;
-    const spfi = scopeIn.spfi;
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       return { decision: "deny", message: "SPFI instance not available in scope" };
     }
@@ -89,12 +92,15 @@ export class CreateSPListAction extends ActionDefinition<
     return probeManageListsPermission(web, effectiveWebUrl);
   }
 
-  override async checkCompliance(
-    ctx: ComplianceRuntimeContext<SPScope, CreateSPListPayload>
-  ): Promise<ComplianceActionCheckResult<SPScope>> {
-    const spfi = ctx.scopeIn.spfi;
+  async checkCompliance(
+    ctx: ComplianceRuntimeContext<M365Scope, CreateSPListPayload, M365Clients>
+  ): Promise<ComplianceActionCheckResult<M365Scope>> {
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
-      return { outcome: "unverifiable", reason: "missing_prerequisite", message: "SPFI instance not available in scope" };
+      return unverifiable({
+        reason: "missing_prerequisite",
+        message: "SPFI instance not available in scope",
+      });
     }
 
     const { web } = await resolveTargetWeb({
@@ -108,22 +114,16 @@ export class CreateSPListAction extends ActionDefinition<
     try {
       const found = await getListInfoByRootFolderName(web, listName);
       if (!found?.Id) {
-        return { outcome: "non_compliant", resource: listName, reason: "not_found" };
+        return nonCompliant({ resource: listName, reason: "not_found" });
       }
 
       const list = web.lists.getById(found.Id);
-      return {
-        outcome: "compliant",
+      return compliant({
         resource: listName,
         scopeDelta: { web, list },
-      };
+      });
     } catch (e) {
-      return {
-        outcome: "unverifiable",
-        resource: listName,
-        reason: "error",
-        message: normalizeError(e).message,
-      };
+      return unverifiableError(listName, e);
     }
   }
 
@@ -138,11 +138,11 @@ export class CreateSPListAction extends ActionDefinition<
    * 1) Create list using `listName` as Title (to get stable RootFolder/Name)
    * 2) Update the list Title to the user-friendly `title`
    */
-  override async handler(
-    ctx: SPRuntimeContext<CreateSPListPayload>
-  ): Promise<SPActionResult> {
+  async handler(
+    ctx: M365RuntimeContext<CreateSPListPayload>
+  ): Promise<M365ActionResult> {
     const scopeIn = ctx.scopeIn;
-    const spfi = scopeIn.spfi;
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       throw new Error("SPFI instance not available in scope");
     }
@@ -171,17 +171,14 @@ export class CreateSPListAction extends ActionDefinition<
         listId: existing.Id,
       });
 
-      return {
-        result: {
-          outcome: "skipped",
-          resource: listName,
-          reason: "already_exists",
-        },
-        scopeDelta: {
+      return actionSkipped(
+        listName,
+        "already_exists",
+        {
           web,
           list: web.lists.getById(existing.Id),
-        },
-      };
+        }
+      );
     }
 
     const additionalSettings: Partial<IListInfo> = pickDefined({
@@ -235,15 +232,12 @@ export class CreateSPListAction extends ActionDefinition<
       template,
     });
 
-    return {
-      result: {
-        outcome: "executed",
-        resource: listName,
-      },
-      scopeDelta: {
+    return actionExecuted(
+      listName,
+      {
         web,
         list: web.lists.getById(listId),
-      },
-    };
+      }
+    );
   }
 }

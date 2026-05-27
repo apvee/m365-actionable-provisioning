@@ -8,18 +8,18 @@
  * - If `scopeIn.list` exists: list field
  * - Else: root web site column (uses `scopeIn.web`)
  *
- * The Zod schema for this action is defined in `catalogs/schemas/fields`.
+ * The Zod schema for this action is co-located in `schema.ts`.
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
-import { normalizeError } from "../../../../core";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { normalizeError } from "../../../../../core";
 
-import { deleteSPFieldSchema, type DeleteSPFieldPayload } from "../../schemas/fields/delete-sp-field.schema";
+import { deleteSPFieldSchema, type DeleteSPFieldPayload } from "./schema";
 import "@pnp/sp/fields";
 import "@pnp/sp/lists";
 
-import { getFieldByNameOrTitle } from "../../../shared/domains/fields/field-lookup";
+import { getFieldByNameOrTitle } from "../../../../shared/domains/fields/field-lookup";
 
 /* ========================================
    ACTION DEFINITION
@@ -32,12 +32,15 @@ import { getFieldByNameOrTitle } from "../../../shared/domains/fields/field-look
 export class DeleteSPFieldAction extends ActionDefinition<
     "deleteSPField",
     typeof deleteSPFieldSchema,
-    SPScope
+    M365Scope,
+    ProvisioningResultLight,
+    M365Clients
 > {
     readonly verb = "deleteSPField";
     readonly actionSchema = deleteSPFieldSchema;
+    readonly requiredClients = ["spfi"] as const;
 
-    override async handler(ctx: SPRuntimeContext<DeleteSPFieldPayload>): Promise<SPActionResult> {
+    async handler(ctx: M365RuntimeContext<DeleteSPFieldPayload>): Promise<M365ActionResult> {
         const payload = ctx.action.payload;
         const resource = payload.fieldName ?? payload.fieldId ?? "field";
 
@@ -106,9 +109,9 @@ export class DeleteSPFieldAction extends ActionDefinition<
         };
     }
 
-    override async checkCompliance(
-        ctx: ComplianceRuntimeContext<SPScope, DeleteSPFieldPayload>
-    ): Promise<ComplianceActionCheckResult<SPScope>> {
+    async checkCompliance(
+        ctx: ComplianceRuntimeContext<M365Scope, DeleteSPFieldPayload, M365Clients>
+    ): Promise<ComplianceActionCheckResult<M365Scope>> {
         const payload = ctx.action.payload;
         const resource = payload.fieldName ?? payload.fieldId ?? "field";
 

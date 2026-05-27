@@ -1,7 +1,7 @@
 
-import { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 
-export const examplePlan: ProvisioningPlan = {
+export const examplePlan: M365ProvisioningPlan = {
     schemaVersion: "1.0",
     version: "1.0.0",
     parameters: [

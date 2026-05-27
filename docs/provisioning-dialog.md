@@ -78,7 +78,7 @@ import type {
 | `open` | `boolean` | Controls dialog visibility |
 | `onClose` | `() => void` | Callback when dialog should close |
 | `context` | `BaseComponentContext` | SPFx component context |
-| `planTemplate` | `ProvisioningPlan` | Provisioning plan to execute |
+| `planTemplate` | `M365ProvisioningPlan` | Provisioning plan to execute |
 | `logger` | `Logger` | Logger instance for operation logging |
 
 ### Optional Props
@@ -129,7 +129,7 @@ import {
   Button 
 } from '@fluentui/react-components';
 import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
-import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/sharepoint';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
 import type { WebPartContext } from '@microsoft/sp-webpart-base';
 import { myPlan } from './provisioning-plan';
 
@@ -526,7 +526,7 @@ import {
 } from '@fluentui/react-components';
 import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
 import type { ProvisioningCompletedEvent } from '@apvee/spfx-m365-actionable-provisioning';
-import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/sharepoint';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
 import { provisioningPlan } from './plans/provisioning-plan';
 
 interface IMyWebPartProps {

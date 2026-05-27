@@ -127,13 +127,16 @@ export const myCatalog: ActionCatalog<MyScope> = {
 
 ### 4. Engines
 
-**Engines** execute plans by referencing a catalog and a plan schema:
+**Engines** execute plans with an explicit catalog and plan schema:
 
 ```typescript
-class MyEngine extends ProvisioningEngineBase<MyScope> {
-  protected static readonly provisioningSchema = myProvisioningPlanSchema;
-  protected static readonly definitions = myCatalog.definitions;
-}
+const engine = new ProvisioningEngine<MyScope>({
+  initialScope,
+  planTemplate,
+  logger,
+  definitions: myCatalog.definitions,
+  provisioningSchema: myProvisioningPlanSchema
+});
 ```
 
 ---
@@ -194,7 +197,7 @@ core/
 ├── compliance.ts          # Compliance (drift) checking types
 ├── action.ts              # Action model and ActionDefinition base class
 ├── catalog.ts             # ActionCatalog type
-├── engine.ts              # ProvisioningEngineBase implementation
+├── engine.ts              # ProvisioningEngine implementation
 ├── engine-internals.ts    # Internal engine helpers (@internal)
 ├── provisioning-plan.ts   # Plan schema and template utilities
 ├── trace.ts               # Unified trace types and builders
@@ -394,36 +397,27 @@ export const myCatalog: ActionCatalog<MyScope> = {
 ### Step 5: Create the Engine
 
 ```typescript
-import { ProvisioningEngineBase, type EngineOptions } from "./engine";
+import { ProvisioningEngine, type EngineOptions } from "./engine";
 
-export class MyEngine extends ProvisioningEngineBase<MyScope> {
-  protected static readonly provisioningSchema = myProvisioningPlanSchema;
-  protected static readonly definitions = myCatalog.definitions;
-
-  /** Optional: validate injected runtime context before any work starts */
-  protected async validateEngineContextOrThrow(scope: MyScope): Promise<void> {
-    // Example: require tenantId to be present
-    if (!scope.tenantId) throw new Error("tenantId is required in initialScope");
-  }
-
-  /** Optional: enrich caught errors with domain-specific details */
-  protected async enrichCaughtError(
-    err: unknown,
-    ctx: { phase: "preflight" | "execute"; path?: string; verb?: string }
-  ): Promise<unknown | undefined> {
+const engine = new ProvisioningEngine<MyScope>({
+  initialScope,
+  planTemplate,
+  logger,
+  options,
+  definitions: myCatalog.definitions,
+  provisioningSchema: myProvisioningPlanSchema,
+  validateEngineContext: ({ initialScope }) => {
+    if (!initialScope.tenantId) throw new Error("tenantId is required in initialScope");
+  },
+  enrichCaughtError: (err, ctx) => {
     return { phase: ctx.phase, verb: ctx.verb, original: err };
-  }
-
-  constructor(options: EngineOptions<MyScope>) {
-    super(options);
-  }
-}
+  },
+});
 ```
 
 ### Step 6: Use the Engine
 
 ```typescript
-import { MyEngine } from "./engines/my-engine";
 import { createLogger, consoleSink } from "./logger";
 
 const plan = {
@@ -755,7 +749,7 @@ See `catalogs/example-catalog.ts` and `engines/example-engine.ts` for a full imp
 ```typescript
 import { z } from "zod";
 import { ActionDefinition, type ActionRuntimeContext } from "./action";
-import { ProvisioningEngineBase } from "./engine";
+import { ProvisioningEngine } from "./engine";
 import type { ActionCatalog } from "./catalog";
 import type { JsonObject } from "./json";
 
@@ -795,16 +789,12 @@ const catalog: ActionCatalog<MyScope> = {
 };
 
 // 5. Engine
-class MinimalEngine extends ProvisioningEngineBase<MyScope> {
-  protected static readonly provisioningSchema = provisioningPlanSchema;
-  protected static readonly definitions = catalog.definitions;
-}
-
-// 6. Usage
-const engine = new MinimalEngine({
+const engine = new ProvisioningEngine<MyScope>({
   initialScope: {},
   planTemplate: { version: "1.0.0", actions: [{ verb: "doSomething", value: "Hello World" }] },
-  logger: createLogger({ level: "info", sink: consoleSink })
+  logger: createLogger({ level: "info", sink: consoleSink }),
+  definitions: catalog.definitions,
+  provisioningSchema: provisioningPlanSchema,
 });
 
 await engine.run();
@@ -910,7 +900,7 @@ expect(result.scopeDelta?.createdListId).toBeDefined();
 - **Compliance**: `CompliancePolicy`, `ComplianceReport`, `ComplianceOutcome`, `ComplianceOverall`
 - **Actions**: `ActionDefinition`, `ActionRuntimeContext`, `ActionResult`, `ComplianceRuntimeContext`, `ComplianceActionCheckResult`
 - **Catalog**: `ActionCatalog`
-- **Engine**: `ProvisioningEngineBase`, `EngineOptions`, `EngineSnapshot`
+- **Engine**: `ProvisioningEngine`, `EngineOptions`, `EngineSnapshot`
 - **Trace**: `EngineTrace`, `ActionTraceItem`
 
 ### Key Methods

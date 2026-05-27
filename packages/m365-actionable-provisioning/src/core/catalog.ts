@@ -7,8 +7,8 @@
  * - **definitions**: All action implementations (handlers + permission checkers)
  * 
  * This type is used to organize catalogs in separate files for better
- * modularity and maintainability. Engine subclasses reference these
- * catalogs via static properties.
+ * modularity and maintainability. ProvisioningEngine instances receive these
+ * catalogs through constructor configuration.
  * 
  * @packageDocumentation
  */
@@ -45,9 +45,13 @@ import type { AnyActionDefinition } from "./action";
  * **Usage in Engine:**
  * 
  * ```typescript
- * class MyEngine extends ProvisioningEngineBase<MyScope> {
- *   protected static readonly definitions = myCatalog.definitions;
- * }
+ * const engine = new ProvisioningEngine({
+ *   definitions: myCatalog.definitions,
+ *   provisioningSchema,
+ *   initialScope,
+ *   planTemplate,
+ *   logger
+ * });
  * ```
  * 
  * **Organizing Catalogs:**

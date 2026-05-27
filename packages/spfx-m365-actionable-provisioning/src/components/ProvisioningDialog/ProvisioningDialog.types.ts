@@ -6,7 +6,7 @@
 
 import type { BaseComponentContext } from '@microsoft/sp-component-base';
 
-import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 import type { EngineStatus } from '@apvee/m365-actionable-provisioning/core';
 import type { Logger } from '@apvee/m365-actionable-provisioning/core';
 import type { CompliancePolicy } from '@apvee/m365-actionable-provisioning/core';
@@ -132,7 +132,7 @@ export type ProvisioningDialogProps = Readonly<{
     onProvisioningCompleted?: (ev: ProvisioningCompletedEvent) => void;
 
     context: BaseComponentContext;
-    planTemplate: ProvisioningPlan;
+    planTemplate: M365ProvisioningPlan;
     logger: Logger;
 
     title?: string;

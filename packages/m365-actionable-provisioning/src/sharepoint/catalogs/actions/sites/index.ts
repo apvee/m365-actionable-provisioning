@@ -4,6 +4,21 @@
  * @module
  */
 
-export { CreateSPSiteAction } from "./create-sp-site";
-export { DeleteSPSiteAction } from "./delete-sp-site";
-export { ModifySPSiteAction } from "./modify-sp-site";
+export {
+  createSPSiteActionModule,
+  CreateSPSiteAction,
+  createSPSiteSchema,
+  type CreateSPSitePayload,
+} from "./create-sp-site";
+export {
+  deleteSPSiteActionModule,
+  DeleteSPSiteAction,
+  deleteSPSiteSchema,
+  type DeleteSPSitePayload,
+} from "./delete-sp-site";
+export {
+  modifySPSiteActionModule,
+  ModifySPSiteAction,
+  modifySPSiteSchema,
+  type ModifySPSitePayload,
+} from "./modify-sp-site";

@@ -2,7 +2,7 @@
  * Core provisioning engine implementation.
  *
  * @remarks
- * The ProvisioningEngineBase class orchestrates the complete lifecycle of
+ * The ProvisioningEngine class orchestrates the complete lifecycle of
  * provisioning plan execution including:
  * - Template preprocessing with strict validation
  * - Schema-driven plan parsing and validation
@@ -11,9 +11,9 @@
  * - Real-time trace updates and observer notifications
  * - Permission caching for performance
  *
- * This is an abstract base class that must be extended with:
- * - Static `definitions` array of all action definitions
- * - Static `provisioningSchema` defining root-level plan validation
+ * This is a concrete engine configured with:
+ * - `definitions` array of all action definitions
+ * - `provisioningSchema` defining root-level plan validation
  *
  * @packageDocumentation
  */
@@ -24,7 +24,7 @@ import type { Logger } from "./logger";
 import type { PermissionCheckResult } from "./permissions";
 import type { ActionPath, EngineOutput } from "./trace";
 import { buildInitialTrace, markAction } from "./trace";
-import type { ActionNode, ActionResult, AnyActionDefinition } from "./action";
+import type { ActionNode, ActionResult, AnyActionDefinition, RuntimeClients } from "./action";
 import {
     buildProvisioningPlanParameterMap,
     resolveProvisioningPlanPlaceholders,
@@ -41,6 +41,8 @@ import {
     buildDefinitionMap,
     collectPreorderPathVerb,
     collectPreorder,
+    createMissingClientsError,
+    getMissingRequiredClients,
     PermissionCache,
     type EngineOptionsInternal,
 } from "./engine-internals";
@@ -145,74 +147,115 @@ type Observer<TResult extends JsonValue = JsonValue> = (snap: EngineSnapshotType
 export type EngineOptions = EngineOptionsInternal;
 
 /**
- * Abstract base class for provisioning engines.
+ * Hook used to validate engine-level context before the pipeline starts.
+ *
+ * @public
+ */
+export type EngineContextValidator<
+    Scope extends Record<string, unknown>,
+    Clients extends RuntimeClients = RuntimeClients
+> = (args: Readonly<{
+    initialScope: Scope;
+    clients: Clients;
+}>) => void | Promise<void>;
+
+/**
+ * Hook used to enrich errors with structured details.
+ *
+ * @public
+ */
+export type EngineErrorEnricher = (
+    err: unknown,
+    ctx: Readonly<{ phase: "preflight" | "execute"; path?: ActionPath; verb?: string }>
+) => unknown | Promise<unknown | undefined> | undefined;
+
+/**
+ * Configuration for {@link ProvisioningEngine}.
+ *
+ * @public
+ */
+export type ProvisioningEngineArgs<
+    Scope extends Record<string, unknown>,
+    TResult extends JsonValue = JsonValue,
+    Clients extends RuntimeClients = RuntimeClients
+> = Readonly<{
+    /** SDK clients available to all actions. */
+    clients?: Clients;
+
+    /** Initial scope for root actions. */
+    initialScope: Scope;
+
+    /** Provisioning plan template. */
+    planTemplate: BaseProvisioningPlan;
+
+    /** Logger instance. */
+    logger: Logger;
+
+    /** Optional engine behavior options. */
+    options?: EngineOptions;
+
+    /** Complete action definition registry. */
+    definitions: ReadonlyArray<AnyActionDefinition<Scope, TResult, Clients>>;
+
+    /** Schema used to parse and validate the resolved plan. */
+    provisioningSchema: z.ZodType<BaseProvisioningPlan>;
+
+    /** Optional context validator. */
+    validateEngineContext?: EngineContextValidator<Scope, Clients>;
+
+    /** Optional error enrichment hook. */
+    enrichCaughtError?: EngineErrorEnricher;
+}>;
+
+/**
+ * Concrete provisioning engine.
  *
  * @remarks
  * Orchestrates template preprocessing, schema validation, preflight permission checks,
  * and depth-first action execution with real-time trace updates.
  *
- * Subclasses must define:
- * - `static provisioningSchema` - Zod schema for root-level plan validation
- * - `static definitions` - Registry of all action definitions
- *
  * @example
  * ```typescript
- * class MyEngine extends ProvisioningEngineBase<MyScope> {
- *   protected static readonly provisioningSchema = z.array(z.union([createListSchema]));
- *   protected static readonly definitions = [new CreateListAction()];
- * }
- * const engine = new MyEngine({ initialScope, planTemplate, logger });
+ * const engine = new ProvisioningEngine({
+ *   clients,
+ *   initialScope,
+ *   planTemplate,
+ *   logger,
+ *   definitions,
+ *   provisioningSchema
+ * });
  * const result = await engine.run();
  * ```
  *
  * @public
  */
-export abstract class ProvisioningEngineBase<
+export class ProvisioningEngine<
     Scope extends Record<string, unknown>,
-    TResult extends JsonValue = JsonValue
+    TResult extends JsonValue = JsonValue,
+    Clients extends RuntimeClients = RuntimeClients
 > {
-    /**
-     * Static Zod schema defining the root-level plan structure.
-     * @remarks
-     * This schema defines which actions are allowed at the root level.
-     * Typically a `z.array(z.union([...root action schemas]))`.
-     * 
-     * The engine uses this schema to parse and validate the plan after
-     * parsing. Governance (subactions) is encoded within each
-     * action's schema, not managed by the engine.
-     * 
-     * **Must be defined by subclasses.**
-     */
-    protected static readonly provisioningSchema: z.ZodType<BaseProvisioningPlan>;
-
-    /**
-     * Complete registry of action definitions.
-     * 
-     * @remarks
-     * Must be defined by subclasses. Should contain one definition for every
-     * verb that can appear in plans (both root and subactions).
-     * 
-     * Used by the engine to build the verb → definition map for handler/permission
-     * lookup during execution.
-     */
-    protected static readonly definitions: ReadonlyArray<AnyActionDefinition>;
-
     private readonly initialScope: Scope;
+    private readonly clients: Clients;
     private readonly planTemplateRaw: BaseProvisioningPlan;
     private readonly logger: Logger;
     private readonly options: Required<EngineOptions>;
+    private readonly definitions: ReadonlyArray<AnyActionDefinition<Scope, TResult, Clients>>;
+    private readonly provisioningSchema: z.ZodType<BaseProvisioningPlan>;
+    private readonly validateEngineContext?: EngineContextValidator<Scope, Clients>;
+    private readonly errorEnricher?: EngineErrorEnricher;
 
     private observers: Set<Observer<TResult>> = new Set();
     private cancelled = false;
+    private hadActionFailure = false;
 
     private compliance?: EngineComplianceSnapshot;
     private complianceCancel?: { cancelled: boolean };
 
     private status: EngineStatus = "idle";
-    private out!: EngineOutput<TResult>;
+    private out: EngineOutput<TResult> = { byAction: {}, trace: buildInitialTrace([]) };
 
     private plan!: BaseProvisioningPlan;
-    private defByVerb!: Record<string, AnyActionDefinition<Scope, TResult>>;
+    private defByVerb!: Record<string, AnyActionDefinition<Scope, TResult, Clients>>;
 
     private readonly permCache = new PermissionCache();
 
@@ -233,39 +276,18 @@ export abstract class ProvisioningEngineBase<
      * The constructor does NOT start execution. Call `run()` to begin.
         * The plan is parsed and validated when `run()` is called.
      */
-    protected constructor(args: {
-        initialScope: Scope;
-        planTemplate: BaseProvisioningPlan;
-        logger: Logger;
-        options?: EngineOptions
-    }) {
+    public constructor(args: ProvisioningEngineArgs<Scope, TResult, Clients>) {
         this.initialScope = args.initialScope;
+        this.clients = args.clients ?? ({} as Clients);
         this.planTemplateRaw = args.planTemplate;
         this.logger = args.logger;
         this.options = defaultOptions(args.options);
-    }
+        this.definitions = args.definitions;
+        this.provisioningSchema = args.provisioningSchema;
+        this.validateEngineContext = args.validateEngineContext;
+        this.errorEnricher = args.enrichCaughtError;
 
-    /**
-     * Optional engine-specific context validation.
-     *
-     * @remarks
-     * Override in specialized engines to validate required context before the pipeline starts.
-     */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    protected async validateEngineContextOrThrow(_scope: Scope): Promise<void> {
-        // no-op by default
-    }
-
-    /**
-     * Optional async error enrichment hook.
-     * @remarks Override in specialized engines to extract structured details from known error types.
-     */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    protected async enrichCaughtError(
-        _err: unknown,
-        _ctx: { phase: "preflight" | "execute"; path?: ActionPath; verb?: string }
-    ): Promise<unknown | undefined> {
-        return undefined;
+        if (!this.definitions.length) throw new Error(`ProvisioningEngine requires at least one action definition.`);
     }
 
     /**
@@ -358,9 +380,10 @@ export abstract class ProvisioningEngineBase<
             return this.snapshot();
         }
         this.cancelled = false;
+        this.hadActionFailure = false;
 
         try {
-            await this.validateEngineContextOrThrow(this.initialScope);
+            await this.validateEngineContext?.({ initialScope: this.initialScope, clients: this.clients });
             await this.initializeOrThrow();
             await this.preflightPermissions();
             if (this.status === "failed" || this.status === "cancelled") return this.snapshot();
@@ -368,7 +391,7 @@ export abstract class ProvisioningEngineBase<
             return this.snapshot();
         } catch (e) {
             const message = normalizeError(e).message;
-            const enriched = await this.enrichCaughtError(e, { phase: "preflight" });
+            const enriched = await this.enrichError(e, { phase: "preflight" });
 
             this.status = "failed";
             this.emit({
@@ -530,8 +553,10 @@ export abstract class ProvisioningEngineBase<
                     this.emit();
                 } else {
                     try {
+                        this.validateRequiredClientsOrThrow(def, verb);
                         const res = await def.checkCompliance({
                             scopeIn,
+                            clients: this.clients,
                             logger: log,
                             action: { path, verb, payload },
                         });
@@ -581,7 +606,7 @@ export abstract class ProvisioningEngineBase<
                         return cur;
                     } catch (e) {
                         const message = normalizeError(e).message;
-                        const enriched = await this.enrichCaughtError(e, { phase: "preflight", path, verb });
+                        const enriched = await this.enrichError(e, { phase: "preflight", path, verb });
                         setItem({
                             path,
                             verb,
@@ -690,9 +715,8 @@ export abstract class ProvisioningEngineBase<
     private ensureRegistryAndPlanOrThrow(): void {
         if (this.plan && this.defByVerb) return;
 
-        const { definitions, provisioningSchema } = this.getEngineStaticsOrThrow();
-        this.defByVerb = buildDefinitionMap(definitions);
-        this.plan = this.parseResolvedPlanOrThrow(provisioningSchema);
+        this.defByVerb = buildDefinitionMap(this.definitions);
+        this.plan = this.parseResolvedPlanOrThrow(this.provisioningSchema);
     }
 
     /**
@@ -700,14 +724,13 @@ export abstract class ProvisioningEngineBase<
      * @internal
      */
     private async initializeOrThrow(): Promise<void> {
-        const { definitions, provisioningSchema } = this.getEngineStaticsOrThrow();
-        this.defByVerb = buildDefinitionMap(definitions);
+        this.defByVerb = buildDefinitionMap(this.definitions);
 
         this.status = "preprocessing";
         this.emit();
 
         try {
-            this.plan = this.parseResolvedPlanOrThrow(provisioningSchema);
+            this.plan = this.parseResolvedPlanOrThrow(this.provisioningSchema);
         } catch (e) {
             this.status = "failed";
 
@@ -740,24 +763,6 @@ export abstract class ProvisioningEngineBase<
         this.emit();
     }
 
-    private getEngineStaticsOrThrow(): Readonly<{
-        definitions: ReadonlyArray<AnyActionDefinition<Scope, TResult>>;
-        provisioningSchema: z.ZodType<BaseProvisioningPlan>;
-    }> {
-        const ctor = this.constructor as typeof ProvisioningEngineBase & {
-            definitions: ReadonlyArray<AnyActionDefinition>;
-            provisioningSchema: z.ZodType<BaseProvisioningPlan>;
-        };
-
-        const definitions = ctor.definitions as ReadonlyArray<AnyActionDefinition<Scope, TResult>>;
-        const provisioningSchema = ctor.provisioningSchema;
-
-        if (!definitions?.length) throw new Error(`Engine subclass must provide static "definitions" (complete registry).`);
-        if (!provisioningSchema) throw new Error(`Engine subclass must provide static "provisioningSchema".`);
-
-        return { definitions, provisioningSchema } as const;
-    }
-
     private parseResolvedPlanOrThrow(provisioningSchema: z.ZodType<BaseProvisioningPlan>): BaseProvisioningPlan {
         const paramMap = buildProvisioningPlanParameterMap(this.planTemplateRaw.parameters);
         const resolvedTemplate = {
@@ -766,6 +771,22 @@ export abstract class ProvisioningEngineBase<
         } satisfies BaseProvisioningPlan;
 
         return provisioningSchema.parse(resolvedTemplate) as BaseProvisioningPlan;
+    }
+
+    private validateRequiredClientsOrThrow(
+        def: AnyActionDefinition<Scope, TResult, Clients>,
+        verb: string
+    ): void {
+        const missing = getMissingRequiredClients(this.clients, def.requiredClients);
+        if (!missing.length) return;
+        throw createMissingClientsError(verb, def.requiredClients, missing);
+    }
+
+    private async enrichError(
+        err: unknown,
+        ctx: Readonly<{ phase: "preflight" | "execute"; path?: ActionPath; verb?: string }>
+    ): Promise<unknown | undefined> {
+        return this.errorEnricher ? this.errorEnricher(err, ctx) : undefined;
     }
 
     /* -------------------------------- Snapshot/Emit -------------------------------- */
@@ -825,6 +846,7 @@ export abstract class ProvisioningEngineBase<
      * @internal
      */
     private transitionFail(path: ActionPath, err: unknown): void {
+        this.hadActionFailure = true;
         const item = this.out.trace.byPath[path];
         const endedAt = nowIso();
         const durationMs = item.startedAt ? Date.parse(endedAt) - Date.parse(item.startedAt) : undefined;
@@ -832,7 +854,11 @@ export abstract class ProvisioningEngineBase<
         const zodError = err && typeof err === 'object' && 'issues' in err ? err as z.ZodError : undefined;
         const details = zodError && this.options.captureZodIssuesInTrace ? { issues: zodError.issues } : undefined;
         const errWithCode = err as Error & { code?: string; details?: unknown };
-        const code = errWithCode.code === "FORBIDDEN" ? "FORBIDDEN" : zodError ? "ZOD" : "ACTION_FAIL";
+        const code =
+            errWithCode.code === "FORBIDDEN" ? "FORBIDDEN" :
+                errWithCode.code === "MISSING_CLIENT" ? "MISSING_CLIENT" :
+                    zodError ? "ZOD" :
+                        "ACTION_FAIL";
         const message = err && typeof err === 'object' && 'message' in err ? (err as Error).message : String(err);
 
         this.out = { ...this.out, trace: markAction(this.out.trace, path, "fail", { endedAt, durationMs, error: { message, code, details } }) };
@@ -888,12 +914,14 @@ export abstract class ProvisioningEngineBase<
 
                     const ctx = {
                         scopeIn: scopeForPerms,
+                        clients: this.clients,
                         out: this.out,
                         logger: log,
                         action: { path, verb: String(node.verb), payload },
                     };
 
                     try {
+                        this.validateRequiredClientsOrThrow(def, String(node.verb));
                         log.info("checkPermissions started");
                         const perm = await def.checkPermissions(ctx);
 
@@ -911,18 +939,20 @@ export abstract class ProvisioningEngineBase<
                             denied.code = "FORBIDDEN";
                             denied.details = perm;
                             this.transitionFail(path, denied);
-                            this.status = "failed";
+                            if (this.options.failFast) this.status = "failed";
                             this.emit({ cursor: { path, verb: String(node.verb) }, error: { message: denied.message, code: "FORBIDDEN", details: perm } });
                             return;
                         }
                     } catch (e) {
                         this.transitionFail(path, e);
-                        this.status = "failed";
+                        if (this.options.failFast) this.status = "failed";
                         const message = e && typeof e === 'object' && 'message' in e ? (e as Error).message : String(e);
-                        const enriched = await this.enrichCaughtError(e, { phase: "preflight", path, verb: String(node.verb) });
+                        const enriched = await this.enrichError(e, { phase: "preflight", path, verb: String(node.verb) });
+                        const errWithCode = e as Error & { code?: string; details?: unknown };
+                        const code = errWithCode.code === "MISSING_CLIENT" ? "MISSING_CLIENT" : "PREFLIGHT_PERMS";
                         this.emit({
                             cursor: { path, verb: String(node.verb) },
-                            error: { message, code: "PREFLIGHT_PERMS", ...(enriched !== undefined ? { details: enriched } : {}) },
+                            error: { message, code, ...(enriched !== undefined ? { details: enriched } : {}) },
                         });
                         return;
                     }
@@ -962,6 +992,10 @@ export abstract class ProvisioningEngineBase<
             const def = this.defByVerb[String(node.verb)];
             const log = this.logger.withScope({ path, verb: String(node.verb) });
 
+            if (this.out.trace.byPath[path]?.status === "fail") {
+                return scopeIn;
+            }
+
             this.out = { ...this.out, trace: markAction(this.out.trace, path, "running", { startedAt: nowIso() }) };
             this.emit({ cursor: { path, verb: String(node.verb) } });
             log.info("Action started");
@@ -977,15 +1011,19 @@ export abstract class ProvisioningEngineBase<
 
                 // JIT perms if not already preflight-allowed
                 if (typeof def.checkPermissions === "function") {
+                    this.validateRequiredClientsOrThrow(def, String(node.verb));
+
                     const existing = this.out.trace.byPath[path]?.permissions;
                     const preflightAllowed = existing?.decision === "allow" && this.out.trace.byPath[path]?.permissionsSource === "preflight";
+                    const mustRunJit = Boolean(def.requiredClients?.length);
 
-                    if (!preflightAllowed) {
+                    if (!preflightAllowed || mustRunJit) {
                         // Permission checks must not mutate the real execution scope.
                         const scopeForPerms = { ...scopeIn } as Scope;
 
                         const ctx = {
                             scopeIn: scopeForPerms,
+                            clients: this.clients,
                             out: this.out,
                             logger: log.withScope({ phase: "jit" }),
                             action: { path, verb: String(node.verb), payload },
@@ -1012,11 +1050,14 @@ export abstract class ProvisioningEngineBase<
                     }
                 }
 
-                // handler optional (we do NOT implement actions now, per your request)
+                // Handlers are optional so catalogs can support validation-only actions.
                 let actionResult: ActionResult<Scope, TResult> = {};
                 if (def.handler) {
+                    this.validateRequiredClientsOrThrow(def, String(node.verb));
+
                     const ctx = {
                         scopeIn,
+                        clients: this.clients,
                         out: this.out,
                         logger: log,
                         action: { path, verb: String(node.verb), payload },
@@ -1049,16 +1090,17 @@ export abstract class ProvisioningEngineBase<
                 const zodError = e && typeof e === 'object' && 'issues' in e ? e as z.ZodError : undefined;
                 const code =
                     errWithCode.code === "FORBIDDEN" ? "FORBIDDEN" :
+                        errWithCode.code === "MISSING_CLIENT" ? "MISSING_CLIENT" :
                         zodError ? "ZOD" :
                             "ACTION_FAIL";
 
-                const enriched = await this.enrichCaughtError(e, { phase: "execute", path, verb: String(node.verb) });
+                const enriched = await this.enrichError(e, { phase: "execute", path, verb: String(node.verb) });
                 const details =
                     errWithCode.details === undefined ? enriched :
                         enriched === undefined ? errWithCode.details :
                             { details: errWithCode.details, enriched };
 
-                this.status = "failed";
+                if (this.options.failFast) this.status = "failed";
                 this.emit({
                     cursor: { path, verb: String(node.verb) },
                     error: {
@@ -1080,7 +1122,7 @@ export abstract class ProvisioningEngineBase<
         }
 
         if (this.cancelled) this.status = "cancelled";
-        else if ((this.status as EngineStatus) !== "failed") this.status = "completed";
+        else if ((this.status as EngineStatus) !== "failed") this.status = this.hadActionFailure ? "failed" : "completed";
         this.emit();
     }
 }

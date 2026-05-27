@@ -15,11 +15,9 @@ This module provides a declarative approach to SharePoint provisioning through:
 ```
 packages/m365-actionable-provisioning/src/sharepoint/
 ├── index.ts          # Public API barrel export
-├── engines/          # Provisioning engine implementations
-├── types/            # Type definitions (SPScope, SPRuntimeContext, etc.)
 ├── utils/            # General utilities (error handling, web resolution)
-├── shared/           # Internal helpers (NOT exported publicly)
-└── catalogs/         # Action definitions, schemas, and registry
+├── shared/           # SharePoint domain helpers
+└── catalogs/         # Co-located action modules and schema composition
 ```
 
 ## Files
@@ -32,23 +30,23 @@ packages/m365-actionable-provisioning/src/sharepoint/
 
 | Folder | Description |
 |--------|-------------|
-| engines/ | Provisioning engine implementations |
-| types/ | Type definitions (SPScope, SPRuntimeContext, etc.) |
 | utils/ | General utilities (error handling, web resolution) |
-| shared/ | Internal helpers (NOT exported publicly) |
-| catalogs/ | Action definitions, schemas, and registry |
+| shared/ | SharePoint domain helpers used by action handlers |
+| catalogs/ | Co-located action modules, definitions and schema composition |
 
 ## Usage
 
 ```typescript
-import { SharePointProvisioningEngine, type SPScope } from "@apvee/m365-actionable-provisioning/sharepoint";
-import { createLogger, consoleSink } from "@apvee/m365-actionable-provisioning/core";
+import { ProvisioningEngine, createLogger, consoleSink } from "@apvee/m365-actionable-provisioning/core";
+import { m365ActionDefinitions, m365ProvisioningPlanSchema, type M365Scope } from "@apvee/m365-actionable-provisioning/m365";
 
-const engine = new SharePointProvisioningEngine({
-  spfi: rootSPFI,
-  initialScope: {},
+const engine = new ProvisioningEngine<M365Scope>({
+  clients: { spfi: rootSPFI },
+  initialScope: { web: targetWeb },
   planTemplate: provisioningPlan,
   logger: createLogger({ level: "info", sink: consoleSink }),
+  definitions: m365ActionDefinitions,
+  provisioningSchema: m365ProvisioningPlanSchema,
 });
 
 const result = await engine.run();
@@ -58,4 +56,4 @@ const result = await engine.run();
 
 - **New action types**: See [catalogs/actions/ADDING_ACTIONS.md](catalogs/actions/ADDING_ACTIONS.md)
 - **Shared utilities**: Add to `shared/` folder (internal only)
-- **Public types**: Add to `types/` folder and update `types/index.ts`
+- **Public M365 types**: Add to the `m365/` module and re-export intentionally

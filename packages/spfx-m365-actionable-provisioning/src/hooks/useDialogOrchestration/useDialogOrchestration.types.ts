@@ -1,7 +1,7 @@
 import type * as React from 'react';
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
 import type { CompliancePolicy, ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
 import type { Logger } from '@apvee/m365-actionable-provisioning/core';
 import type { DialogAction, DialogState } from '../../components/ProvisioningDialog/ProvisioningDialog.state';
 import type { ProvisioningCompletedEvent, ProvisioningDialogMode } from '../../components/ProvisioningDialog/ProvisioningDialog.types';

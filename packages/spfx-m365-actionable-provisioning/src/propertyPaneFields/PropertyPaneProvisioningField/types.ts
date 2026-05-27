@@ -6,7 +6,7 @@
 
 import type { BaseComponentContext } from '@microsoft/sp-component-base';
 
-import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 import type { Logger } from '@apvee/m365-actionable-provisioning/core';
 import type { ProvisioningDialogStrings } from '../../components';
 import type { TemplateAppliedState } from '../../models';
@@ -23,9 +23,9 @@ export type PropertyPaneProvisioningFieldProps = Readonly<{
   label?: string;
 
   /** Action plan to provision the template. */
-  provisioningActionPlan: ProvisioningPlan;
+  provisioningActionPlan: M365ProvisioningPlan;
   /** Optional action plan to deprovision the template. */
-  deprovisioningActionPlan?: ProvisioningPlan;
+  deprovisioningActionPlan?: M365ProvisioningPlan;
 
   /** Target site URL (undefined means current site). */
   targetSiteUrl?: string;
@@ -96,8 +96,8 @@ export type PropertyPaneProvisioningFieldViewProps = Readonly<{
   targetSiteUrl?: string;
   getEffectiveState: () => TemplateAppliedState | undefined;
 
-  provisioningActionPlan: ProvisioningPlan;
-  deprovisioningActionPlan?: ProvisioningPlan;
+  provisioningActionPlan: M365ProvisioningPlan;
+  deprovisioningActionPlan?: M365ProvisioningPlan;
 
   enableComplianceCheck: boolean;
   complianceAutoRunOnOpen: boolean;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { siteSubactionSchema } from "./site-subactions.schemas";
+import { subactionsOf } from "../../_shared/schemas/action-schemas";
+import { siteSubactionSchema } from "../../_composition/site-subactions-schema";
 
 /* ========================================
    SCHEMA
@@ -24,7 +25,7 @@ const communicationSiteSchema = z.object({
   shareByEmailEnabled: z.boolean().optional(),
   webTemplate: z.enum(["SITEPAGEPUBLISHING#0", "STS#3"]).optional(),
 
-  subactions: z.array(siteSubactionSchema).optional(),
+  subactions: subactionsOf(siteSubactionSchema),
 });
 
 const teamSiteSchema = z.object({
@@ -45,7 +46,7 @@ const teamSiteSchema = z.object({
   hubSiteId: z.string().uuid().optional(),
   siteDesignId: z.string().uuid().optional(),
 
-  subactions: z.array(siteSubactionSchema).optional(),
+  subactions: subactionsOf(siteSubactionSchema),
 });
 
 export const createSPSiteSchema = z.discriminatedUnion("siteType", [

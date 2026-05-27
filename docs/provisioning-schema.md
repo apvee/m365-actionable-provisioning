@@ -22,9 +22,9 @@ A provisioning plan is a JSON object validated by Zod schemas. The root structur
 ### Schema Definition
 
 ```typescript
-import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 
-interface ProvisioningPlan {
+interface M365ProvisioningPlan {
   schemaVersion?: string;  // Defaults to "1.0"
   version: string;         // Your plan version (e.g., "1.0.0")
   title?: string;          // Optional plan title
@@ -37,7 +37,7 @@ interface ProvisioningPlan {
 ### Minimal Plan Example
 
 ```typescript
-const minimalPlan: ProvisioningPlan = {
+const minimalPlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
   version: "1.0.0",
   actions: [
@@ -53,7 +53,7 @@ const minimalPlan: ProvisioningPlan = {
 ### Complete Plan Example
 
 ```typescript
-const completePlan: ProvisioningPlan = {
+const completePlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
   version: "1.0.0",
   title: "Engineering Portal Setup",
@@ -852,8 +852,8 @@ The library exports Zod schemas and constants for advanced validation and type g
 ```typescript
 import {
   // Schema objects
-  actionsSchema,
-  provisioningPlanSchema,
+  m365ActionsSchema,
+  m365ProvisioningPlanSchema,
   
   // Constants
   DEFAULT_SCHEMA_VERSION,
@@ -861,33 +861,33 @@ import {
   
   // Type
   type SupportedSchemaVersion,
-  type ProvisioningPlan,
-} from '@apvee/m365-actionable-provisioning/sharepoint';
+  type M365ProvisioningPlan,
+} from '@apvee/m365-actionable-provisioning/m365';
 ```
 
-### provisioningPlanSchema
+### m365ProvisioningPlanSchema
 
 The root Zod schema for validating entire provisioning plans:
 
 ```typescript
-import { provisioningPlanSchema } from '@apvee/m365-actionable-provisioning/sharepoint';
+import { m365ProvisioningPlanSchema } from '@apvee/m365-actionable-provisioning/m365';
 
 // Validate a plan
-const result = provisioningPlanSchema.safeParse(myPlan);
+const result = m365ProvisioningPlanSchema.safeParse(myPlan);
 if (!result.success) {
   console.error('Invalid plan:', result.error.issues);
 }
 ```
 
-### actionsSchema
+### m365ActionsSchema
 
 The Zod schema for validating individual actions:
 
 ```typescript
-import { actionsSchema } from '@apvee/m365-actionable-provisioning/sharepoint';
+import { m365ActionsSchema } from '@apvee/m365-actionable-provisioning/m365';
 
 // Validate an action
-const result = actionsSchema.safeParse(myAction);
+const result = m365ActionsSchema.safeParse(myAction);
 ```
 
 ### Schema Version Constants
@@ -954,9 +954,9 @@ import {
 ### Example 1: Communication Site with Lists
 
 ```typescript
-import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 
-export const engineeringPortalPlan: ProvisioningPlan = {
+export const engineeringPortalPlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
   version: "1.0.0",
   title: "Engineering Portal Setup",
@@ -1031,7 +1031,7 @@ export const engineeringPortalPlan: ProvisioningPlan = {
 ### Example 2: Team Site with Document Library
 
 ```typescript
-export const projectTeamPlan: ProvisioningPlan = {
+export const projectTeamPlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
   version: "1.0.0",
   parameters: [

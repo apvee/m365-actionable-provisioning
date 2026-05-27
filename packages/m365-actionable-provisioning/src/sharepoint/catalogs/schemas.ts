@@ -1,72 +1,70 @@
-// Field schemas - direct imports from source files
+// Compatibility facade: schema ownership lives with each action module.
 export {
   addSPFieldSchema,
   type AddSPFieldPayload,
-} from "./fields/add-sp-field.schema";
+} from "./actions/fields/add-sp-field";
 
 export {
   createSPSiteColumnSchema,
   type CreateSPSiteColumnPayload,
-} from "./fields/create-sp-site-column.schema";
+} from "./actions/fields/create-sp-site-column";
 
 export {
   modifySPFieldSchema,
   modifySPFieldSchema_List,
   modifySPFieldSchema_Site,
   type ModifySPFieldPayload,
-} from "./fields/modify-sp-field.schema";
+} from "./actions/fields/modify-sp-field";
 
 export {
   deleteSPFieldSchema,
   deleteSPFieldSchema_List,
   deleteSPFieldSchema_Site,
   type DeleteSPFieldPayload,
-} from "./fields/delete-sp-field.schema";
+} from "./actions/fields/delete-sp-field";
 
-// List schemas - direct imports from source files
 export {
   DraftVersionVisibility,
   draftVersionVisibilitySchema,
   displayNameSchema as listDisplayNameSchema,
   listNameSchema,
-} from "./lists/base.schemas";
+} from "./actions/lists";
 
 export {
   createSPListSchema,
   type CreateSPListPayload,
-} from "./lists/create-sp-list.schema";
+} from "./actions/lists/create-sp-list";
 
 export {
   modifySPListSchema,
   type ModifySPListPayload,
-} from "./lists/modify-sp-list.schema";
+} from "./actions/lists/modify-sp-list";
 
 export {
   deleteSPListSchema,
   type DeleteSPListPayload,
-} from "./lists/delete-sp-list.schema";
+} from "./actions/lists/delete-sp-list";
 
 export {
   enableSPListRatingSchema,
   type EnableSPListRatingPayload,
-} from "./lists/enable-sp-list-rating.schema";
+} from "./actions/lists/enable-sp-list-rating";
 
-export { listSubactionSchema } from "./lists/list-subactions.schemas";
+export { listSubactionSchema } from "./actions/_composition/list-subactions-schema";
 
-// Site schemas - direct imports from source files
 export {
   createSPSiteSchema,
   type CreateSPSitePayload,
-} from "./sites/create-sp-site.schema";
+} from "./actions/sites/create-sp-site";
 
 export {
   modifySPSiteSchema,
   type ModifySPSitePayload,
-} from "./sites/modify-sp-site.schema";
+} from "./actions/sites/modify-sp-site";
 
 export {
   deleteSPSiteSchema,
   type DeleteSPSitePayload,
-} from "./sites/delete-sp-site.schema";
+} from "./actions/sites/delete-sp-site";
 
-export { siteSubactionSchema } from "./sites/site-subactions.schemas";
+export { siteSubactionSchema } from "./actions/_composition/site-subactions-schema";

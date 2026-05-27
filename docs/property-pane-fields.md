@@ -78,8 +78,8 @@ function PropertyPaneProvisioningField(
 | Prop | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `context` | `BaseComponentContext` | ✓ | - | SPFx component context |
-| `provisioningActionPlan` | `ProvisioningPlan` | ✓ | - | Plan to provision |
-| `deprovisioningActionPlan` | `ProvisioningPlan` | ✗ | - | Plan to deprovision (enables deprovision button) |
+| `provisioningActionPlan` | `M365ProvisioningPlan` | ✓ | - | Plan to provision |
+| `deprovisioningActionPlan` | `M365ProvisioningPlan` | ✗ | - | Plan to deprovision (enables deprovision button) |
 | `targetSiteUrl` | `string` | ✗ | Current site | Target site URL |
 | `label` | `string` | ✗ | Localized default | Field label |
 | `effectiveState` | `TemplateAppliedState` | ✗ | - | Current effective state |

@@ -10,24 +10,24 @@
  * 
  * No subactions allowed (leaf action).
  *
- * The Zod schema for this action is defined in `catalogs/schemas/lists`.
+ * The Zod schema for this action is co-located in `schema.ts`.
  * 
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { PermissionCheckResult } from "../../../../core/permissions";
-import { normalizeError } from "../../../../core";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { PermissionCheckResult } from "../../../../../core/permissions";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { actionExecuted, actionSkipped, compliant, nonCompliant, unverifiable, unverifiableError } from "../../_shared/action-results";
 
 import "@pnp/sp/lists";
 import "@pnp/sp/security/web";
 
-import { resolveTargetWeb } from "../../../utils/sp-utils";
+import { resolveTargetWeb } from "../../../../utils/sp-utils";
 
-import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../shared/domains/lists";
+import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../../shared/domains/lists";
 
-import { deleteSPListSchema, type DeleteSPListPayload } from "../../schemas/lists/delete-sp-list.schema";
+import { deleteSPListSchema, type DeleteSPListPayload } from "./schema";
 
 /* ========================================
    ACTION DEFINITION
@@ -49,10 +49,13 @@ import { deleteSPListSchema, type DeleteSPListPayload } from "../../schemas/list
 export class DeleteSPListAction extends ActionDefinition<
   "deleteSPList",
   typeof deleteSPListSchema,
-  SPScope
+  M365Scope,
+  ProvisioningResultLight,
+  M365Clients
 > {
   readonly verb = "deleteSPList";
   readonly actionSchema = deleteSPListSchema;
+  readonly requiredClients = ["spfi"] as const;
 
   /**
    * Checks permissions for list deletion.
@@ -64,11 +67,11 @@ export class DeleteSPListAction extends ActionDefinition<
    * Resolves the target web URL (payload → scope → SPFI site URL) and runs a best-effort
    * permission probe for `ManageLists`.
    */
-  override async checkPermissions(
-    ctx: SPRuntimeContext<DeleteSPListPayload>
+  async checkPermissions(
+    ctx: M365RuntimeContext<DeleteSPListPayload>
   ): Promise<PermissionCheckResult> {
     const scopeIn = ctx.scopeIn;
-    const spfi = scopeIn.spfi;
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       return { decision: "deny", message: "SPFI instance not available in scope" };
     }
@@ -93,11 +96,11 @@ export class DeleteSPListAction extends ActionDefinition<
    * - If the list doesn't exist, the action returns a "skipped" result (no throw).
    * - If it exists, it is recycled by default.
    */
-  override async handler(
-    ctx: SPRuntimeContext<DeleteSPListPayload>
-  ): Promise<SPActionResult> {
+  async handler(
+    ctx: M365RuntimeContext<DeleteSPListPayload>
+  ): Promise<M365ActionResult> {
     const scopeIn = ctx.scopeIn;
-    const spfi = scopeIn.spfi;
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       throw new Error("SPFI instance not available in scope");
     }
@@ -114,13 +117,7 @@ export class DeleteSPListAction extends ActionDefinition<
     const found = await getListInfoByRootFolderName(web, listName);
     if (!found?.Id) {
       ctx.logger.info("List not found; skipping delete", { webUrl: resolvedWebUrl, listName });
-      return {
-        result: {
-          outcome: "skipped",
-          resource: listName,
-          reason: "not_found",
-        },
-      };
+      return actionSkipped(listName, "not_found");
     }
 
     const list = web.lists.getById(found.Id);
@@ -128,30 +125,23 @@ export class DeleteSPListAction extends ActionDefinition<
     if (recycle) {
       const recycleBinItemId = await list.recycle();
       ctx.logger.info("List recycled", { webUrl: resolvedWebUrl, listName, listId: found.Id, recycleBinItemId });
-      return {
-        result: {
-          outcome: "executed",
-          resource: listName,
-        },
-      };
+      return actionExecuted(listName);
     }
 
     await list.delete();
     ctx.logger.info("List deleted", { webUrl: resolvedWebUrl, listName, listId: found.Id });
-    return {
-      result: {
-        outcome: "executed",
-        resource: listName,
-      },
-    };
+    return actionExecuted(listName);
   }
 
-  override async checkCompliance(
-    ctx: ComplianceRuntimeContext<SPScope, DeleteSPListPayload>
-  ): Promise<ComplianceActionCheckResult<SPScope>> {
-    const spfi = ctx.scopeIn.spfi;
+  async checkCompliance(
+    ctx: ComplianceRuntimeContext<M365Scope, DeleteSPListPayload, M365Clients>
+  ): Promise<ComplianceActionCheckResult<M365Scope>> {
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
-      return { outcome: "unverifiable", reason: "missing_prerequisite", message: "SPFI instance not available in scope" };
+      return unverifiable({
+        reason: "missing_prerequisite",
+        message: "SPFI instance not available in scope",
+      });
     }
 
     const { web } = await resolveTargetWeb({
@@ -164,16 +154,11 @@ export class DeleteSPListAction extends ActionDefinition<
     try {
       const found = await getListInfoByRootFolderName(web, listName);
       if (!found?.Id) {
-        return { outcome: "compliant", resource: listName };
+        return compliant({ resource: listName });
       }
-      return { outcome: "non_compliant", resource: listName, reason: "still_exists" };
+      return nonCompliant({ resource: listName, reason: "still_exists" });
     } catch (e) {
-      return {
-        outcome: "unverifiable",
-        resource: listName,
-        reason: "error",
-        message: normalizeError(e).message,
-      };
+      return unverifiableError(listName, e);
     }
   }
 }

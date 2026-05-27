@@ -11,9 +11,10 @@ import {
   listNameSchema,
   DraftVersionVisibility,
   draftVersionVisibilitySchema,
-} from "./base.schemas";
+} from "../_shared/base-schemas";
 
-import { listSubactionSchema } from "./list-subactions.schemas";
+import { subactionsOf } from "../../_shared/schemas/action-schemas";
+import { listSubactionSchema } from "../../_composition/list-subactions-schema";
 
 // Numeric list template type. PnPjs and REST treat this as a number (BaseTemplate).
 const templateTypeSchema = z
@@ -49,7 +50,7 @@ export const createSPListSchema = z.object({
   noCrawl: z.boolean().optional(),
   enableModeration: z.boolean().optional(),
 
-  subactions: z.array(listSubactionSchema).optional(),
+  subactions: subactionsOf(listSubactionSchema),
 });
 
 export type CreateSPListPayload = z.infer<typeof createSPListSchema>;

@@ -1,6 +1,6 @@
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
 import type { ComplianceLogEntry } from '../../models';
 import type { DialogUiError } from './ProvisioningDialog.state';
 import type { ComplianceLogPanelStrings, ComplianceLogEntryStrings } from '../LogPanel/LogPanel.types';

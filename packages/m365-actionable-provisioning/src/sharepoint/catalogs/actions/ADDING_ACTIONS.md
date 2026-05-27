@@ -1,99 +1,79 @@
 # Adding New SharePoint Provisioning Actions
 
-This guide explains how to add new provisioning actions to the SharePoint catalog.
+SharePoint actions are owned by action modules. A module keeps the action schema,
+handler and catalog metadata in one folder, while shared SharePoint domain logic
+stays in `_shared` folders.
 
-## Overview
+## Folder Shape
 
-Each action in the provisioning system follows a consistent structure:
+Create one folder per action:
 
-1. **Schema** - Zod schema defining the action payload
-2. **Handler** - Action class extending `ActionDefinition`
-3. **Registry** - Registration in the action registry
+```text
+actions/<domain>/<action-name>/
+  action.ts
+  schema.ts
+  index.ts
+```
 
-## Quick Start
+Use shared code only for behavior that is genuinely reused:
 
-To add a new action (e.g., `createSPContentType`):
+```text
+actions/_shared/schemas/        # shared Zod primitives
+actions/_composition/           # root/subaction schema composition
+actions/<domain>/_shared/       # domain-local helpers
+actions/shared/                 # cross-domain action utilities
+```
 
-1. Create schema in `schemas/<domain>/create-sp-content-type.schema.ts`
-2. Create handler in `actions/<domain>/create-sp-content-type.ts`
-3. Register in `action.registry.ts`
-4. Export from barrel files
+## 1. Schema
 
-## Step-by-Step Guide
+Define the full action schema in the action folder.
 
-### 1. Create the Schema
-
-Create a new file in `schemas/<domain>/` with the Zod schema:
-
-```typescript
-// schemas/content-types/create-sp-content-type.schema.ts
+```ts
+// actions/content-types/create-sp-content-type/schema.ts
 import { z } from "zod";
-import { basePayloadSchema, subactionsSchema } from "../shared/base.schemas";
+import { leafSubactionsSchema } from "../../_shared/schemas/action-schemas";
 
-/**
- * Payload schema for createSPContentType action.
- */
-export const createSPContentTypePayloadSchema = z.object({
-  name: z.string().min(1, "Content type name is required"),
+export const createSPContentTypeSchema = z.object({
+  verb: z.literal("createSPContentType"),
+  name: z.string().min(1),
   parentId: z.string().optional(),
   description: z.string().optional(),
   group: z.string().optional(),
-  webUrl: z.string().optional(),
-  siteUrl: z.string().optional(),
+  webUrl: z.string().url().optional(),
+  subactions: leafSubactionsSchema,
 });
 
-/**
- * Full action schema including verb, payload, and optional subactions.
- */
-export const createSPContentTypeSchema = z.object({
-  verb: z.literal("createSPContentType"),
-  payload: createSPContentTypePayloadSchema.merge(basePayloadSchema),
-  subactions: subactionsSchema.optional(),
-});
-
-export type CreateSPContentTypePayload = z.infer<typeof createSPContentTypePayloadSchema>;
+export type CreateSPContentTypePayload = z.infer<typeof createSPContentTypeSchema>;
 ```
 
-### 2. Create the Handler
+## 2. Handler
 
-Create a new file in `actions/<domain>/` with the action class:
+Implement the concrete `ActionDefinition` next to its schema.
 
-```typescript
-// actions/content-types/create-sp-content-type.ts
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { PermissionCheckResult } from "../../../../core/permissions";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../sp-types";
-import { resolveTargetWeb } from "../../../sp-utils";
-import { createSPContentTypeSchema, type CreateSPContentTypePayload } from "../../schemas/content-types";
+```ts
+// actions/content-types/create-sp-content-type/action.ts
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { PermissionCheckResult } from "../../../../../core/permissions";
+import type { M365ActionResult, M365Clients, M365RuntimeContext, M365Scope, ProvisioningResultLight } from "../../../../../m365";
+import { resolveTargetWeb } from "../../../../utils/sp-utils";
+import { probeManageListsPermission } from "../../../../shared/domains/lists";
 
-// Import from shared helpers for common patterns
-import { probeManageListsPermission, resolveWebUrlString } from "../../../shared/domains/lists";
+import { createSPContentTypeSchema, type CreateSPContentTypePayload } from "./schema";
 
-/**
- * CreateSPContentType action implementation.
- */
 export class CreateSPContentTypeAction extends ActionDefinition<
   "createSPContentType",
   typeof createSPContentTypeSchema,
-  SPScope
+  M365Scope,
+  ProvisioningResultLight,
+  M365Clients
 > {
   readonly verb = "createSPContentType";
   readonly actionSchema = createSPContentTypeSchema;
+  readonly requiredClients = ["spfi"] as const;
 
-  /**
-   * Check permissions for content type creation.
-   * 
-   * @remarks
-   * Only implement permission logic specific to this action.
-   * Use shared helpers for common patterns.
-   */
-  async checkPermissions(
-    ctx: SPRuntimeContext<CreateSPContentTypePayload>
-  ): Promise<PermissionCheckResult> {
-    const spfi = ctx.scopeIn.spfi;
-    if (!spfi) {
-      return { decision: "deny", message: "SPFI instance not available in scope" };
-    }
+  async checkPermissions(ctx: M365RuntimeContext<CreateSPContentTypePayload>): Promise<PermissionCheckResult> {
+    const spfi = ctx.clients.spfi;
+    if (!spfi) return { decision: "deny", message: "SPFI instance not available in scope" };
 
     const { web, effectiveWebUrl } = await resolveTargetWeb({
       spfi,
@@ -104,207 +84,72 @@ export class CreateSPContentTypeAction extends ActionDefinition<
     return probeManageListsPermission(web, effectiveWebUrl);
   }
 
-  /**
-   * Execute the content type creation.
-   * 
-   * @remarks
-   * Implement idempotent behavior - check if exists before creating.
-   */
-  async handler(
-    ctx: SPRuntimeContext<CreateSPContentTypePayload>
-  ): Promise<SPActionResult> {
-    const spfi = ctx.scopeIn.spfi;
-    if (!spfi) {
-      throw new Error("SPFI instance not available in scope");
-    }
+  async handler(ctx: M365RuntimeContext<CreateSPContentTypePayload>): Promise<M365ActionResult> {
+    const spfi = ctx.clients.spfi;
+    if (!spfi) throw new Error("SPFI instance not available in scope");
 
-    const { name, parentId, description, group } = ctx.action.payload;
-
-    const { web, effectiveWebUrl } = await resolveTargetWeb({
-      spfi,
-      scopeWeb: ctx.scopeIn.web,
-      webUrl: ctx.action.payload.webUrl,
-    });
-
-    // TODO: Implement content type creation logic
-    // Check if exists → skip if found
-    // Create if not exists
-    // Return result
-
-    ctx.logger.info("Content type created", { name, webUrl: effectiveWebUrl });
     return {
       result: {
         outcome: "executed",
-        resource: name,
+        resource: ctx.action.payload.name,
       },
     };
   }
 
-  /**
-   * Check compliance - verify the content type exists.
-   */
   async checkCompliance(
-    ctx: ComplianceRuntimeContext<SPScope, CreateSPContentTypePayload>
-  ): Promise<ComplianceActionCheckResult<SPScope>> {
-    const spfi = ctx.scopeIn.spfi;
-    if (!spfi) {
-      return { outcome: "unverifiable", reason: "missing_prerequisite", message: "SPFI instance not available" };
-    }
-
-    const { name } = ctx.action.payload;
-    
-    // TODO: Check if content type exists
-    // If exists with expected config → compliant
-    // If exists with wrong config → non_compliant
-    // If not exists → non_compliant
-
-    return { outcome: "compliant", resource: name };
+    ctx: ComplianceRuntimeContext<M365Scope, CreateSPContentTypePayload, M365Clients>
+  ): Promise<ComplianceActionCheckResult<M365Scope>> {
+    return { outcome: "unverifiable", resource: ctx.action.payload.name, reason: "not_supported" };
   }
 }
 ```
 
-### 3. Register the Action
+## 3. Action Module
 
-Add the action to `action.registry.ts`:
+Export schema, handler and placement metadata from `index.ts`.
 
-```typescript
-// In action.registry.ts
+```ts
+// actions/content-types/create-sp-content-type/index.ts
+import { defineSharePointActionModule } from "../../action-module";
 
-// Add import at top
-import { CreateSPContentTypeAction } from "./actions/content-types/create-sp-content-type";
+import { CreateSPContentTypeAction } from "./action";
+import { createSPContentTypeSchema } from "./schema";
 
-// Add to registry initialization
-registry.register("createSPContentType", () => new CreateSPContentTypeAction());
+export { CreateSPContentTypeAction } from "./action";
+export { createSPContentTypeSchema, type CreateSPContentTypePayload } from "./schema";
+
+export const createSPContentTypeActionModule = defineSharePointActionModule({
+  verb: "createSPContentType",
+  schema: createSPContentTypeSchema,
+  definition: new CreateSPContentTypeAction(),
+  placements: ["root"] as const,
+});
 ```
 
-### 4. Update Barrel Exports
+If a placement needs a stricter schema variant, add `schemasByPlacement` and use it
+from the relevant composition file.
 
-Export from the domain's index file:
+## 4. Composition
 
-```typescript
-// schemas/content-types/index.ts
-export * from "./create-sp-content-type.schema";
+Add the module to:
 
-// actions/content-types/index.ts
-export * from "./create-sp-content-type";
-```
+- `actions/action-modules.ts` for runtime definitions
+- `catalogs/provisioning.schema.ts` if it is allowed at root
+- `actions/_composition/site-subactions-schema.ts` if it is allowed under site actions
+- `actions/_composition/list-subactions-schema.ts` if it is allowed under list actions
 
-Update the root schema union in `provisioning.schema.ts`:
-
-```typescript
-// Add to the action discriminated union
-export const actionsSchema = z.discriminatedUnion("verb", [
-  // ... existing actions
-  createSPContentTypeSchema,
-]);
-```
-
-## Action Structure
-
-Every action class should implement these three methods:
-
-| Method | Purpose | Return Type |
-|--------|---------|-------------|
-| `checkPermissions` | Validate user has required permissions | `Promise<PermissionCheckResult>` |
-| `handler` | Execute the action (idempotent) | `Promise<SPActionResult>` |
-| `checkCompliance` | Verify resource matches expected state | `Promise<ComplianceActionCheckResult>` |
-
-## Using Shared Helpers
-
-### SPFI Validation
-
-```typescript
-import { requireSpfi, getSpfiOrUnverifiable, isUnverifiableResult } from "../../shared";
-
-// In handler (throws if missing)
-const spfi = requireSpfi(ctx);
-
-// In compliance (returns unverifiable result if missing)
-const spOrResult = getSpfiOrUnverifiable(ctx, ctx.action);
-if (isUnverifiableResult(spOrResult)) {
-  return spOrResult;
-}
-const spfi = spOrResult;
-```
-
-### Permission Checking
-
-```typescript
-import { probeManageListsPermission } from "../../../shared/domains/lists";
-
-// Reuse list permission helper
-return probeManageListsPermission(web, effectiveWebUrl);
-```
-
-### Field Operations
-
-```typescript
-import { getFieldByNameOrTitle, checkFieldExists } from "../../../shared/domains/fields";
-
-// Check if field exists
-const exists = await checkFieldExists(container, fieldName);
-```
-
-## Testing
-
-1. Add unit tests in `tests/provisioning/catalogs/actions/<domain>/`
-2. Test all three methods: `checkPermissions`, `handler`, `checkCompliance`
-3. Test idempotent behavior (running twice should be safe)
-4. Test error scenarios and edge cases
+The public schema facade in `catalogs/schemas.ts` should re-export public schemas
+only; it should not own implementation logic.
 
 ## Checklist
 
-- [ ] Schema created with proper Zod validation
-- [ ] Handler extends `ActionDefinition<Verb, Schema, SPScope>`
-- [ ] `checkPermissions` validates user access
-- [ ] `handler` is idempotent (safe to run multiple times)
-- [ ] `checkCompliance` verifies expected state
-- [ ] Action registered in `action.registry.ts`
-- [ ] Schema added to root discriminated union
-- [ ] Exports added to barrel files
-- [ ] JSDoc comments with examples
-- [ ] Unit tests written
-
-## Common Patterns
-
-### Idempotent Create
-
-```typescript
-const existing = await findResource(name);
-if (existing) {
-  ctx.logger.info("Resource already exists, skipping");
-  return { result: { outcome: "skipped", resource: name, reason: "already_exists" } };
-}
-
-await createResource(name);
-return { result: { outcome: "executed", resource: name } };
-```
-
-### Idempotent Delete
-
-```typescript
-const existing = await findResource(name);
-if (!existing) {
-  ctx.logger.info("Resource not found, skipping delete");
-  return { result: { outcome: "skipped", resource: name, reason: "not_found" } };
-}
-
-await deleteResource(name);
-return { result: { outcome: "executed", resource: name } };
-```
-
-### Compliance Non-Compliant vs Unverifiable
-
-```typescript
-// Resource should exist but doesn't → non_compliant
-if (!found) {
-  return { outcome: "non_compliant", resource: name, reason: "not_found" };
-}
-
-// Cannot check state (error, missing permissions) → unverifiable
-try {
-  const state = await checkState();
-} catch (e) {
-  return { outcome: "unverifiable", reason: "error", message: e.message };
-}
-```
+- [ ] Folder created under `actions/<domain>/<action-name>/`
+- [ ] `schema.ts` exports the Zod schema and payload type
+- [ ] `action.ts` extends `ActionDefinition`
+- [ ] `requiredClients` declares `spfi` or `graphClient` when needed
+- [ ] Handler is idempotent where the SharePoint operation allows it
+- [ ] Compliance uses the same expected-state semantics as execution
+- [ ] `index.ts` exports an action module via `defineSharePointActionModule`
+- [ ] Composition files include the action in the correct placement
+- [ ] Public schema facade exports any public schema/type
+- [ ] Smoke/build validation passes

@@ -27,67 +27,13 @@ import {
     baseFieldLocationSchema,
     baseFieldImageSchema,
     baseFieldDateTimeSchema,
-} from "./field-base.schema";
+} from "../_shared/field-base-schema";
 
 /* ========================================
    addSPField - List Context Schemas
    ======================================== */
 
-const addSPFieldTextSchema = baseFieldTextSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldMultilineTextSchema = baseFieldMultilineTextSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldNumberSchema = baseFieldNumberSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldCurrencySchema = baseFieldCurrencySchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldBooleanSchema = baseFieldBooleanSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldChoiceSchema = baseFieldChoiceSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldMultiChoiceSchema = baseFieldMultiChoiceSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldUserSchema = baseFieldUserSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldLookupSchema = baseFieldLookupSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldUrlSchema = baseFieldUrlSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldCalculatedSchema = baseFieldCalculatedSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldLocationSchema = baseFieldLocationSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldImageSchema = baseFieldImageSchema.extend({
-    verb: z.literal("addSPField"),
-});
-
-const addSPFieldDateTimeSchema = baseFieldDateTimeSchema.extend({
-    verb: z.literal("addSPField"),
-});
+const addSPFieldVerb = "addSPField";
 
 /* ========================================
    EXPORTED SCHEMAS
@@ -104,20 +50,20 @@ const addSPFieldDateTimeSchema = baseFieldDateTimeSchema.extend({
  * - `showInNewForm`
  */
 export const addSPFieldSchema = z.discriminatedUnion("fieldType", [
-    addSPFieldTextSchema,
-    addSPFieldMultilineTextSchema,
-    addSPFieldNumberSchema,
-    addSPFieldCurrencySchema,
-    addSPFieldBooleanSchema,
-    addSPFieldChoiceSchema,
-    addSPFieldMultiChoiceSchema,
-    addSPFieldUserSchema,
-    addSPFieldLookupSchema,
-    addSPFieldUrlSchema,
-    addSPFieldCalculatedSchema,
-    addSPFieldLocationSchema,
-    addSPFieldImageSchema,
-    addSPFieldDateTimeSchema,
+    baseFieldTextSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldMultilineTextSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldNumberSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldCurrencySchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldBooleanSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldChoiceSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldMultiChoiceSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldUserSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldLookupSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldUrlSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldCalculatedSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldLocationSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldImageSchema.extend({ verb: z.literal(addSPFieldVerb) }),
+    baseFieldDateTimeSchema.extend({ verb: z.literal(addSPFieldVerb) }),
 ]);
 
 /**

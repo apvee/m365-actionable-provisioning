@@ -1,2 +1,2 @@
 export * from './core';
-export * from './sharepoint';
+export * from './m365';

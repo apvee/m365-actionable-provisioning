@@ -7,24 +7,24 @@
  * Root-level action that can contain subactions.
  * Propagates PnPjs site/web handles to child actions via scope.
  *
- * The Zod schema for this action is defined in `catalogs/schemas/sites`.
+ * The Zod schema for this action is co-located in `schema.ts`.
  *
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { PermissionCheckResult } from "../../../../core/permissions";
-import { normalizeError } from "../../../../core";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
-import { pickDefined } from "../../../utils/object-utils";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { PermissionCheckResult } from "../../../../../core/permissions";
+import { normalizeError } from "../../../../../core";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { pickDefined } from "../../../../utils/object-utils";
 import "@pnp/sp/webs";
 import { Site } from "@pnp/sp/sites";
 import { PermissionKind } from "@pnp/sp/security";
 import "@pnp/sp/security/web";
 
-import { resolveTargetWeb } from "../../../utils/sp-utils";
-import { modifySPSiteSchema, type ModifySPSitePayload } from "../../schemas/sites/modify-sp-site.schema";
-import { compareProperties } from "../shared/compliance-compare";
+import { resolveTargetWeb } from "../../../../utils/sp-utils";
+import { modifySPSiteSchema, type ModifySPSitePayload } from "./schema";
+import { compareProperties } from "../../shared/compliance-compare";
 
 /* ========================================
    ACTION DEFINITION
@@ -49,10 +49,13 @@ import { compareProperties } from "../shared/compliance-compare";
 export class ModifySPSiteAction extends ActionDefinition<
     "modifySPSite",
     typeof modifySPSiteSchema,
-    SPScope
+    M365Scope,
+    ProvisioningResultLight,
+    M365Clients
 > {
     readonly verb = "modifySPSite";
     readonly actionSchema = modifySPSiteSchema;
+    readonly requiredClients = ["spfi"] as const;
 
     /**
      * Checks permissions for site modification.
@@ -64,11 +67,11 @@ export class ModifySPSiteAction extends ActionDefinition<
      * Verifies the user has ManageWeb permission on the target site.
      * Note: permission checks are intentionally side-effect free (no scope mutation).
      */
-    override async checkPermissions(
-        ctx: SPRuntimeContext<ModifySPSitePayload>
+    async checkPermissions(
+        ctx: M365RuntimeContext<ModifySPSitePayload>
     ): Promise<PermissionCheckResult> {
         const scopeIn = ctx.scopeIn;
-        const spfi = scopeIn.spfi;
+        const spfi = ctx.clients.spfi;
         if (!spfi) {
             return {
                 decision: "deny",
@@ -117,12 +120,12 @@ export class ModifySPSiteAction extends ActionDefinition<
      * Updates site/web properties (title, description) and propagates
      * PnPjs Site/Web handles to child actions via scopeDelta.
      */
-    override async handler(
-        ctx: SPRuntimeContext<ModifySPSitePayload>
-    ): Promise<SPActionResult> {
+    async handler(
+        ctx: M365RuntimeContext<ModifySPSitePayload>
+    ): Promise<M365ActionResult> {
         const { siteUrl: payloadSiteUrl } = ctx.action.payload;
 
-        const spfi = ctx.scopeIn.spfi;
+        const spfi = ctx.clients.spfi;
         if (!spfi) {
             throw new Error("SPFI instance not available in scope");
         }
@@ -191,10 +194,10 @@ export class ModifySPSiteAction extends ActionDefinition<
         };
     }
 
-    override async checkCompliance(
-        ctx: ComplianceRuntimeContext<SPScope, ModifySPSitePayload>
-    ): Promise<ComplianceActionCheckResult<SPScope>> {
-        const spfi = ctx.scopeIn.spfi;
+    async checkCompliance(
+        ctx: ComplianceRuntimeContext<M365Scope, ModifySPSitePayload, M365Clients>
+    ): Promise<ComplianceActionCheckResult<M365Scope>> {
+        const spfi = ctx.clients.spfi;
         if (!spfi) {
             return { outcome: "unverifiable", reason: "missing_prerequisite", message: "SPFI instance not available in scope" };
         }

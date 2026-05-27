@@ -5,14 +5,14 @@
  * @packageDocumentation
  */
 
-import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 
 export type Mode = 'provision' | 'deprovision' | 'compliance';
 
 export function getDialogPlanTemplate(
   mode: Mode,
-  plans: { provisioningActionPlan: ProvisioningPlan; deprovisioningActionPlan?: ProvisioningPlan }
-): ProvisioningPlan {
+  plans: { provisioningActionPlan: M365ProvisioningPlan; deprovisioningActionPlan?: M365ProvisioningPlan }
+): M365ProvisioningPlan {
   return mode === 'deprovision'
     ? (plans.deprovisioningActionPlan ?? plans.provisioningActionPlan)
     : plans.provisioningActionPlan;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { nonEmptyStringSchema } from "../shared/strings.schemas";
+import { nonEmptyStringSchema } from "../../_shared/schemas/strings-schemas";
 
 export const displayNameSchema = z
   .string()

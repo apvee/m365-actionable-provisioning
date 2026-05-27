@@ -11,11 +11,11 @@
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
 
-import { createSPSiteColumnSchema, type CreateSPSiteColumnPayload } from "../../schemas/fields/create-sp-site-column.schema";
-import { handleFieldCreation, checkFieldCompliance } from "./field-handler";
+import { createSPSiteColumnSchema, type CreateSPSiteColumnPayload } from "./schema";
+import { handleFieldCreation, checkFieldCompliance } from "../_shared/field-handler";
 
 /* ========================================
    ACTION DEFINITION
@@ -33,12 +33,15 @@ import { handleFieldCreation, checkFieldCompliance } from "./field-handler";
 export class CreateSPSiteColumnAction extends ActionDefinition<
     "createSPSiteColumn",
     typeof createSPSiteColumnSchema,
-    SPScope
+    M365Scope,
+    ProvisioningResultLight,
+    M365Clients
 > {
     readonly verb = "createSPSiteColumn";
     readonly actionSchema = createSPSiteColumnSchema;
+    readonly requiredClients = ["spfi"] as const;
 
-    override async handler(ctx: SPRuntimeContext<CreateSPSiteColumnPayload>): Promise<SPActionResult> {
+    async handler(ctx: M365RuntimeContext<CreateSPSiteColumnPayload>): Promise<M365ActionResult> {
         return handleFieldCreation({
             def: ctx.action.payload,
             scopeIn: ctx.scopeIn,
@@ -46,10 +49,9 @@ export class CreateSPSiteColumnAction extends ActionDefinition<
         });
     }
 
-    override async checkCompliance(
-        ctx: ComplianceRuntimeContext<SPScope, CreateSPSiteColumnPayload>
-    ): Promise<ComplianceActionCheckResult<SPScope>> {
+    async checkCompliance(
+        ctx: ComplianceRuntimeContext<M365Scope, CreateSPSiteColumnPayload, M365Clients>
+    ): Promise<ComplianceActionCheckResult<M365Scope>> {
         return checkFieldCompliance(ctx);
     }
 }
-

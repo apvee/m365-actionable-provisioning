@@ -7,7 +7,7 @@
 
 import type { EngineSnapshotTyped, EngineStatus } from '@apvee/m365-actionable-provisioning/core';
 import type { EngineTrace, ActionStatus } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
 import type { ProvisioningLogEntry, ProvisioningLogStatus } from '../models';
 
 export type ProvisioningUiProgress = Readonly<{

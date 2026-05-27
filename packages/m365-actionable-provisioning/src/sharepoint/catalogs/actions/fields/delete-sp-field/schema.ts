@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { leafSubactionsSchema } from "../../_shared/schemas/action-schemas";
+
 /* ========================================
    deleteSPField
    ======================================== */
@@ -12,7 +14,7 @@ export const deleteSPFieldSchema = z
     fieldName: z.string().min(1).optional(),
     fieldId: z.string().min(1).optional(),
 
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
   })
   .refine((v) => Boolean(v.fieldId || v.fieldName), {
     message: "Either fieldId or fieldName must be provided",

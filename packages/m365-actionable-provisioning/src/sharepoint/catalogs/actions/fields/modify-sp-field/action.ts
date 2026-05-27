@@ -8,15 +8,15 @@
  * - If `scopeIn.list` exists: list field
  * - Else: root web site column (uses `scopeIn.web`)
  *
- * The Zod schema for this action is defined in `catalogs/schemas/fields`.
+ * The Zod schema for this action is co-located in `schema.ts`.
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
-import { normalizeError } from "../../../../core";
-import { pickDefined } from "../../../utils/object-utils";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { normalizeError } from "../../../../../core";
+import { pickDefined } from "../../../../utils/object-utils";
 
-import { modifySPFieldSchema, type ModifySPFieldPayload } from "../../schemas/fields/modify-sp-field.schema";
+import { modifySPFieldSchema, type ModifySPFieldPayload } from "./schema";
 
 import {
     ChoiceFieldFormatType,
@@ -34,7 +34,7 @@ import "@pnp/sp/lists";
 import {
     applyFieldViewSettings,
     getFieldByNameOrTitle,
-} from "../../../shared/domains/fields/field-lookup";
+} from "../../../../shared/domains/fields/field-lookup";
 
 /* ========================================
    ACTION DEFINITION
@@ -47,12 +47,15 @@ import {
 export class ModifySPFieldAction extends ActionDefinition<
     "modifySPField",
     typeof modifySPFieldSchema,
-    SPScope
+    M365Scope,
+    ProvisioningResultLight,
+    M365Clients
 > {
     readonly verb = "modifySPField";
     readonly actionSchema = modifySPFieldSchema;
+    readonly requiredClients = ["spfi"] as const;
 
-    override async handler(ctx: SPRuntimeContext<ModifySPFieldPayload>): Promise<SPActionResult> {
+    async handler(ctx: M365RuntimeContext<ModifySPFieldPayload>): Promise<M365ActionResult> {
         const def = ctx.action.payload;
         const resource = def.fieldName;
 
@@ -401,9 +404,9 @@ export class ModifySPFieldAction extends ActionDefinition<
         };
     }
 
-    override async checkCompliance(
-        ctx: ComplianceRuntimeContext<SPScope, ModifySPFieldPayload>
-    ): Promise<ComplianceActionCheckResult<SPScope>> {
+    async checkCompliance(
+        ctx: ComplianceRuntimeContext<M365Scope, ModifySPFieldPayload, M365Clients>
+    ): Promise<ComplianceActionCheckResult<M365Scope>> {
         const def = ctx.action.payload;
         const resource = def.fieldName;
 

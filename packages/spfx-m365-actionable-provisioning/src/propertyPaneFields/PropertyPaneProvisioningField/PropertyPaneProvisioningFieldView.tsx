@@ -18,7 +18,7 @@ import {
 } from '@fluentui/react-components';
 import { Flex } from '@apvee/react-layout-kit';
 
-import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
 
 import {
@@ -237,7 +237,7 @@ export const PropertyPaneProvisioningFieldView: React.FC<PropertyPaneProvisionin
     };
   }, [dialogStrings, mode]);
 
-  const dialogPlanTemplate: ProvisioningPlan = getDialogPlanTemplate(mode, {
+  const dialogPlanTemplate: M365ProvisioningPlan = getDialogPlanTemplate(mode, {
     provisioningActionPlan: props.provisioningActionPlan,
     deprovisioningActionPlan: props.deprovisioningActionPlan,
   });

@@ -1,61 +1,46 @@
 /**
- * SPFx provisioning engine public API.
+ * SharePoint provisioning action API.
  *
  * @remarks
- * This module provides a unified provisioning framework for SharePoint and Microsoft Graph
- * using PnPjs v4.
+ * This module exposes SharePoint action definitions, schemas, utilities and
+ * action implementations. Use the M365 module for engine/catalog construction.
  *
  * **Main Exports:**
- * - `SPFxProvisioningEngine` - SPFx entry point (currently SharePoint-only wrapper)
- * - `SharePointProvisioningEngine` - SharePoint-specific engine
- * - `actionRegistry` - SharePoint action registry
+ * - `sharePointActionDefinitions` - SharePoint action definitions
+ * - `sharePointActionsSchema` - SharePoint root action schema
  * - Types and utilities
  *
  * @packageDocumentation
  */
 
 /* ========================================
-   ENGINES
-   ======================================== */
-
-export {
-  SPFxProvisioningEngine,
-  type SPFxProvisioningEngineOptions,
-} from "./engines";
-
-export {
-  SharePointProvisioningEngine,
-  type SharePointProvisioningEngineOptions
-} from "./engines";
-
-/* ========================================
    TYPES
    ======================================== */
 
 export type {
-  SPScope,
-  SPRuntimeContext,
+  M365ActionResult,
+  M365Clients,
+  M365RuntimeContext,
+  M365Scope,
   ProvisioningOutcome,
-  SkipReason,
   ProvisioningResultLight,
-  SPActionResult,
-} from "./types";
+  SkipReason,
+} from "../m365";
 
 /* ========================================
    CATALOGS
    ======================================== */
 
 export {
-  actionRegistry,
-  actionsSchema,
-  provisioningPlanSchema,
-  type ProvisioningPlan,
-  DEFAULT_SCHEMA_VERSION,
-  SUPPORTED_SCHEMA_VERSIONS,
-  type SupportedSchemaVersion,
+  sharePointActionDefinitions,
+  sharePointActionsSchema,
+  sharePointRootActionSchema,
+  sharePointRootActionSchemas,
+  type SharePointActionDefinition,
 } from "./catalogs";
 
 export * from "./catalogs/schemas";
+export { extractPnPjsHttpErrorDetails } from "./utils";
 
 /* ========================================
    ACTIONS (for advanced use cases)
@@ -63,46 +48,46 @@ export * from "./catalogs/schemas";
 
 // Site actions - using direct imports
 export { CreateSPSiteAction } from "./catalogs/actions/sites";
-export { createSPSiteSchema, type CreateSPSitePayload } from "./catalogs/schemas/sites/create-sp-site.schema";
+export { createSPSiteSchema, type CreateSPSitePayload } from "./catalogs/actions/sites/create-sp-site";
 
 export { ModifySPSiteAction } from "./catalogs/actions/sites";
-export { modifySPSiteSchema, type ModifySPSitePayload } from "./catalogs/schemas/sites/modify-sp-site.schema";
+export { modifySPSiteSchema, type ModifySPSitePayload } from "./catalogs/actions/sites/modify-sp-site";
 
 export { DeleteSPSiteAction } from "./catalogs/actions/sites";
-export { deleteSPSiteSchema, type DeleteSPSitePayload } from "./catalogs/schemas/sites/delete-sp-site.schema";
+export { deleteSPSiteSchema, type DeleteSPSitePayload } from "./catalogs/actions/sites/delete-sp-site";
 
 // List actions - using direct imports
 export { CreateSPListAction } from "./catalogs/actions/lists";
-export { createSPListSchema, type CreateSPListPayload, DraftVersionVisibility } from "./catalogs/schemas/lists/create-sp-list.schema";
+export { createSPListSchema, type CreateSPListPayload, DraftVersionVisibility } from "./catalogs/actions/lists/create-sp-list";
 
 export { ModifySPListAction } from "./catalogs/actions/lists";
-export { modifySPListSchema, type ModifySPListPayload } from "./catalogs/schemas/lists/modify-sp-list.schema";
+export { modifySPListSchema, type ModifySPListPayload } from "./catalogs/actions/lists/modify-sp-list";
 
 export { DeleteSPListAction } from "./catalogs/actions/lists";
-export { deleteSPListSchema, type DeleteSPListPayload } from "./catalogs/schemas/lists/delete-sp-list.schema";
+export { deleteSPListSchema, type DeleteSPListPayload } from "./catalogs/actions/lists/delete-sp-list";
 
 export { EnableSPListRatingAction } from "./catalogs/actions/lists";
-export { enableSPListRatingSchema, type EnableSPListRatingPayload } from "./catalogs/schemas/lists/enable-sp-list-rating.schema";
+export { enableSPListRatingSchema, type EnableSPListRatingPayload } from "./catalogs/actions/lists/enable-sp-list-rating";
 
 // Field actions - using direct imports
 export { AddSPFieldAction } from "./catalogs/actions/fields";
-export { addSPFieldSchema, type AddSPFieldPayload } from "./catalogs/schemas/fields/add-sp-field.schema";
+export { addSPFieldSchema, type AddSPFieldPayload } from "./catalogs/actions/fields/add-sp-field";
 
 export { CreateSPSiteColumnAction } from "./catalogs/actions/fields";
-export { createSPSiteColumnSchema, type CreateSPSiteColumnPayload } from "./catalogs/schemas/fields/create-sp-site-column.schema";
+export { createSPSiteColumnSchema, type CreateSPSiteColumnPayload } from "./catalogs/actions/fields/create-sp-site-column";
 
 // Field handler (for advanced use cases)
 export {
   handleFieldCreation,
   checkFieldCompliance,
   type FieldHandlerContext
-} from "./catalogs/actions/fields/field-handler";
+} from "./catalogs/actions/fields/_shared/field-handler";
 
 export { ModifySPFieldAction } from "./catalogs/actions/fields";
-export { modifySPFieldSchema, type ModifySPFieldPayload } from "./catalogs/schemas/fields/modify-sp-field.schema";
+export { modifySPFieldSchema, type ModifySPFieldPayload } from "./catalogs/actions/fields/modify-sp-field";
 
 export { DeleteSPFieldAction } from "./catalogs/actions/fields";
-export { deleteSPFieldSchema, type DeleteSPFieldPayload } from "./catalogs/schemas/fields/delete-sp-field.schema";
+export { deleteSPFieldSchema, type DeleteSPFieldPayload } from "./catalogs/actions/fields/delete-sp-field";
 
 /* ========================================
    CORE RE-EXPORTS (for convenience)

@@ -2,9 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Web } from '@pnp/sp/webs';
 import '@pnp/sp/webs';
 
-import { SPFxProvisioningEngine } from '@apvee/m365-actionable-provisioning/sharepoint';
-import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { EngineSnapshotTyped, ProvisioningEngine } from '@apvee/m365-actionable-provisioning/core';
+import {
+  createM365ProvisioningEngine,
+  type M365Clients,
+  type M365Scope,
+  type ProvisioningResultLight,
+} from '@apvee/m365-actionable-provisioning/m365';
+import { extractPnPjsHttpErrorDetails } from '@apvee/m365-actionable-provisioning/sharepoint';
 import { normalizeUrl } from '../../utils/url';
 
 import { useSPInstance } from '../useSPInstance/useSPInstance';
@@ -52,7 +57,7 @@ export function useSPFxProvisioningEngine(
 
   const [snapshot, setSnapshot] = useState<EngineSnapshotTyped<ProvisioningResultLight>>();
 
-  const engineRef = useRef<SPFxProvisioningEngine | undefined>(undefined);
+  const engineRef = useRef<ProvisioningEngine<M365Scope, ProvisioningResultLight, M365Clients> | undefined>(undefined);
   const subscriptionRef = useRef<{ unsubscribe: () => void } | undefined>(undefined);
 
   const engineVersionRef = useRef(0);
@@ -93,12 +98,21 @@ export function useSPFxProvisioningEngine(
     pendingSnapshotRef.current = undefined;
     setSnapshot(undefined);
 
-    const engine = new SPFxProvisioningEngine({
-      spfi: sp,
+    const engine = createM365ProvisioningEngine({
+      clients: { spfi: sp },
       initialScope: mergedInitialScope,
       planTemplate: options.planTemplate,
       logger: options.logger,
       options: options.engineOptions,
+      validateEngineContext: ({ clients }) => {
+        if (!clients.spfi) {
+          throw new Error('SPFI instance not available in engine clients');
+        }
+      },
+      enrichCaughtError: async (err) => {
+        const http = await extractPnPjsHttpErrorDetails(err);
+        return http ? { http } : undefined;
+      },
     });
 
     engineRef.current = engine;

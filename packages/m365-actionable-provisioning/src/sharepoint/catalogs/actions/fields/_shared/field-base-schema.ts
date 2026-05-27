@@ -14,7 +14,8 @@
 
 import { z } from "zod";
 
-import { nonEmptyStringSchema } from "../shared/strings.schemas";
+import { leafSubactionsSchema } from "../../_shared/schemas/action-schemas";
+import { nonEmptyStringSchema } from "../../_shared/schemas/strings-schemas";
 
 /* ========================================
    SHARED FIELD PRIMITIVES
@@ -31,7 +32,7 @@ export const displayNameSchema = nonEmptyStringSchema;
  * Base schema for Text fields (without verb).
  */
 export const baseFieldTextSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Text"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -61,7 +62,7 @@ export const baseFieldTextSchema = z.object({
  * Base schema for MultilineText fields (without verb).
  */
 export const baseFieldMultilineTextSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("MultilineText"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -90,7 +91,7 @@ export const baseFieldMultilineTextSchema = z.object({
  * Base schema for Number fields (without verb).
  */
 export const baseFieldNumberSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Number"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -121,7 +122,7 @@ export const baseFieldNumberSchema = z.object({
  * Base schema for Currency fields (without verb).
  */
 export const baseFieldCurrencySchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Currency"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -152,7 +153,7 @@ export const baseFieldCurrencySchema = z.object({
  * Base schema for Boolean fields (without verb).
  */
 export const baseFieldBooleanSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Boolean"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -175,7 +176,7 @@ export const baseFieldBooleanSchema = z.object({
  * Base schema for Choice fields (without verb).
  */
 export const baseFieldChoiceSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Choice"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -206,7 +207,7 @@ export const baseFieldChoiceSchema = z.object({
  * Base schema for MultiChoice fields (without verb).
  */
 export const baseFieldMultiChoiceSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("MultiChoice"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -236,7 +237,7 @@ export const baseFieldMultiChoiceSchema = z.object({
  * Base schema for User fields (without verb).
  */
 export const baseFieldUserSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("User"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -267,7 +268,7 @@ export const baseFieldUserSchema = z.object({
  * Base schema for Lookup fields (without verb).
  */
 export const baseFieldLookupSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Lookup"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -308,7 +309,7 @@ export const baseFieldLookupSchema = z.object({
  * Base schema for Url fields (without verb).
  */
 export const baseFieldUrlSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Url"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -337,7 +338,7 @@ export const baseFieldUrlSchema = z.object({
  * Base schema for Calculated fields (without verb).
  */
 export const baseFieldCalculatedSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Calculated"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -367,7 +368,7 @@ export const baseFieldCalculatedSchema = z.object({
  * Base schema for Location fields (without verb).
  */
 export const baseFieldLocationSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Location"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -393,7 +394,7 @@ export const baseFieldLocationSchema = z.object({
  * Base schema for Image fields (without verb).
  */
 export const baseFieldImageSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Image"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -419,7 +420,7 @@ export const baseFieldImageSchema = z.object({
  * Base schema for DateTime fields (without verb).
  */
 export const baseFieldDateTimeSchema = z.object({
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("DateTime"),
     fieldName: fieldNameSchema,
     displayName: displayNameSchema,
@@ -506,4 +507,3 @@ export type BaseFieldPayload = z.infer<typeof baseFieldTextSchema>
     | z.infer<typeof baseFieldLocationSchema>
     | z.infer<typeof baseFieldImageSchema>
     | z.infer<typeof baseFieldDateTimeSchema>;
-

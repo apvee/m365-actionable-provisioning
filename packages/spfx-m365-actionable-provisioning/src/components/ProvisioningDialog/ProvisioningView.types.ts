@@ -1,5 +1,5 @@
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/sharepoint';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
 import type { ProvisioningLogEntry } from '../../models';
 import type { ProvisioningUiSummary } from '../../utils/trace-to-log';
 import type { LogPanelStrings, ProvisioningLogEntryStrings } from '../LogPanel/LogPanel.types';

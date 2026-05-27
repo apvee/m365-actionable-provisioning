@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-import { nonEmptyStringSchema } from "../shared/strings.schemas";
-import { asSiteFieldSchema } from "../shared/field-variants.schemas";
+import { leafSubactionsSchema } from "../../_shared/schemas/action-schemas";
+import { nonEmptyStringSchema } from "../../_shared/schemas/strings-schemas";
+import { asSiteFieldSchema } from "../../_shared/schemas/field-variants-schemas";
 
 /* ========================================
    SHARED
@@ -15,7 +16,7 @@ const fieldNameSchema = nonEmptyStringSchema;
 
 const modifySPFieldTextSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Text"),
 
     // Target field (internal name or Title)
@@ -45,7 +46,7 @@ const modifySPFieldTextSchema_Site = asSiteFieldSchema(modifySPFieldTextSchema);
 
 const modifySPFieldMultilineTextSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("MultilineText"),
 
     // Target field (internal name or Title)
@@ -78,7 +79,7 @@ const modifySPFieldMultilineTextSchema_Site = asSiteFieldSchema(modifySPFieldMul
 
 const modifySPFieldNumberSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Number"),
 
     // Target field (internal name or Title)
@@ -111,7 +112,7 @@ const modifySPFieldNumberSchema_Site = asSiteFieldSchema(modifySPFieldNumberSche
 
 const modifySPFieldDateTimeSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("DateTime"),
 
     // Target field (internal name or Title)
@@ -162,7 +163,7 @@ const modifySPFieldDateTimeSchema_Site = asSiteFieldSchema(modifySPFieldDateTime
 
 const modifySPFieldBooleanSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Boolean"),
 
     // Target field (internal name or Title)
@@ -187,7 +188,7 @@ const modifySPFieldBooleanSchema_Site = asSiteFieldSchema(modifySPFieldBooleanSc
 
 const modifySPFieldChoiceSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Choice"),
 
     // Target field (internal name or Title)
@@ -220,7 +221,7 @@ const modifySPFieldChoiceSchema_Site = asSiteFieldSchema(modifySPFieldChoiceSche
 
 const modifySPFieldMultiChoiceSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("MultiChoice"),
 
     // Target field (internal name or Title)
@@ -252,7 +253,7 @@ const modifySPFieldMultiChoiceSchema_Site = asSiteFieldSchema(modifySPFieldMulti
 
 const modifySPFieldUserSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("User"),
 
     // Target field (internal name or Title)
@@ -285,7 +286,7 @@ const modifySPFieldUserSchema_Site = asSiteFieldSchema(modifySPFieldUserSchema);
 
 const modifySPFieldLookupSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Lookup"),
 
     // Target field (internal name or Title)
@@ -313,7 +314,7 @@ const modifySPFieldLookupSchema_Site = asSiteFieldSchema(modifySPFieldLookupSche
 
 const modifySPFieldUrlSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Url"),
 
     // Target field (internal name or Title)
@@ -343,7 +344,7 @@ const modifySPFieldUrlSchema_Site = asSiteFieldSchema(modifySPFieldUrlSchema);
 
 const modifySPFieldCalculatedSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Calculated"),
 
     // Target field (internal name or Title)
@@ -375,7 +376,7 @@ const modifySPFieldCalculatedSchema_Site = asSiteFieldSchema(modifySPFieldCalcul
 
 const modifySPFieldLocationSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Location"),
 
     // Target field (internal name or Title)
@@ -403,7 +404,7 @@ const modifySPFieldLocationSchema_Site = asSiteFieldSchema(modifySPFieldLocation
 
 const modifySPFieldImageSchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Image"),
 
     // Target field (internal name or Title)
@@ -431,7 +432,7 @@ const modifySPFieldImageSchema_Site = asSiteFieldSchema(modifySPFieldImageSchema
 
 const modifySPFieldCurrencySchema = z.object({
     verb: z.literal("modifySPField"),
-    subactions: z.array(z.never()).optional(),
+    subactions: leafSubactionsSchema,
     fieldType: z.literal("Currency"),
 
     // Target field (internal name or Title)

@@ -6,21 +6,21 @@
  *
  * Root-level action only. No subactions allowed.
  *
- * The Zod schema for this action is defined in `catalogs/schemas/sites`.
+ * The Zod schema for this action is co-located in `schema.ts`.
  *
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { PermissionCheckResult } from "../../../../core/permissions";
-import { normalizeError } from "../../../../core";
-import type { SPScope, SPRuntimeContext, SPActionResult } from "../../../types";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
+import type { PermissionCheckResult } from "../../../../../core/permissions";
+import { normalizeError } from "../../../../../core";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
 import { Site } from "@pnp/sp/sites";
 import { PermissionKind } from "@pnp/sp/security";
 import "@pnp/sp/webs";
 import "@pnp/sp/security/web";
 
-import { deleteSPSiteSchema, type DeleteSPSitePayload } from "../../schemas/sites/delete-sp-site.schema";
+import { deleteSPSiteSchema, type DeleteSPSitePayload } from "./schema";
 
 /* ========================================
    ACTION DEFINITION
@@ -48,10 +48,13 @@ import { deleteSPSiteSchema, type DeleteSPSitePayload } from "../../schemas/site
 export class DeleteSPSiteAction extends ActionDefinition<
   "deleteSPSite",
   typeof deleteSPSiteSchema,
-  SPScope
+  M365Scope,
+  ProvisioningResultLight,
+  M365Clients
 > {
   readonly verb = "deleteSPSite";
   readonly actionSchema = deleteSPSiteSchema;
+  readonly requiredClients = ["spfi"] as const;
 
   /**
    * Checks permissions for site deletion.
@@ -66,10 +69,10 @@ export class DeleteSPSiteAction extends ActionDefinition<
    * 
    * Note: Group-connected sites require M365 Group deletion instead.
    */
-  override async checkPermissions(
-    ctx: SPRuntimeContext<DeleteSPSitePayload>
+  async checkPermissions(
+    ctx: M365RuntimeContext<DeleteSPSitePayload>
   ): Promise<PermissionCheckResult> {
-    const spfi = ctx.scopeIn.spfi;
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       return {
         decision: "deny",
@@ -132,12 +135,12 @@ export class DeleteSPSiteAction extends ActionDefinition<
    * Uses PnPjs Site.delete() to remove the site collection.
    * Group-connected sites will throw an error with guidance to delete the M365 Group instead.
    */
-  override async handler(
-    ctx: SPRuntimeContext<DeleteSPSitePayload>
-  ): Promise<SPActionResult> {
+  async handler(
+    ctx: M365RuntimeContext<DeleteSPSitePayload>
+  ): Promise<M365ActionResult> {
     const { siteUrl } = ctx.action.payload;
 
-    const spfi = ctx.scopeIn.spfi;
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       throw new Error("SPFI instance not available in scope");
     }
@@ -202,10 +205,10 @@ export class DeleteSPSiteAction extends ActionDefinition<
     };
   }
 
-  override async checkCompliance(
-    ctx: ComplianceRuntimeContext<SPScope, DeleteSPSitePayload>
-  ): Promise<ComplianceActionCheckResult<SPScope>> {
-    const spfi = ctx.scopeIn.spfi;
+  async checkCompliance(
+    ctx: ComplianceRuntimeContext<M365Scope, DeleteSPSitePayload, M365Clients>
+  ): Promise<ComplianceActionCheckResult<M365Scope>> {
+    const spfi = ctx.clients.spfi;
     if (!spfi) {
       return { outcome: "unverifiable", reason: "missing_prerequisite", message: "SPFI instance not available in scope" };
     }

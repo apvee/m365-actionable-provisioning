@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { siteSubactionSchema } from "./site-subactions.schemas";
+import { subactionsOf } from "../../_shared/schemas/action-schemas";
+import { siteSubactionSchema } from "../../_composition/site-subactions-schema";
 
 const webUpdateSchema = z
   .object({
@@ -19,7 +20,7 @@ export const modifySPSiteSchema = z.object({
   // Web properties are intentionally lifted to root-level for plan ergonomics.
   ...webUpdateSchema.shape,
 
-  subactions: z.array(siteSubactionSchema).optional(),
+  subactions: subactionsOf(siteSubactionSchema),
 });
 
 export type ModifySPSitePayload = z.infer<typeof modifySPSiteSchema>;

@@ -20,6 +20,17 @@ import type { ActionPath, EngineOutput } from "./trace";
 import type { ComplianceOutcome } from "./compliance";
 
 /**
+ * Runtime clients available to actions.
+ *
+ * @remarks
+ * The core engine treats clients as an opaque map. Workload packages can narrow
+ * this to concrete SDK clients such as PnPjs SPFI or GraphFI.
+ *
+ * @public
+ */
+export type RuntimeClients = Readonly<Record<string, unknown>>;
+
+/**
  * Base structure for all action nodes.
  * 
  * @remarks
@@ -118,10 +129,14 @@ export const defaultActionResultSchema: z.ZodType<ActionResult<Record<string, un
 export type ActionRuntimeContext<
     Scope extends Record<string, unknown>,
     Payload extends Record<string, unknown>,
-    TResult extends JsonValue = JsonValue
+    TResult extends JsonValue = JsonValue,
+    Clients extends RuntimeClients = RuntimeClients
 > = Readonly<{
     /** Scope inherited from parent actions */
     scopeIn: Scope;
+
+    /** Runtime clients injected by the engine */
+    clients: Clients;
 
     /** Current engine output state */
     out: EngineOutput<TResult>;
@@ -153,9 +168,11 @@ export type ActionRuntimeContext<
  */
 export type ComplianceRuntimeContext<
     Scope extends Record<string, unknown>,
-    Payload extends Record<string, unknown>
+    Payload extends Record<string, unknown>,
+    Clients extends RuntimeClients = RuntimeClients
 > = Readonly<{
     scopeIn: Scope;
+    clients: Clients;
     logger: Logger;
     action: {
         path: ActionPath;
@@ -249,7 +266,8 @@ export abstract class ActionDefinition<
     Verb extends string,
     ActionSchema extends z.ZodType<Record<string, unknown>>,
     Scope extends Record<string, unknown>,
-    TResult extends JsonValue = JsonValue
+    TResult extends JsonValue = JsonValue,
+    Clients extends RuntimeClients = RuntimeClients
 > {
     /**
      * The unique verb identifier for this action type.
@@ -283,6 +301,15 @@ export abstract class ActionDefinition<
     public abstract readonly actionSchema: ActionSchema;
 
     /**
+     * Runtime clients required by this action.
+     *
+     * @remarks
+     * The engine validates these clients before permission checks, handlers, and
+     * compliance checks. This keeps SDK handles out of scope propagation.
+     */
+    public readonly requiredClients?: readonly (keyof Clients & string)[];
+
+    /**
      * Optional Zod schema for required scope properties.
      * 
      * @remarks
@@ -312,7 +339,7 @@ export abstract class ActionDefinition<
      * If the result decision is `"deny"`, the action fails with FORBIDDEN.
      */
     public async checkPermissions?(
-        _ctx: ActionRuntimeContext<Scope, z.infer<ActionSchema>, TResult>
+        _ctx: ActionRuntimeContext<Scope, z.infer<ActionSchema>, TResult, Clients>
     ): Promise<PermissionCheckResult>;
 
     /**
@@ -334,7 +361,7 @@ export abstract class ActionDefinition<
      * If the handler throws, the action fails and the error is captured in trace.
      */
     public async handler?(
-        _ctx: ActionRuntimeContext<Scope, z.infer<ActionSchema>, TResult>
+        _ctx: ActionRuntimeContext<Scope, z.infer<ActionSchema>, TResult, Clients>
     ): Promise<ActionResult<Scope, TResult>>;
 
     /**
@@ -345,7 +372,7 @@ export abstract class ActionDefinition<
      * properties implied by the action payload.
      */
     public async checkCompliance?(
-        _ctx: ComplianceRuntimeContext<Scope, z.infer<ActionSchema>>
+        _ctx: ComplianceRuntimeContext<Scope, z.infer<ActionSchema>, Clients>
     ): Promise<ComplianceActionCheckResult<Scope>>;
 
     /**
@@ -373,5 +400,6 @@ export abstract class ActionDefinition<
  */
 export type AnyActionDefinition<
     Scope extends Record<string, unknown> = Record<string, unknown>,
-    TResult extends JsonValue = JsonValue
-> = ActionDefinition<string, z.ZodType<Record<string, unknown>>, Scope, TResult>;
+    TResult extends JsonValue = JsonValue,
+    Clients extends RuntimeClients = RuntimeClients
+> = ActionDefinition<string, z.ZodType<Record<string, unknown>>, Scope, TResult, Clients>;

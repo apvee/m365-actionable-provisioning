@@ -4,7 +4,10 @@
  * @module
  */
 
-export { actionRegistry } from "./action.registry";
-export type { ActionFactory, SPActionDefinition } from "./action.registry";
-export { DEFAULT_SCHEMA_VERSION, SUPPORTED_SCHEMA_VERSIONS, actionsSchema, provisioningPlanSchema } from "./provisioning.schema";
-export type { SupportedSchemaVersion, ProvisioningPlan } from "./provisioning.schema";
+export { sharePointActionDefinitions } from "./action-definitions";
+export type { SharePointActionDefinition } from "./action-definitions";
+export {
+  sharePointActionsSchema,
+  sharePointRootActionSchema,
+  sharePointRootActionSchemas,
+} from "./provisioning.schema";

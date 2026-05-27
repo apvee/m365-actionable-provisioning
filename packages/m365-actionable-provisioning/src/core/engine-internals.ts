@@ -12,7 +12,7 @@
 
 import { z } from "zod";
 import type { ActionPath } from "./trace";
-import type { ActionNode, AnyActionDefinition } from "./action";
+import type { ActionNode, AnyActionDefinition, RuntimeClients } from "./action";
 import type { PermissionCheckResult } from "./permissions";
 import type { JsonValue } from "./json";
 
@@ -63,11 +63,12 @@ export const defaultOptions = (opts?: EngineOptionsInternal): Required<EngineOpt
  */
 export const buildDefinitionMap = <
     Scope extends Record<string, unknown>,
-    TResult extends JsonValue = JsonValue
+    TResult extends JsonValue = JsonValue,
+    Clients extends RuntimeClients = RuntimeClients
 >(
-    definitions: ReadonlyArray<AnyActionDefinition<Scope, TResult>>
-): Record<string, AnyActionDefinition<Scope, TResult>> => {
-    const defByVerb: Record<string, AnyActionDefinition<Scope, TResult>> = {};
+    definitions: ReadonlyArray<AnyActionDefinition<Scope, TResult, Clients>>
+): Record<string, AnyActionDefinition<Scope, TResult, Clients>> => {
+    const defByVerb: Record<string, AnyActionDefinition<Scope, TResult, Clients>> = {};
     for (const d of definitions) {
         if (defByVerb[d.verb]) {
             throw new Error(`Duplicate definition for verb "${d.verb}".`);
@@ -75,6 +76,41 @@ export const buildDefinitionMap = <
         defByVerb[d.verb] = d;
     }
     return defByVerb;
+};
+
+/* -------------------------------- Required Clients -------------------------------- */
+
+/**
+ * Finds required clients that are not available on the runtime client bag.
+ *
+ * @internal
+ */
+export const getMissingRequiredClients = <
+    Clients extends RuntimeClients = RuntimeClients
+>(
+    clients: Clients,
+    requiredClients: readonly (keyof Clients & string)[] | undefined
+): string[] => (requiredClients ?? []).filter((clientName) => {
+    const value = (clients as Record<string, unknown>)[clientName];
+    return value === undefined || value === null;
+});
+
+/**
+ * Creates the standardized missing-client error used by execution and preflight.
+ *
+ * @internal
+ */
+export const createMissingClientsError = (
+    verb: string,
+    requiredClients: readonly string[] | undefined,
+    missingClients: readonly string[]
+): Error & { code: string; details: unknown } => {
+    const err = new Error(
+        `Missing required client${missingClients.length === 1 ? "" : "s"} for action "${verb}": ${missingClients.join(", ")}`
+    ) as Error & { code: string; details: unknown };
+    err.code = "MISSING_CLIENT";
+    err.details = { requiredClients, missingClients, verb };
+    return err;
 };
 
 /* -------------------------------- Preorder Traversal -------------------------------- */
