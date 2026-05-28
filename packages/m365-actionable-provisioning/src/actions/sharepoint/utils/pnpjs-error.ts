@@ -5,8 +5,8 @@
  */
 
 import { HttpRequestError } from "@pnp/queryable";
-import type { JsonValue } from "../../core/json";
-import { isPlainObject } from "../../core/utils";
+import { jsonValueSchema, type JsonValue } from "../../../core/json";
+import { isPlainObject } from "../../../core/utils";
 
 /**
  * Structured details extracted from a PnPjs HTTP error.
@@ -99,7 +99,12 @@ export const extractPnPjsHttpErrorDetails = async (err: unknown): Promise<PnPjsH
   try {
     // response is documented as "unread copy" but clone() keeps this safe across multiple consumers.
     const json = await err.response.clone().json();
-    responseJson = json as JsonValue;
+    const parsed = jsonValueSchema.safeParse(json);
+    if (parsed.success) {
+      responseJson = parsed.data;
+    } else {
+      responseText = truncate(safeToString(json));
+    }
   } catch {
     try {
       const text = await err.response.clone().text();

@@ -1,4 +1,4 @@
-import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 
 /**
  * Provisioning template used by the TestProvisioning webpart.
@@ -9,7 +9,6 @@ import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m
  */
 export const provisioningPlan: M365ProvisioningPlan = {
   schemaVersion: '1.0',
-  version: '1.0.0',
   parameters: [
     { key: 'CustomersListName', value: 'customers' },
     { key: 'OrdersListName', value: 'orders' },
@@ -99,7 +98,6 @@ export const provisioningPlan: M365ProvisioningPlan = {
  */
 export const deprovisioningPlan: M365ProvisioningPlan = {
   schemaVersion: '1.0',
-  version: '1.0.0',
   parameters: [
     { key: 'CustomersListName', value: 'customers' },
     { key: 'OrdersListName', value: 'orders' },

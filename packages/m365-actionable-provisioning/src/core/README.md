@@ -77,7 +77,6 @@ Note: placeholders are **not** applied to any action `verb` field.
 
 ```typescript
 const plan = {
-  version: "1.0.0",
   parameters: [
     { key: "SiteTitle", value: "Project Alpha" },
     { key: "TasksListTitle", value: "Tasks" }
@@ -240,11 +239,11 @@ core/
 
 ```typescript
 // my-catalog.ts
-import type { JsonObject } from "./json";
-
-export type MyScope = JsonObject & {
+export type MyScope = {
   environment?: string;
   tenantId?: string;
+  createdListId?: string;
+  createdListName?: string;
   // Add your domain-specific properties
 };
 ```
@@ -322,7 +321,7 @@ class CreateListAction extends ActionDefinition<
   }
 
   // Handler (execution logic)
-  async handler(ctx: ActionRuntimeContext<MyScope, z.infer<typeof createListSchema>>): Promise<{ result?: unknown; scopeDelta?: JsonObject }> {
+  async handler(ctx: ActionRuntimeContext<MyScope, z.infer<typeof createListSchema>>): Promise<{ result?: { listId: string; listName: string; title: string }; scopeDelta?: Partial<MyScope> }> {
     const { listName, title } = ctx.action.payload;
     const { logger, scopeIn } = ctx;
 
@@ -421,7 +420,6 @@ const engine = new ProvisioningEngine<MyScope>({
 import { createLogger, consoleSink } from "./logger";
 
 const plan = {
-  version: "1.0.0",
   actions: [
     {
       verb: "createList",
@@ -737,7 +735,7 @@ This makes traces more **user-friendly** (natural counting).
 ### Complete Example: SharePoint Provisioning
 
 The M365 package composes the concrete SharePoint action catalog and
-provisioning schema under `src/sharepoint/catalogs`, then exposes the unified
+provisioning schema under `src/actions/sharepoint`, then exposes the unified
 runtime through `ProvisioningEngine`. That implementation covers:
 
 - Site creation and modification
@@ -753,10 +751,9 @@ import { z } from "zod";
 import { ActionDefinition, type ActionRuntimeContext } from "./action";
 import { ProvisioningEngine } from "./engine";
 import type { ActionCatalog } from "./catalog";
-import type { JsonObject } from "./json";
 
 // 1. Scope type
-type MyScope = JsonObject;
+type MyScope = Record<string, unknown>;
 
 // 2. Schema
 const doSomethingSchema = z.object({
@@ -793,7 +790,7 @@ const catalog: ActionCatalog<MyScope> = {
 // 5. Engine
 const engine = new ProvisioningEngine<MyScope>({
   initialScope: {},
-  planTemplate: { version: "1.0.0", actions: [{ verb: "doSomething", value: "Hello World" }] },
+  planTemplate: { actions: [{ verb: "doSomething", value: "Hello World" }] },
   logger: createLogger({ level: "info", sink: consoleSink }),
   definitions: catalog.definitions,
   provisioningSchema: provisioningPlanSchema,
@@ -867,7 +864,7 @@ Use structured logging with context:
 ```typescript
 ctx.logger.info("Creating list", { listName, tenantId: ctx.scopeIn.tenantId });
 ctx.logger.warn("Retrying operation", { attempt: 2, maxAttempts: 3 });
-ctx.logger.error("Operation failed", { error: err.message });
+ctx.logger.error("Operation failed", { error: err, data: { listName } });
 ```
 
 ### 5. Testing
@@ -896,7 +893,8 @@ expect(result.scopeDelta?.createdListId).toBeDefined();
 
 ### Core Exports
 
-- **Types**: `JsonValue`, `JsonObject`, `ActionNode`, `BaseProvisioningPlan`, `ProvisioningPlanParameter`, `ActionPath`, `ActionStatus`, `EngineStatus`
+- **JSON**: `JsonValue`, `JsonObject`, `jsonValueSchema`, `isJsonValue`
+- **Types**: `ActionNode`, `BaseProvisioningPlan`, `ProvisioningPlanParameter`, `ActionPath`, `ActionStatus`, `EngineStatus`
 - **Logging**: `Logger`, `createLogger`, `consoleSink`
 - **Permissions**: `PermissionCheckResult`, `PermissionDecision`, `PermissionFinding`
 - **Compliance**: `CompliancePolicy`, `ComplianceReport`, `ComplianceOutcome`, `ComplianceOverall`

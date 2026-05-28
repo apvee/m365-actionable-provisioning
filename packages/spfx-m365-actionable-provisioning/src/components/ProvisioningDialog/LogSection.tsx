@@ -13,9 +13,9 @@ import { LogPanel } from '../LogPanel/LogPanel';
 import type { LogSectionProps } from './LogSection.types';
 import type {
     LogPanelStrings,
-    ProvisioningLogEntryStrings,
+    ProvisioningActivityEntryStrings,
     ComplianceLogPanelStrings,
-    ComplianceLogEntryStrings,
+    ComplianceActivityEntryStrings,
 } from '../LogPanel/LogPanel.types';
 
 // Re-export types for external consumers
@@ -60,7 +60,7 @@ export const LogSection: React.FC<LogSectionProps> = ({
     entries,
     mode = 'provisioning',
     strings,
-    logEntryStrings,
+    activityEntryStrings,
     className,
 }): React.ReactElement => {
     const styles = useStyles();
@@ -90,16 +90,16 @@ export const LogSection: React.FC<LogSectionProps> = ({
             return {
                 ...baseProps,
                 complianceStrings: strings as Partial<ComplianceLogPanelStrings> | undefined,
-                complianceLogEntryStrings: logEntryStrings as Partial<ComplianceLogEntryStrings> | undefined,
+                complianceActivityEntryStrings: activityEntryStrings as Partial<ComplianceActivityEntryStrings> | undefined,
             };
         }
 
         return {
             ...baseProps,
             strings: strings as Partial<LogPanelStrings> | undefined,
-            logEntryStrings: logEntryStrings as Partial<ProvisioningLogEntryStrings> | undefined,
+            activityEntryStrings: activityEntryStrings as Partial<ProvisioningActivityEntryStrings> | undefined,
         };
-    }, [entries, mode, strings, logEntryStrings]);
+    }, [entries, mode, strings, activityEntryStrings]);
 
     return (
         <Accordion

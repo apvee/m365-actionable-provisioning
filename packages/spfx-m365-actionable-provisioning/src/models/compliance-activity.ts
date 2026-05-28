@@ -1,33 +1,33 @@
 /**
- * Compliance log entry types.
+ * Compliance activity entry types.
  * 
  * @packageDocumentation
  */
 
-import type { ActionPath } from '@apvee/m365-actionable-provisioning/core';
-import type { ComplianceOutcome } from '@apvee/m365-actionable-provisioning/core';
+import type { ActionPath } from '@apvee/m365-actionable-provisioning';
+import type { ComplianceOutcome } from '@apvee/m365-actionable-provisioning';
 
-import type { BaseLogEntry } from './log-entry';
+import type { BaseActivityEntry } from './activity-entry';
 
 /**
  * Status for completed compliance checks.
  * @public
  */
-type ComplianceLogStatus = ComplianceOutcome | 'blocked';
+type ComplianceActivityStatus = ComplianceOutcome | 'blocked';
 
 /**
  * Additional states used during realtime compliance checks.
  * @internal
  */
-type ComplianceLogStatusRealtime = 'pending' | 'running' | 'cancelled';
+type ComplianceActivityStatusRealtime = 'pending' | 'running' | 'cancelled';
 
 /**
- * Log entry representing a compliance check's state.
+ * Activity entry representing a compliance check's state.
  * 
  * @public
  */
-export interface ComplianceLogEntry extends BaseLogEntry<ActionPath> {
-  status: ComplianceLogStatus | ComplianceLogStatusRealtime;
+export interface ComplianceActivityEntry extends BaseActivityEntry<ActionPath> {
+  status: ComplianceActivityStatus | ComplianceActivityStatusRealtime;
 
   checked: boolean;
   blockedBy?: ActionPath;
@@ -36,5 +36,5 @@ export interface ComplianceLogEntry extends BaseLogEntry<ActionPath> {
   reason?: string;
   message?: string;
 
-  children?: ReadonlyArray<ComplianceLogEntry>;
+  children?: ReadonlyArray<ComplianceActivityEntry>;
 }

@@ -13,7 +13,7 @@
  */
 
 import { z } from "zod";
-import type { JsonValue, JsonObject } from "./json";
+import { jsonValueSchema, type JsonValue, type JsonObject } from "./json";
 import type { Logger } from "./logger";
 import type { PermissionCheckResult } from "./permissions";
 import type { ActionPath, EngineOutput } from "./trace";
@@ -107,14 +107,22 @@ export type ActionResult<
  * @public
  */
 export const defaultActionResultSchema: z.ZodType<ActionResult<Record<string, unknown>, JsonValue>> = z.object({
-    result: z.unknown().optional(),
+    result: jsonValueSchema.optional(),
     scopeDelta: z.record(z.string(), z.unknown()).optional(),
+}).superRefine((value, ctx) => {
+    if (Object.prototype.hasOwnProperty.call(value, "result") && value.result === undefined) {
+        ctx.addIssue({
+            code: "custom",
+            path: ["result"],
+            message: "Result must be omitted or contain a JSON value",
+        });
+    }
 }) as z.ZodType<ActionResult<Record<string, unknown>, JsonValue>>;
 
 /**
  * Runtime context passed to action handlers and permission checkers.
  * 
- * @template Scope - The scope object type (extends JsonObject)
+ * @template Scope - The runtime scope object type
  * @template Payload - The action payload type (extends Record<string, unknown>)
  * 
  * @remarks
@@ -389,7 +397,7 @@ export abstract class ActionDefinition<
 /**
  * Type alias for heterogeneous action definition collections.
  * 
- * @template Scope - The scope object type (defaults to JsonObject)
+ * @template Scope - The runtime scope object type
  * 
  * @remarks
  * Used for the action registry to hold definitions with different verb

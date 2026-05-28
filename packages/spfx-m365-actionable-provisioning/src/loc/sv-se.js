@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'Inga efterlevnadsresultat tillgängliga',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'Väntar',
       RunningLabel: 'Körs',
       ExecutedLabel: 'Utfört',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'Stöds inte',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Kompatibel',
       NonCompliantLabel: 'Icke-kompatibel',
       UnverifiableLabel: 'Ej verifierbar',

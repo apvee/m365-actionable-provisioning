@@ -1,9 +1,9 @@
-import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
-import type { ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
-import type { ComplianceLogEntry } from '../../models';
+import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
+import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
+import type { ComplianceActivityEntry } from '../../models';
 import type { DialogUiError } from './ProvisioningDialog.state';
-import type { ComplianceLogPanelStrings, ComplianceLogEntryStrings } from '../LogPanel/LogPanel.types';
+import type { ComplianceLogPanelStrings, ComplianceActivityEntryStrings } from '../LogPanel/LogPanel.types';
 
 /**
  * Localized strings for the ComplianceView component.
@@ -37,7 +37,7 @@ export type ComplianceViewStrings = Readonly<{
     /** Optional LogPanel string overrides (compliance mode) */
     complianceStrings?: Partial<ComplianceLogPanelStrings>;
     /** Optional compliance log entry string overrides */
-    complianceLogEntryStrings?: Partial<ComplianceLogEntryStrings>;
+    complianceActivityEntryStrings?: Partial<ComplianceActivityEntryStrings>;
 }>;
 
 /**
@@ -64,7 +64,7 @@ export type ComplianceViewProps = Readonly<{
     onOpenLogItemsChange: (items: ReadonlyArray<string>) => void;
 
     /** Log entries to display (computed by parent) */
-    logEntries: ReadonlyArray<ComplianceLogEntry>;
+    activityEntries: ReadonlyArray<ComplianceActivityEntry>;
 
     /** Localized strings */
     strings: ComplianceViewStrings;

@@ -113,7 +113,7 @@ export function PropertyPaneSiteSelectorField(
     const wrapped = React.createElement(
       IdPrefixProvider,
       { value: idPrefix },
-      React.createElement(FluentProvider, { theme: v9Theme }, inner)
+      React.createElement(FluentProvider, { theme: v9Theme, applyStylesToPortals: true }, inner)
     );
 
     ReactDom.render(wrapped, elem);

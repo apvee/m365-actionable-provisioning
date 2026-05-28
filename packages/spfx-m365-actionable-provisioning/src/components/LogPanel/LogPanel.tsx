@@ -1,5 +1,5 @@
 /**
- * Internal LogPanel component for displaying provisioning and compliance logs.
+ * Internal LogPanel component for displaying provisioning and compliance activity.
  *
  * @internal
  * @packageDocumentation
@@ -18,7 +18,7 @@ import {
 } from '@fluentui/react-icons';
 import { Center, Stack } from '@apvee/react-layout-kit';
 
-import type { ComplianceLogEntry, ProvisioningLogEntry } from '../../models';
+import type { ComplianceActivityEntry, ProvisioningActivityEntry } from '../../models';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
 
@@ -26,11 +26,11 @@ import { LogItem } from './LogItem/LogItem';
 import type { LogItemBadgeSpec, LogItemRenderers, LogItemStyles } from './LogItem/LogItem.types';
 
 import type {
-  ComplianceLogEntryStrings,
+  ComplianceActivityEntryStrings,
   ComplianceLogPanelStrings,
   LogPanelProps,
   LogPanelStrings,
-  ProvisioningLogEntryStrings,
+  ProvisioningActivityEntryStrings,
 } from './LogPanel.types';
 import { prunePendingComplianceEntries, prunePendingEntries } from './LogPanel.utils';
 
@@ -128,36 +128,36 @@ const DEFAULT_COMPLIANCE_STRINGS: ComplianceLogPanelStrings = {
   emptyMessage: locStrings.ComplianceLogPanel.EmptyMessage,
 };
 
-const DEFAULT_PROVISIONING_LOG_ENTRY_STRINGS: ProvisioningLogEntryStrings = {
-  pendingLabel: locStrings.ProvisioningLogEntry.PendingLabel,
-  runningLabel: locStrings.ProvisioningLogEntry.RunningLabel,
-  executedLabel: locStrings.ProvisioningLogEntry.ExecutedLabel,
-  failedLabel: locStrings.ProvisioningLogEntry.FailedLabel,
-  skippedLabel: locStrings.ProvisioningLogEntry.SkippedLabel,
+const DEFAULT_PROVISIONING_ACTIVITY_ENTRY_STRINGS: ProvisioningActivityEntryStrings = {
+  pendingLabel: locStrings.ProvisioningActivityEntry.PendingLabel,
+  runningLabel: locStrings.ProvisioningActivityEntry.RunningLabel,
+  executedLabel: locStrings.ProvisioningActivityEntry.ExecutedLabel,
+  failedLabel: locStrings.ProvisioningActivityEntry.FailedLabel,
+  skippedLabel: locStrings.ProvisioningActivityEntry.SkippedLabel,
   skipReasonLabels: {
-    not_found: locStrings.ProvisioningLogEntry.SkipReasonNotFound,
-    already_exists: locStrings.ProvisioningLogEntry.SkipReasonAlreadyExists,
-    no_changes: locStrings.ProvisioningLogEntry.SkipReasonNoChanges,
-    missing_prerequisite: locStrings.ProvisioningLogEntry.SkipReasonMissingPrerequisite,
-    unsupported: locStrings.ProvisioningLogEntry.SkipReasonUnsupported,
+    not_found: locStrings.ProvisioningActivityEntry.SkipReasonNotFound,
+    already_exists: locStrings.ProvisioningActivityEntry.SkipReasonAlreadyExists,
+    no_changes: locStrings.ProvisioningActivityEntry.SkipReasonNoChanges,
+    missing_prerequisite: locStrings.ProvisioningActivityEntry.SkipReasonMissingPrerequisite,
+    unsupported: locStrings.ProvisioningActivityEntry.SkipReasonUnsupported,
   },
 };
 
-const DEFAULT_COMPLIANCE_LOG_ENTRY_STRINGS: ComplianceLogEntryStrings = {
-  compliantLabel: locStrings.ComplianceLogEntry.CompliantLabel,
-  nonCompliantLabel: locStrings.ComplianceLogEntry.NonCompliantLabel,
-  unverifiableLabel: locStrings.ComplianceLogEntry.UnverifiableLabel,
-  ignoredLabel: locStrings.ComplianceLogEntry.IgnoredLabel,
-  blockedLabel: locStrings.ComplianceLogEntry.BlockedLabel,
+const DEFAULT_COMPLIANCE_ACTIVITY_ENTRY_STRINGS: ComplianceActivityEntryStrings = {
+  compliantLabel: locStrings.ComplianceActivityEntry.CompliantLabel,
+  nonCompliantLabel: locStrings.ComplianceActivityEntry.NonCompliantLabel,
+  unverifiableLabel: locStrings.ComplianceActivityEntry.UnverifiableLabel,
+  ignoredLabel: locStrings.ComplianceActivityEntry.IgnoredLabel,
+  blockedLabel: locStrings.ComplianceActivityEntry.BlockedLabel,
 
-  pendingLabel: locStrings.ComplianceLogEntry.PendingLabel,
-  runningLabel: locStrings.ComplianceLogEntry.RunningLabel,
-  cancelledLabel: locStrings.ComplianceLogEntry.CancelledLabel,
+  pendingLabel: locStrings.ComplianceActivityEntry.PendingLabel,
+  runningLabel: locStrings.ComplianceActivityEntry.RunningLabel,
+  cancelledLabel: locStrings.ComplianceActivityEntry.CancelledLabel,
 
-  blockedByPrefix: locStrings.ComplianceLogEntry.BlockedByPrefix,
+  blockedByPrefix: locStrings.ComplianceActivityEntry.BlockedByPrefix,
 };
 
-const provisioningStatusIcon = (entry: ProvisioningLogEntry): JSX.Element => {
+const provisioningStatusIcon = (entry: ProvisioningActivityEntry): JSX.Element => {
   if (entry.status === 'success') {
     return <CheckmarkCircle20Filled primaryFill={tokens.colorPaletteGreenForeground1} />;
   }
@@ -177,7 +177,7 @@ const provisioningStatusIcon = (entry: ProvisioningLogEntry): JSX.Element => {
   return <Circle20Regular primaryFill={tokens.colorNeutralForeground3} />;
 };
 
-const buildProvisioningLogBadge = (entry: ProvisioningLogEntry, s: ProvisioningLogEntryStrings): LogItemBadgeSpec => {
+const buildProvisioningActivityBadge = (entry: ProvisioningActivityEntry, s: ProvisioningActivityEntryStrings): LogItemBadgeSpec => {
   if (entry.status === 'failed') {
     return { text: s.failedLabel, appearance: 'filled', color: 'danger' };
   }
@@ -203,7 +203,7 @@ const buildProvisioningLogBadge = (entry: ProvisioningLogEntry, s: ProvisioningL
   return { text: s.pendingLabel, appearance: 'outline', color: undefined };
 };
 
-const createProvisioningLogItemRenderers = (s: ProvisioningLogEntryStrings): LogItemRenderers<ProvisioningLogEntry> => {
+const createProvisioningActivityRenderers = (s: ProvisioningActivityEntryStrings): LogItemRenderers<ProvisioningActivityEntry> => {
   return {
     getKey: (e) => e.id,
     getChildren: (e) => e.children,
@@ -222,7 +222,7 @@ const createProvisioningLogItemRenderers = (s: ProvisioningLogEntryStrings): Log
     },
 
     renderMetadata: (e) => {
-      const badge = buildProvisioningLogBadge(e, s);
+      const badge = buildProvisioningActivityBadge(e, s);
       return (
         <>
           <Badge appearance={badge.appearance} color={badge.color} size="small">
@@ -245,7 +245,7 @@ const createProvisioningLogItemRenderers = (s: ProvisioningLogEntryStrings): Log
   };
 };
 
-const complianceStatusIcon = (entry: ComplianceLogEntry): JSX.Element => {
+const complianceStatusIcon = (entry: ComplianceActivityEntry): JSX.Element => {
   switch (entry.status) {
     case 'running':
       return <Circle20Regular primaryFill={tokens.colorBrandForeground1} />;
@@ -268,7 +268,7 @@ const complianceStatusIcon = (entry: ComplianceLogEntry): JSX.Element => {
   }
 };
 
-const buildComplianceBadge = (entry: ComplianceLogEntry, s: ComplianceLogEntryStrings): LogItemBadgeSpec => {
+const buildComplianceBadge = (entry: ComplianceActivityEntry, s: ComplianceActivityEntryStrings): LogItemBadgeSpec => {
   switch (entry.status) {
     case 'running':
       return { text: s.runningLabel, appearance: 'tint', color: 'brand' };
@@ -291,7 +291,7 @@ const buildComplianceBadge = (entry: ComplianceLogEntry, s: ComplianceLogEntrySt
   }
 };
 
-const buildComplianceInfo = (entry: ComplianceLogEntry, s: ComplianceLogEntryStrings): string | undefined => {
+const buildComplianceInfo = (entry: ComplianceActivityEntry, s: ComplianceActivityEntryStrings): string | undefined => {
   if (entry.status === 'running' || entry.status === 'pending' || entry.status === 'cancelled') return undefined;
 
   if (!entry.checked && entry.blockedBy) {
@@ -305,7 +305,7 @@ const buildComplianceInfo = (entry: ComplianceLogEntry, s: ComplianceLogEntryStr
   return parts.join(' • ');
 };
 
-const createComplianceLogItemRenderers = (s: ComplianceLogEntryStrings): LogItemRenderers<ComplianceLogEntry> => {
+const createComplianceActivityRenderers = (s: ComplianceActivityEntryStrings): LogItemRenderers<ComplianceActivityEntry> => {
   return {
     getKey: (e) => e.id,
     getChildren: (e) => e.children,
@@ -347,9 +347,9 @@ export const LogPanel: React.FC<LogPanelProps> = ({
   className = '',
   mode = 'provisioning',
   strings,
-  logEntryStrings,
+  activityEntryStrings,
   complianceStrings,
-  complianceLogEntryStrings,
+  complianceActivityEntryStrings,
 }) => {
   if (mode === 'compliance') {
     const s = React.useMemo(() => {
@@ -361,17 +361,17 @@ export const LogPanel: React.FC<LogPanelProps> = ({
 
     const itemStrings = React.useMemo(() => {
       return {
-        ...DEFAULT_COMPLIANCE_LOG_ENTRY_STRINGS,
-        ...(complianceLogEntryStrings ?? {}),
-      } satisfies ComplianceLogEntryStrings;
-    }, [complianceLogEntryStrings]);
+        ...DEFAULT_COMPLIANCE_ACTIVITY_ENTRY_STRINGS,
+        ...(complianceActivityEntryStrings ?? {}),
+      } satisfies ComplianceActivityEntryStrings;
+    }, [complianceActivityEntryStrings]);
 
     const renderers = React.useMemo(() => {
-      return createComplianceLogItemRenderers(itemStrings);
+      return createComplianceActivityRenderers(itemStrings);
     }, [itemStrings]);
 
     const visibleEntries = React.useMemo(() => {
-      return prunePendingComplianceEntries(entries as ReadonlyArray<ComplianceLogEntry>);
+      return prunePendingComplianceEntries(entries as ReadonlyArray<ComplianceActivityEntry>);
     }, [entries]);
 
     return (
@@ -393,17 +393,17 @@ export const LogPanel: React.FC<LogPanelProps> = ({
 
   const itemStrings = React.useMemo(() => {
     return {
-      ...DEFAULT_PROVISIONING_LOG_ENTRY_STRINGS,
-      ...(logEntryStrings ?? {}),
-    } satisfies ProvisioningLogEntryStrings;
-  }, [logEntryStrings]);
+      ...DEFAULT_PROVISIONING_ACTIVITY_ENTRY_STRINGS,
+      ...(activityEntryStrings ?? {}),
+    } satisfies ProvisioningActivityEntryStrings;
+  }, [activityEntryStrings]);
 
   const renderers = React.useMemo(() => {
-    return createProvisioningLogItemRenderers(itemStrings);
+    return createProvisioningActivityRenderers(itemStrings);
   }, [itemStrings]);
 
   const visibleEntries = React.useMemo(() => {
-    return prunePendingEntries(entries as ReadonlyArray<ProvisioningLogEntry>);
+    return prunePendingEntries(entries as ReadonlyArray<ProvisioningActivityEntry>);
   }, [entries]);
 
   return (

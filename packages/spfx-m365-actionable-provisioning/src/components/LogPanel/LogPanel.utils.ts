@@ -1,9 +1,9 @@
-import type { ComplianceLogEntry, ProvisioningLogEntry } from '../../models';
+import type { ComplianceActivityEntry, ProvisioningActivityEntry } from '../../models';
 
 export const prunePendingEntries = (
-  entries: ReadonlyArray<ProvisioningLogEntry>
-): ReadonlyArray<ProvisioningLogEntry> => {
-  const pruned: ProvisioningLogEntry[] = [];
+  entries: ReadonlyArray<ProvisioningActivityEntry>
+): ReadonlyArray<ProvisioningActivityEntry> => {
+  const pruned: ProvisioningActivityEntry[] = [];
 
   for (const entry of entries) {
     const prunedChildren = entry.children ? prunePendingEntries(entry.children) : undefined;
@@ -29,9 +29,9 @@ export const prunePendingEntries = (
 };
 
 export const prunePendingComplianceEntries = (
-  entries: ReadonlyArray<ComplianceLogEntry>
-): ReadonlyArray<ComplianceLogEntry> => {
-  const pruned: ComplianceLogEntry[] = [];
+  entries: ReadonlyArray<ComplianceActivityEntry>
+): ReadonlyArray<ComplianceActivityEntry> => {
+  const pruned: ComplianceActivityEntry[] = [];
 
   for (const entry of entries) {
     const prunedChildren = entry.children ? prunePendingComplianceEntries(entry.children) : undefined;

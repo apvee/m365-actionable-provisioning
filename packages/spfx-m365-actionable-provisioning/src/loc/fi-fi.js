@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'Vaatimustenmukaisuustuloksia ei ole saatavilla',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'Odottaa',
       RunningLabel: 'Käynnissä',
       ExecutedLabel: 'Suoritettu',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'Ei tuettu',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Vaatimustenmukainen',
       NonCompliantLabel: 'Ei vaatimustenmukainen',
       UnverifiableLabel: 'Ei todennettavissa',

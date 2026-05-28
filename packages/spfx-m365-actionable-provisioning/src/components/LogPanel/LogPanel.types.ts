@@ -1,7 +1,7 @@
-import type { ComplianceLogEntry, ProvisioningLogEntry } from '../../models';
-import type { SkipReason } from '@apvee/m365-actionable-provisioning/m365';
+import type { ComplianceActivityEntry, ProvisioningActivityEntry } from '../../models';
+import type { SkipReason } from '@apvee/m365-actionable-provisioning';
 
-export type ProvisioningLogEntryStrings = Readonly<{
+export type ProvisioningActivityEntryStrings = Readonly<{
   pendingLabel: string;
   runningLabel: string;
   executedLabel: string;
@@ -15,7 +15,7 @@ export type LogPanelStrings = Readonly<{
   emptyMessage: string;
 }>;
 
-export type ComplianceLogEntryStrings = Readonly<{
+export type ComplianceActivityEntryStrings = Readonly<{
   compliantLabel: string;
   nonCompliantLabel: string;
   unverifiableLabel: string;
@@ -36,7 +36,7 @@ export type ComplianceLogPanelStrings = Readonly<{
 export type LogPanelMode = 'provisioning' | 'compliance';
 
 export interface LogPanelProps {
-  entries: ReadonlyArray<ProvisioningLogEntry | ComplianceLogEntry>;
+  entries: ReadonlyArray<ProvisioningActivityEntry | ComplianceActivityEntry>;
   className?: string;
 
   /** Rendering mode (defaults to "provisioning"). */
@@ -48,9 +48,9 @@ export interface LogPanelProps {
   /** Optional localized strings overrides (compliance mode). */
   complianceStrings?: Partial<ComplianceLogPanelStrings>;
 
-  /** Optional localized strings for provisioning log entries (rendered via LogItem). */
-  logEntryStrings?: Partial<ProvisioningLogEntryStrings>;
+  /** Optional localized strings for provisioning activity entries (rendered via LogItem). */
+  activityEntryStrings?: Partial<ProvisioningActivityEntryStrings>;
 
-  /** Optional localized strings for compliance log entries (rendered via LogItem). */
-  complianceLogEntryStrings?: Partial<ComplianceLogEntryStrings>;
+  /** Optional localized strings for compliance activity entries (rendered via LogItem). */
+  complianceActivityEntryStrings?: Partial<ComplianceActivityEntryStrings>;
 }

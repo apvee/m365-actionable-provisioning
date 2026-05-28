@@ -5,25 +5,9 @@
  */
 
 import { ProvisioningEngine, type ProvisioningEngineArgs } from "../core";
-import { sharePointActionDefinitions } from "../sharepoint/catalogs";
-import type { M365Clients } from "./clients";
+import { m365ActionDefinitions } from "./action-definitions";
 import { m365ProvisioningPlanSchema } from "./provisioning-schema";
-import type { ProvisioningResultLight } from "./result";
-import type { M365Scope } from "./scope";
-
-/**
- * Unified M365 action definitions.
- *
- * @remarks
- * The catalog currently contains SharePoint actions. Graph support is wired
- * through the same engine/client infrastructure and covered by smoke tests until
- * public Graph actions are introduced.
- *
- * @public
- */
-export const m365ActionDefinitions = [
-  ...sharePointActionDefinitions,
-] as const;
+import type { M365Clients, M365Scope, ProvisioningResultLight } from "../runtime";
 
 /**
  * Arguments for creating a default M365 provisioning engine.

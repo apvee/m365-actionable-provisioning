@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'Nema dostupnih rezultata usklađenosti',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'Na čekanju',
       RunningLabel: 'U tijeku',
       ExecutedLabel: 'Izvršeno',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'Nije podržano',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Usklađeno',
       NonCompliantLabel: 'Neusklađeno',
       UnverifiableLabel: 'Neprovjerljivo',

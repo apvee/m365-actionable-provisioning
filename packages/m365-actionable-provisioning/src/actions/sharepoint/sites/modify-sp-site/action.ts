@@ -12,19 +12,19 @@
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
-import type { PermissionCheckResult } from "../../../../../core/permissions";
-import { normalizeError } from "../../../../../core";
-import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
-import { pickDefined } from "../../../../utils/object-utils";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
+import type { PermissionCheckResult } from "../../../../core/permissions";
+import { normalizeError } from "../../../../core";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../runtime";
+import { pickDefined } from "../../utils/object-utils";
 import "@pnp/sp/webs";
 import { Site } from "@pnp/sp/sites";
 import { PermissionKind } from "@pnp/sp/security";
 import "@pnp/sp/security/web";
 
-import { resolveTargetWeb } from "../../../../utils/sp-utils";
+import { resolveTargetWeb } from "../../utils/sp-utils";
 import { modifySPSiteSchema, type ModifySPSitePayload } from "./schema";
-import { compareProperties } from "../../shared/compliance-compare";
+import { compareProperties } from "../../_shared/compliance-compare";
 
 /* ========================================
    ACTION DEFINITION

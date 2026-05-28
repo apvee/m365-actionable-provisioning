@@ -10,7 +10,7 @@
 
 import type { IListInfo } from "@pnp/sp/lists";
 
-import { pickDefined } from "../../../../utils/object-utils";
+import { pickDefined } from "../../utils/object-utils";
 import type { ModifySPListPayload } from "./schema";
 
 export type BuiltListUpdateProps = Readonly<{

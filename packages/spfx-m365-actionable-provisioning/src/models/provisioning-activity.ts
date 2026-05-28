@@ -1,20 +1,20 @@
 /**
- * Provisioning log entry types.
+ * Provisioning activity entry types.
  * 
  * @packageDocumentation
  */
 
-import type { ActionPath } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
+import type { ActionPath } from '@apvee/m365-actionable-provisioning';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
 
-import type { BaseLogEntry } from './log-entry';
+import type { BaseActivityEntry } from './activity-entry';
 
 /**
- * Status of a provisioning log entry.
+ * Status of a provisioning activity entry.
  * 
  * @public
  */
-export type ProvisioningLogStatus =
+export type ProvisioningActivityStatus =
   | 'pending'
   | 'working'
   | 'success'
@@ -22,14 +22,14 @@ export type ProvisioningLogStatus =
   | 'skipped';
 
 /**
- * Log entry representing a provisioning action's state.
+ * Activity entry representing a provisioning action's state.
  * 
  * @public
  */
-export interface ProvisioningLogEntry extends BaseLogEntry<ActionPath> {
-  status: ProvisioningLogStatus;
+export interface ProvisioningActivityEntry extends BaseActivityEntry<ActionPath> {
+  status: ProvisioningActivityStatus;
   result?: ProvisioningResultLight;
   durationMs?: number;
   errorMessage?: string;
-  children?: ReadonlyArray<ProvisioningLogEntry>;
+  children?: ReadonlyArray<ProvisioningActivityEntry>;
 }

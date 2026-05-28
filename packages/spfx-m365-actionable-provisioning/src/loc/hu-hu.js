@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'Nincsenek elérhető megfelelőségi eredmények',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'Függőben',
       RunningLabel: 'Fut',
       ExecutedLabel: 'Végrehajtva',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'Nem támogatott',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Megfelelő',
       NonCompliantLabel: 'Nem megfelelő',
       UnverifiableLabel: 'Nem ellenőrizhető',

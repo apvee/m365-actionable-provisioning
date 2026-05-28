@@ -17,7 +17,7 @@ declare interface IConfirmDialogStrings {
 
 /** Strings for LogPanel component (provisioning mode) */
 declare interface ILogPanelStrings {
-  /** Message shown when no logs are available */
+  /** Message shown when no activity is available */
   EmptyMessage: string;
 }
 
@@ -27,8 +27,8 @@ declare interface IComplianceLogPanelStrings {
   EmptyMessage: string;
 }
 
-/** Strings for provisioning log entries */
-declare interface IProvisioningLogEntryStrings {
+/** Strings for provisioning activity entries */
+declare interface IProvisioningActivityEntryStrings {
   /** Label for pending status */
   PendingLabel: string;
   /** Label for running status */
@@ -53,8 +53,8 @@ declare interface IProvisioningLogEntryStrings {
   SkipReasonUnsupported: string;
 }
 
-/** Strings for compliance log entries */
-declare interface IComplianceLogEntryStrings {
+/** Strings for compliance activity entries */
+declare interface IComplianceActivityEntryStrings {
   /** Label for compliant status */
   CompliantLabel: string;
   /** Label for non-compliant status */
@@ -294,11 +294,11 @@ declare interface ISPFxProvisioningUIStrings {
   /** Strings for LogPanel component (compliance mode) */
   ComplianceLogPanel: IComplianceLogPanelStrings;
 
-  /** Strings for provisioning log entries */
-  ProvisioningLogEntry: IProvisioningLogEntryStrings;
+  /** Strings for provisioning activity entries */
+  ProvisioningActivityEntry: IProvisioningActivityEntryStrings;
 
-  /** Strings for compliance log entries */
-  ComplianceLogEntry: IComplianceLogEntryStrings;
+  /** Strings for compliance activity entries */
+  ComplianceActivityEntry: IComplianceActivityEntryStrings;
 
   /** Strings for ProvisioningDialog component */
   ProvisioningDialog: IProvisioningDialogStrings;

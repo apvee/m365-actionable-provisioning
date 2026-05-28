@@ -12,9 +12,9 @@
  */
 
 import type { BaseFieldPayload } from "./field-base-schema";
-import type { M365Scope, M365ActionResult } from "../../../../../m365";
-import type { ActionRuntimeContext } from "../../../../../core/action";
-import { pickDefined } from "../../../../utils/object-utils";
+import type { M365Scope, M365ActionResult } from "../../../../runtime";
+import type { ActionRuntimeContext } from "../../../../core/action";
+import { pickDefined } from "../../utils/object-utils";
 
 import {
     ChoiceFieldFormatType,
@@ -35,10 +35,10 @@ import {
     extractFieldId,
     getFieldByNameOrTitle,
     updateFieldDisplayName,
-} from "../../../../shared/domains/fields/field-lookup";
+} from "../../domains/fields/field-lookup";
 
-import { normalizeError } from "../../../../../core";
-import type { ComplianceActionCheckResult, ComplianceRuntimeContext } from "../../../../../core/action";
+import { normalizeError } from "../../../../core";
+import type { ComplianceActionCheckResult, ComplianceRuntimeContext } from "../../../../core/action";
 
 /* ========================================
    FIELD HANDLER CONTEXT

@@ -1,5 +1,5 @@
 /**
- * Microsoft 365 provisioning plan schema definitions with versioning support.
+ * Microsoft 365 provisioning plan schema definitions.
  *
  * @packageDocumentation
  */
@@ -7,7 +7,7 @@
 import { z } from "zod";
 import type { ActionNode } from "../core/action";
 import { provisioningPlanParametersSchema } from "../core/provisioning-plan";
-import { sharePointRootActionSchemas } from "../sharepoint/catalogs/provisioning.schema";
+import { sharePointRootActionSchemas } from "../actions/sharepoint/provisioning-schema";
 
 /**
  * Current default schema version.
@@ -53,8 +53,8 @@ export const m365RootActionSchema = z.discriminatedUnion("verb", m365RootActionS
  */
 export const m365ActionsSchema = z.array(m365RootActionSchema) satisfies z.ZodType<ReadonlyArray<ActionNode>>;
 
-function validateSchemaVersion(version: string): boolean {
-  return (SUPPORTED_SCHEMA_VERSIONS as readonly string[]).includes(version);
+function validateSchemaVersion(schemaVersion: string): boolean {
+  return (SUPPORTED_SCHEMA_VERSIONS as readonly string[]).includes(schemaVersion);
 }
 
 /**
@@ -70,10 +70,9 @@ export const m365ProvisioningPlanSchema = z
       .transform((val) => val ?? DEFAULT_SCHEMA_VERSION)
       .refine(validateSchemaVersion, {
         message: `Unsupported schema version. Supported versions: ${SUPPORTED_SCHEMA_VERSIONS.join(", ")}`,
-      }),
+    }),
     title: z.string().min(1).optional(),
     description: z.string().min(1).optional(),
-    version: z.string().min(1),
     parameters: provisioningPlanParametersSchema.optional(),
     actions: m365ActionsSchema,
   })

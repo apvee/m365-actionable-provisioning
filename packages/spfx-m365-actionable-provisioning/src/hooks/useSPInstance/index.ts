@@ -1,5 +1,5 @@
 /**
- * Auto-generated barrel export.
+ * Public barrel export.
  * Only @public exports are included.
  * @module
  */

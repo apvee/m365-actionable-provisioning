@@ -15,9 +15,9 @@
  *
  * @packageDocumentation
  */
-import { ActionDefinition, ComplianceActionCheckResult, ComplianceRuntimeContext } from "../../../../../core/action";
-import { normalizeError } from "../../../../../core";
-import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { ActionDefinition, ComplianceActionCheckResult, ComplianceRuntimeContext } from "../../../../core/action";
+import { normalizeError } from "../../../../core";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../runtime";
 
 import "@pnp/sp/webs";
 import "@pnp/sp/lists";

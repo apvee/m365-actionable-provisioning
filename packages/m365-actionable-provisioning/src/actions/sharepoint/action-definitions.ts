@@ -4,8 +4,8 @@
  * @packageDocumentation
  */
 
-import { sharePointActionModules } from "./actions/action-modules";
-import type { SharePointActionDefinition } from "./actions/action-module";
+import { sharePointActionModules } from "./action-modules";
+import type { SharePointActionDefinition } from "./action-module";
 
 /**
  * Built-in SharePoint action definitions.

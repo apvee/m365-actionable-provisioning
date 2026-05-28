@@ -15,17 +15,17 @@
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
-import type { PermissionCheckResult } from "../../../../../core/permissions";
-import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
+import type { PermissionCheckResult } from "../../../../core/permissions";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../runtime";
 import { actionExecuted, actionSkipped, compliant, nonCompliant, unverifiable, unverifiableError } from "../../_shared/action-results";
 
 import "@pnp/sp/lists";
 import "@pnp/sp/security/web";
 
-import { resolveTargetWeb } from "../../../../utils/sp-utils";
+import { resolveTargetWeb } from "../../utils/sp-utils";
 
-import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../../shared/domains/lists";
+import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../domains/lists";
 
 import { deleteSPListSchema, type DeleteSPListPayload } from "./schema";
 

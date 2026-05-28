@@ -27,14 +27,14 @@ Clients are injected once through the engine constructor and are available to ac
 ## Direct Usage
 
 ```typescript
-import { ProvisioningEngine, createLogger, consoleSink } from "@apvee/m365-actionable-provisioning/core";
+import { ProvisioningEngine, createLogger, consoleSink } from "@apvee/m365-actionable-provisioning";
 import {
   m365ActionDefinitions,
   m365ProvisioningPlanSchema,
   type M365Clients,
   type M365Scope,
   type ProvisioningResultLight,
-} from "@apvee/m365-actionable-provisioning/m365";
+} from "@apvee/m365-actionable-provisioning";
 
 const engine = new ProvisioningEngine<M365Scope, ProvisioningResultLight, M365Clients>({
   clients: { spfi, graphClient },
@@ -52,7 +52,7 @@ const snapshot = await engine.run();
 For the built-in M365 catalog, use the convenience factory when you do not need to override the definitions or schema:
 
 ```typescript
-import { createM365ProvisioningEngine } from "@apvee/m365-actionable-provisioning/m365";
+import { createM365ProvisioningEngine } from "@apvee/m365-actionable-provisioning";
 
 const engine = createM365ProvisioningEngine({
   clients: { spfi, graphClient },

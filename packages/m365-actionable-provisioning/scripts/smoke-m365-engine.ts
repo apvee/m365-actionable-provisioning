@@ -1,14 +1,14 @@
 import { z } from "zod";
 
-import { ActionDefinition, type ActionRuntimeContext } from "../src/core/action";
+import { ActionDefinition, defaultActionResultSchema, type ActionRuntimeContext } from "../src/core/action";
 import { ProvisioningEngine } from "../src/core/engine";
-import { createLogger } from "../src/core/logger";
+import { createLogger, createMultiSink, type LogEvent } from "../src/core/logger";
 import { createProvisioningPlanSchema, type BaseProvisioningPlan } from "../src/core/provisioning-plan";
 import type { PermissionCheckResult } from "../src/core/permissions";
-import { sharePointActionDefinitions, sharePointActionsSchema } from "../src/sharepoint/catalogs";
-import { sharePointActionModules } from "../src/sharepoint/catalogs/actions/action-modules";
-import { listSubactionSchema } from "../src/sharepoint/catalogs/actions/_composition/list-subactions-schema";
-import { siteSubactionSchema } from "../src/sharepoint/catalogs/actions/_composition/site-subactions-schema";
+import { sharePointActionDefinitions, sharePointActionsSchema } from "../src/actions/sharepoint";
+import { sharePointActionModules } from "../src/actions/sharepoint/action-modules";
+import { listSubactionSchema } from "../src/actions/sharepoint/_composition/list-subactions-schema";
+import { siteSubactionSchema } from "../src/actions/sharepoint/_composition/site-subactions-schema";
 
 type SmokeScope = {
   parentReady?: boolean;
@@ -221,6 +221,72 @@ function assertSharePointCatalogComposition(): void {
   assert(!listCreatesList.success, "SharePoint list subaction schema should reject nested list creation");
 }
 
+function assertJsonResultContract(): void {
+  assert(
+    defaultActionResultSchema.safeParse({ result: { ok: true, values: ["a", 1, null] } }).success,
+    "Default action result schema should accept JSON-safe output"
+  );
+
+  assert(
+    defaultActionResultSchema.safeParse({ scopeDelta: { runtimeObject: { execute: () => undefined } } }).success,
+    "Default action result schema should allow runtime values in scopeDelta"
+  );
+
+  assert(
+    !defaultActionResultSchema.safeParse({ result: { execute: () => undefined } }).success,
+    "Default action result schema should reject non-JSON output"
+  );
+
+  assert(
+    !defaultActionResultSchema.safeParse({ result: undefined }).success,
+    "Default action result schema should reject explicit undefined output"
+  );
+}
+
+function assertLoggerContract(): void {
+  const primaryEvents: LogEvent[] = [];
+  const secondaryEvents: LogEvent[] = [];
+  const cyclic: Record<string, unknown> = { name: "root" };
+  cyclic.self = cyclic;
+
+  const logger = createLogger({
+    level: "debug",
+    sink: createMultiSink(
+      { write: (event) => primaryEvents.push(event) },
+      { write: (event) => secondaryEvents.push(event) }
+    ),
+    scope: { requestId: "smoke" },
+  });
+
+  logger.info("structured payload", {
+    cyclic,
+    fn: function smokeFunction() {
+      return undefined;
+    },
+    notANumber: Number.NaN,
+    omitted: undefined,
+  });
+
+  logger.error("structured error", {
+    error: new Error("boom"),
+    data: { status: 500 },
+  });
+
+  assert(primaryEvents.length === 2, "Logger should emit both events to primary sink");
+  assert(secondaryEvents.length === 2, "Logger should emit both events to secondary sink");
+  assert(primaryEvents[0].scope?.requestId === "smoke", "Logger should preserve scoped metadata");
+
+  const payload = primaryEvents[0].data as Record<string, unknown>;
+  assert((payload.fn as string).startsWith("[Function"), "Logger should sanitize functions in data");
+  assert(payload.notANumber === "NaN", "Logger should sanitize non-finite numbers in data");
+  assert(!Object.prototype.hasOwnProperty.call(payload, "omitted"), "Logger should omit undefined object fields");
+
+  const cyclicPayload = payload.cyclic as Record<string, unknown>;
+  assert(cyclicPayload.self === "[Circular]", "Logger should sanitize circular references");
+  assert(primaryEvents[1].error?.message === "boom", "Logger should normalize error context");
+  assert((primaryEvents[1].data as Record<string, unknown>).status === 500, "Logger should keep JSON-safe error data");
+}
+
 async function runSmoke(
   args: Partial<ConstructorParameters<typeof ProvisioningEngine<SmokeScope, SmokeResult, SmokeClients>>[0]> & {
     planTemplate: BaseProvisioningPlan;
@@ -247,24 +313,26 @@ async function runSmoke(
 
 async function main(): Promise<void> {
   assertSharePointCatalogComposition();
+  assertJsonResultContract();
+  assertLoggerContract();
 
   const spOnly = await runSmoke({
     clients: { spfi: { marker: "spfi" } },
-    planTemplate: { version: "1.0.0", actions: [{ verb: "spSmoke", resource: "sp" }] },
+    planTemplate: { actions: [{ verb: "spSmoke", resource: "sp" }] },
   });
   assert(spOnly.status === "completed", "SPFI smoke action should complete");
   assert(spOnly.out.byAction["1"]?.result?.resource === "sp", "SPFI smoke action should write output");
 
   const graphOnly = await runSmoke({
     clients: { graphClient: { marker: "graph" } },
-    planTemplate: { version: "1.0.0", actions: [{ verb: "graphSmoke", resource: "graph" }] },
+    planTemplate: { actions: [{ verb: "graphSmoke", resource: "graph" }] },
   });
   assert(graphOnly.status === "completed", "Graph smoke action should complete");
   assert(graphOnly.out.byAction["1"]?.result?.resource === "graph", "Graph smoke action should write output");
 
   const missingGraph = await runSmoke({
     clients: {},
-    planTemplate: { version: "1.0.0", actions: [{ verb: "graphSmoke", resource: "graph" }] },
+    planTemplate: { actions: [{ verb: "graphSmoke", resource: "graph" }] },
   });
   assert(missingGraph.status === "failed", "Missing graphClient should fail");
   assert(
@@ -275,7 +343,6 @@ async function main(): Promise<void> {
   const failFastFalse = await runSmoke({
     options: { failFast: false },
     planTemplate: {
-      version: "1.0.0",
       actions: [
         { verb: "failSmoke", resource: "broken" },
         { verb: "successSmoke", resource: "next" },
@@ -294,7 +361,7 @@ async function main(): Promise<void> {
         permissionChecks += 1;
       }),
     ],
-    planTemplate: { version: "1.0.0", actions: [{ verb: "permissionSmoke", resource: "jit" }] },
+    planTemplate: { actions: [{ verb: "permissionSmoke", resource: "jit" }] },
   });
   assert(preflightJit.status === "completed", "Permission smoke action should complete");
   assert(permissionChecks === 2, "requiredClients action should run both preflight and JIT permission checks");

@@ -16,7 +16,7 @@ import {
   IdPrefixProvider,
 } from '@fluentui/react-components';
 
-import { consoleSink, createLogger, type Logger } from '@apvee/m365-actionable-provisioning/core';
+import { consoleSink, createLogger, type Logger } from '@apvee/m365-actionable-provisioning';
 
 import type { TemplateAppliedState } from '../../models';
 
@@ -130,7 +130,7 @@ export function PropertyPaneProvisioningField(
     const wrapped = React.createElement(
       IdPrefixProvider,
       { value: idPrefix },
-      React.createElement(FluentProvider, { theme: v9Theme }, inner)
+      React.createElement(FluentProvider, { theme: v9Theme, applyStylesToPortals: true }, inner)
     );
 
     ReactDom.render(wrapped, elem);

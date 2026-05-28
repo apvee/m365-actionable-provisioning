@@ -3,7 +3,7 @@ import { Button, Card, CardHeader, FluentProvider, IdPrefixProvider, Text, Title
 
 import type { ITestProvisioningProps } from './ITestProvisioningProps';
 
-import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning';
 import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
 import type { ProvisioningCompletedEvent } from '@apvee/spfx-m365-actionable-provisioning';
 import examplePlan from '../test-plans/complete-plan';
@@ -34,7 +34,7 @@ const TestProvisioning: React.FC<ITestProvisioningProps> = (props) => {
 
   return (
     <IdPrefixProvider value="pnpjs-provisioning-">
-      <FluentProvider theme={webLightTheme}>
+      <FluentProvider theme={webLightTheme} applyStylesToPortals>
         <Card>
           <CardHeader
             header={<Title3>SharePoint Provisioning</Title3>}

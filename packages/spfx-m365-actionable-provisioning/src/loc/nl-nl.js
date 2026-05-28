@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'Geen nalevingsresultaten beschikbaar',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'In behandeling',
       RunningLabel: 'Wordt uitgevoerd',
       ExecutedLabel: 'Uitgevoerd',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'Niet ondersteund',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Conform',
       NonCompliantLabel: 'Niet-conform',
       UnverifiableLabel: 'Niet verifieerbaar',

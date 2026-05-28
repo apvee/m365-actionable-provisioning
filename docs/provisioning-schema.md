@@ -22,11 +22,10 @@ A provisioning plan is a JSON object validated by Zod schemas. The root structur
 ### Schema Definition
 
 ```typescript
-import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 
 interface M365ProvisioningPlan {
   schemaVersion?: string;  // Defaults to "1.0"
-  version: string;         // Your plan version (e.g., "1.0.0")
   title?: string;          // Optional plan title
   description?: string;    // Optional plan description
   parameters?: Parameter[]; // Dynamic parameters
@@ -39,7 +38,6 @@ interface M365ProvisioningPlan {
 ```typescript
 const minimalPlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
-  version: "1.0.0",
   actions: [
     {
       verb: "modifySPSite",
@@ -55,7 +53,6 @@ const minimalPlan: M365ProvisioningPlan = {
 ```typescript
 const completePlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
-  version: "1.0.0",
   title: "Engineering Portal Setup",
   description: "Provisions the engineering portal with required lists and fields",
   parameters: [
@@ -862,7 +859,7 @@ import {
   // Type
   type SupportedSchemaVersion,
   type M365ProvisioningPlan,
-} from '@apvee/m365-actionable-provisioning/m365';
+} from '@apvee/m365-actionable-provisioning';
 ```
 
 ### m365ProvisioningPlanSchema
@@ -870,7 +867,7 @@ import {
 The root Zod schema for validating entire provisioning plans:
 
 ```typescript
-import { m365ProvisioningPlanSchema } from '@apvee/m365-actionable-provisioning/m365';
+import { m365ProvisioningPlanSchema } from '@apvee/m365-actionable-provisioning';
 
 // Validate a plan
 const result = m365ProvisioningPlanSchema.safeParse(myPlan);
@@ -884,7 +881,7 @@ if (!result.success) {
 The Zod schema for validating individual actions:
 
 ```typescript
-import { m365ActionsSchema } from '@apvee/m365-actionable-provisioning/m365';
+import { m365ActionsSchema } from '@apvee/m365-actionable-provisioning';
 
 // Validate an action
 const result = m365ActionsSchema.safeParse(myAction);
@@ -925,7 +922,7 @@ import {
   CreateSPSiteColumnAction,
   ModifySPFieldAction,
   DeleteSPFieldAction,
-} from '@apvee/m365-actionable-provisioning/sharepoint';
+} from '@apvee/m365-actionable-provisioning';
 ```
 
 ### Action Schemas (Advanced)
@@ -944,7 +941,7 @@ import {
   createSPSiteColumnSchema,
   modifySPFieldSchema,
   deleteSPFieldSchema,
-} from '@apvee/m365-actionable-provisioning/sharepoint';
+} from '@apvee/m365-actionable-provisioning';
 ```
 
 ---
@@ -954,11 +951,10 @@ import {
 ### Example 1: Communication Site with Lists
 
 ```typescript
-import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 
 export const engineeringPortalPlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
-  version: "1.0.0",
   title: "Engineering Portal Setup",
   parameters: [
     { key: "TenantUrl", value: "https://contoso.sharepoint.com" },
@@ -1033,7 +1029,6 @@ export const engineeringPortalPlan: M365ProvisioningPlan = {
 ```typescript
 export const projectTeamPlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
-  version: "1.0.0",
   parameters: [
     { key: "TenantUrl", value: "https://contoso.sharepoint.com" },
     { key: "TeamAlias", value: "project-alpha" }

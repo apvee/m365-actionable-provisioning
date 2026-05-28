@@ -13,11 +13,15 @@ This module provides a declarative approach to SharePoint provisioning through:
 ## Architecture
 
 ```
-packages/m365-actionable-provisioning/src/sharepoint/
+packages/m365-actionable-provisioning/src/actions/sharepoint/
 ├── index.ts          # Public API barrel export
 ├── utils/            # General utilities (error handling, web resolution)
-├── shared/           # SharePoint domain helpers
-└── catalogs/         # Co-located action modules and schema composition
+├── domains/          # SharePoint domain helpers
+├── _composition/     # Site/list subaction schema composition
+├── _shared/          # Cross-action runtime/schema utilities
+├── sites/            # Site action modules
+├── lists/            # List action modules
+└── fields/           # Field action modules
 ```
 
 ## Files
@@ -31,14 +35,16 @@ packages/m365-actionable-provisioning/src/sharepoint/
 | Folder | Description |
 |--------|-------------|
 | utils/ | General utilities (error handling, web resolution) |
-| shared/ | SharePoint domain helpers used by action handlers |
-| catalogs/ | Co-located action modules, definitions and schema composition |
+| domains/ | SharePoint domain helpers used by action handlers |
+| sites/, lists/, fields/ | Co-located action modules, definitions and schema |
+| _composition/ | Parent/child action schema composition |
+| _shared/ | Cross-action runtime/schema utilities |
 
 ## Usage
 
 ```typescript
-import { ProvisioningEngine, createLogger, consoleSink } from "@apvee/m365-actionable-provisioning/core";
-import { m365ActionDefinitions, m365ProvisioningPlanSchema, type M365Scope } from "@apvee/m365-actionable-provisioning/m365";
+import { ProvisioningEngine, createLogger, consoleSink } from "@apvee/m365-actionable-provisioning";
+import { m365ActionDefinitions, m365ProvisioningPlanSchema, type M365Scope } from "@apvee/m365-actionable-provisioning";
 
 const engine = new ProvisioningEngine<M365Scope>({
   clients: { spfi: rootSPFI },
@@ -54,6 +60,6 @@ const result = await engine.run();
 
 ## Adding New Features
 
-- **New action types**: See [catalogs/actions/ADDING_ACTIONS.md](catalogs/actions/ADDING_ACTIONS.md)
-- **Shared utilities**: Add to `shared/` folder (internal only)
-- **Public M365 types**: Add to the `m365/` module and re-export intentionally
+- **New action types**: See [ADDING_ACTIONS.md](ADDING_ACTIONS.md)
+- **Shared utilities**: Add to `domains/`, `_shared/`, or domain-local `_shared/` folders
+- **Public M365 types**: Add to `runtime/` or `catalog/` and re-export intentionally from the package root

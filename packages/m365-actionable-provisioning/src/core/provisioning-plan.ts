@@ -167,9 +167,6 @@ export type BaseProvisioningPlan<TAction extends { verb: string } = ActionNode> 
   /** Human-friendly description for the plan. */
   description?: string;
 
-  /** Plan format/version identifier (e.g. "1.0.0"). */
-  version: string;
-
   /** Optional parameter bag (to be resolved later by template expansion). */
   parameters?: ReadonlyArray<ProvisioningPlanParameter>;
 
@@ -225,7 +222,6 @@ export function createProvisioningPlanSchema<TAction extends { verb: string }>(
     .object({
       title: z.string().min(1).optional(),
       description: z.string().min(1).optional(),
-      version: z.string().min(1),
       parameters: provisioningPlanParametersSchema.optional(),
       actions: actionsSchema,
     })

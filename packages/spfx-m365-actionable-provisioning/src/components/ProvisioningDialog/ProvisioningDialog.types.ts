@@ -6,13 +6,13 @@
 
 import type { BaseComponentContext } from '@microsoft/sp-component-base';
 
-import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
-import type { EngineStatus } from '@apvee/m365-actionable-provisioning/core';
-import type { Logger } from '@apvee/m365-actionable-provisioning/core';
-import type { CompliancePolicy } from '@apvee/m365-actionable-provisioning/core';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
+import type { EngineStatus } from '@apvee/m365-actionable-provisioning';
+import type { Logger } from '@apvee/m365-actionable-provisioning';
+import type { CompliancePolicy } from '@apvee/m365-actionable-provisioning';
 
 import type { ConfirmDialogStrings } from '../ConfirmDialog/ConfirmDialog.types';
-import type { LogPanelProps, LogPanelStrings, ProvisioningLogEntryStrings } from '../LogPanel/LogPanel.types';
+import type { LogPanelProps, LogPanelStrings, ProvisioningActivityEntryStrings } from '../LogPanel/LogPanel.types';
 
 /**
  * Localized strings for the provisioning dialog.
@@ -92,7 +92,7 @@ export type ProvisioningDialogStrings = Readonly<{
     logPanelStrings?: Partial<LogPanelStrings>;
 
     /** Optional localized strings for log entries (rendered via LogItem). */
-    logEntryStrings?: Partial<ProvisioningLogEntryStrings>;
+    activityEntryStrings?: Partial<ProvisioningActivityEntryStrings>;
 }>;
 
 /**

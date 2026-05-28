@@ -11,10 +11,10 @@
  * The Zod schema for this action is co-located in `schema.ts`.
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
-import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
-import { normalizeError } from "../../../../../core";
-import { pickDefined } from "../../../../utils/object-utils";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../runtime";
+import { normalizeError } from "../../../../core";
+import { pickDefined } from "../../utils/object-utils";
 
 import { modifySPFieldSchema, type ModifySPFieldPayload } from "./schema";
 
@@ -34,7 +34,7 @@ import "@pnp/sp/lists";
 import {
     applyFieldViewSettings,
     getFieldByNameOrTitle,
-} from "../../../../shared/domains/fields/field-lookup";
+} from "../../domains/fields/field-lookup";
 
 /* ========================================
    ACTION DEFINITION

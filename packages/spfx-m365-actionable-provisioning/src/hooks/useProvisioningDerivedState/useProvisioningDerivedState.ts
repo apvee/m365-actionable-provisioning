@@ -6,14 +6,14 @@
 
 import { useMemo } from 'react';
 
-import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
-import type { ProvisioningLogEntry } from '../../models';
+import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
+import type { ProvisioningActivityEntry } from '../../models';
 import {
-  buildProvisioningLogEntriesFromSnapshot,
+  buildProvisioningActivityEntriesFromSnapshot,
   buildProvisioningUiSummary,
   type ProvisioningUiSummary,
-} from '../../utils/trace-to-log';
+} from '../../utils/trace-to-activity';
 
 /**
  * Derived state from a provisioning engine snapshot.
@@ -21,7 +21,7 @@ import {
  */
 export type ProvisioningDerivedState = Readonly<{
   summary?: ProvisioningUiSummary;
-  logEntries: ReadonlyArray<ProvisioningLogEntry>;
+  activityEntries: ReadonlyArray<ProvisioningActivityEntry>;
 }>;
 
 /**
@@ -34,7 +34,7 @@ export function useProvisioningDerivedState(
   return useMemo(() => {
     return {
       summary: buildProvisioningUiSummary(snapshot),
-      logEntries: buildProvisioningLogEntriesFromSnapshot(snapshot),
+      activityEntries: buildProvisioningActivityEntriesFromSnapshot(snapshot),
     };
   }, [snapshot]);
 }

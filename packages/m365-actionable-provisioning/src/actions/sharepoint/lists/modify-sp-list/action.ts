@@ -15,20 +15,20 @@
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
-import type { PermissionCheckResult } from "../../../../../core/permissions";
-import { normalizeError } from "../../../../../core";
-import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
+import type { PermissionCheckResult } from "../../../../core/permissions";
+import { normalizeError } from "../../../../core";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../runtime";
 
 import "@pnp/sp/lists";
 import "@pnp/sp/security/web";
 
-import { resolveTargetWeb } from "../../../../utils/sp-utils";
+import { resolveTargetWeb } from "../../utils/sp-utils";
 
-import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../../shared/domains/lists";
+import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../domains/lists";
 import { modifySPListSchema, type ModifySPListPayload } from "./schema";
 import { buildModifyListUpdateProps } from "./update-props";
-import { compareProperties } from "../../shared/compliance-compare";
+import { compareProperties } from "../../_shared/compliance-compare";
 
 /* ========================================
    ACTION DEFINITION

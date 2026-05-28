@@ -1,2 +1,4 @@
 export * from './core';
-export * from './m365';
+export * from './runtime';
+export * from './catalog';
+export * from './actions/sharepoint';

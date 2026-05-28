@@ -14,44 +14,13 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
-    "core.d.ts",
-    "core.js",
     "lib",
-    "m365.d.ts",
-    "m365.js",
-    "README.md",
-    "sharepoint.d.ts",
-    "sharepoint.js"
+    "README.md"
   ],
-  "typesVersions": {
-    "*": {
-      "core": [
-        "lib/core/index.d.ts"
-      ],
-      "m365": [
-        "lib/m365/index.d.ts"
-      ],
-      "sharepoint": [
-        "lib/sharepoint/index.d.ts"
-      ]
-    }
-  },
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
-    },
-    "./core": {
-      "types": "./lib/core/index.d.ts",
-      "default": "./lib/core/index.js"
-    },
-    "./m365": {
-      "types": "./lib/m365/index.d.ts",
-      "default": "./lib/m365/index.js"
-    },
-    "./sharepoint": {
-      "types": "./lib/sharepoint/index.d.ts",
-      "default": "./lib/sharepoint/index.js"
     },
     "./package.json": "./package.json"
   },

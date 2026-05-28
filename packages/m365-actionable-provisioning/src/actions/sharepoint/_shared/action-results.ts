@@ -1,6 +1,6 @@
-import { normalizeError } from "../../../../core";
-import type { ComplianceActionCheckResult } from "../../../../core/action";
-import type { M365ActionResult, M365Scope, SkipReason } from "../../../../m365";
+import { normalizeError } from "../../../core";
+import type { ComplianceActionCheckResult } from "../../../core/action";
+import type { M365ActionResult, M365Scope, SkipReason } from "../../../runtime";
 
 type ComplianceResultArgs = Readonly<{
   resource?: string;

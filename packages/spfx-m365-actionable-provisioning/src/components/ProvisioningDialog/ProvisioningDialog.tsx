@@ -9,9 +9,9 @@ import { ShieldCheckmarkColor, WrenchScrewdriverColor } from '@fluentui/react-ic
 
 import { useSPFxProvisioningEngine, useProvisioningDerivedState } from '../../hooks';
 import { useNavigationGuard } from '../../hooks/useNavigationGuard';
-import { buildComplianceLogEntriesFromReport, buildComplianceLogEntriesFromTrace } from '../../utils/compliance-to-log';
+import { buildComplianceActivityEntriesFromReport, buildComplianceActivityEntriesFromTrace } from '../../utils/compliance-to-activity';
 import { normalizeUrl } from '../../utils/url';
-import type { ComplianceLogEntry } from '../../models';
+import type { ComplianceActivityEntry } from '../../models';
 import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
 import { useProvisioningDialogStyles } from './ProvisioningDialog.styles';
 import { buildInitialDialogState, dialogReducer, getComplianceFooterModel } from './ProvisioningDialog.state';
@@ -170,7 +170,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
         resetKey: localEngineResetKey,
     });
 
-    const { summary, logEntries } = useProvisioningDerivedState(snapshot);
+    const { summary, activityEntries } = useProvisioningDerivedState(snapshot);
     const isRunning = summary?.isRunning === true;
 
     // Navigation guard: warn user before leaving while operation is in progress
@@ -241,17 +241,17 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
     }, [snapshot, state.isClosing]);
 
     // Pristine state for provisioning mode
-    const isPristine = !isRunning && !state.runInFlight && !finalOutcome && logEntries.length === 0 && !state.uiError && !snapshot?.error;
+    const isPristine = !isRunning && !state.runInFlight && !finalOutcome && activityEntries.length === 0 && !state.uiError && !snapshot?.error;
 
     // Compliance mode derived state
     const complianceEntries = React.useMemo(() => {
         return state.complianceReport
-            ? buildComplianceLogEntriesFromReport(state.complianceReport)
-            : ([] as ReadonlyArray<ComplianceLogEntry>);
+            ? buildComplianceActivityEntriesFromReport(state.complianceReport)
+            : ([] as ReadonlyArray<ComplianceActivityEntry>);
     }, [state.complianceReport]);
 
     const liveComplianceEntries = React.useMemo(() => {
-        return buildComplianceLogEntriesFromTrace(snapshot?.compliance?.trace);
+        return buildComplianceActivityEntriesFromTrace(snapshot?.compliance?.trace);
     }, [snapshot?.compliance?.trace]);
 
     const displayedComplianceEntries = React.useMemo(() => {
@@ -308,7 +308,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
         finalOutcomeFailedLabel: s.finalOutcomeFailedLabel,
         finalOutcomeCancelledLabel: s.finalOutcomeCancelledLabel,
         logPanelStrings: s.logPanelStrings,
-        logEntryStrings: s.logEntryStrings,
+        activityEntryStrings: s.activityEntryStrings,
     }), [s]);
 
     const complianceViewStrings = React.useMemo<ComplianceViewStrings>(() => ({
@@ -415,7 +415,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
                     uiError={state.complianceError}
                     openLogItems={state.complianceOpenLogItems}
                     onOpenLogItemsChange={handleComplianceOpenLogItemsChange}
-                    logEntries={displayedComplianceEntries}
+                    activityEntries={displayedComplianceEntries}
                     strings={complianceViewStrings}
                 />
             );
@@ -425,7 +425,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
             <ProvisioningView
                 snapshot={snapshot}
                 summary={summary}
-                logEntries={logEntries}
+                activityEntries={activityEntries}
                 isPristine={isPristine}
                 uiError={state.uiError}
                 openLogItems={state.openLogItems}

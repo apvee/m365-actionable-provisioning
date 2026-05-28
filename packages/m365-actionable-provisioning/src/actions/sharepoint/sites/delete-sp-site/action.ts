@@ -11,10 +11,10 @@
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
-import type { PermissionCheckResult } from "../../../../../core/permissions";
-import { normalizeError } from "../../../../../core";
-import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
+import type { PermissionCheckResult } from "../../../../core/permissions";
+import { normalizeError } from "../../../../core";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../runtime";
 import { Site } from "@pnp/sp/sites";
 import { PermissionKind } from "@pnp/sp/security";
 import "@pnp/sp/webs";

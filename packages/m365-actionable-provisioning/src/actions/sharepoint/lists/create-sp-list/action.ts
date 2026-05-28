@@ -18,11 +18,11 @@
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
-import type { PermissionCheckResult } from "../../../../../core/permissions";
-import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
-import { pickDefined } from "../../../../utils/object-utils";
-import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../../../shared/domains/lists";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
+import type { PermissionCheckResult } from "../../../../core/permissions";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../runtime";
+import { pickDefined } from "../../utils/object-utils";
+import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../domains/lists";
 import { actionExecuted, actionSkipped, compliant, nonCompliant, unverifiable, unverifiableError } from "../../_shared/action-results";
 
 import { createSPListSchema, type CreateSPListPayload } from "./schema";
@@ -31,7 +31,7 @@ import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/security/web";
 import { IListInfo } from "@pnp/sp/lists";
-import { resolveTargetWeb } from "../../../../utils/sp-utils";
+import { resolveTargetWeb } from "../../utils/sp-utils";
 
 /* ========================================
    ACTION DEFINITION

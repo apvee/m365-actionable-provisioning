@@ -1,11 +1,11 @@
 import type {
     LogPanelStrings,
-    ProvisioningLogEntryStrings,
+    ProvisioningActivityEntryStrings,
     ComplianceLogPanelStrings,
-    ComplianceLogEntryStrings,
+    ComplianceActivityEntryStrings,
 } from '../LogPanel/LogPanel.types';
-import type { ProvisioningLogEntry } from '../../models';
-import type { ComplianceLogEntry } from '../../models';
+import type { ProvisioningActivityEntry } from '../../models';
+import type { ComplianceActivityEntry } from '../../models';
 
 /**
  * Props for the LogSection component.
@@ -19,13 +19,13 @@ export type LogSectionProps = Readonly<{
     /** Called when accordion open state changes */
     onOpenItemsChange: (items: ReadonlyArray<string>) => void;
     /** Log entries to display */
-    entries: ReadonlyArray<ProvisioningLogEntry | ComplianceLogEntry>;
+    entries: ReadonlyArray<ProvisioningActivityEntry | ComplianceActivityEntry>;
     /** Display mode for log entries */
     mode?: 'provisioning' | 'compliance';
     /** Optional LogPanel string overrides (provisioning mode) */
     strings?: Partial<LogPanelStrings> | Partial<ComplianceLogPanelStrings>;
     /** Optional log entry string overrides */
-    logEntryStrings?: Partial<ProvisioningLogEntryStrings> | Partial<ComplianceLogEntryStrings>;
+    activityEntryStrings?: Partial<ProvisioningActivityEntryStrings> | Partial<ComplianceActivityEntryStrings>;
     /** Optional additional CSS class */
     className?: string;
 }>;

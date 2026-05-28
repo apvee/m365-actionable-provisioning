@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'No hay resultados de cumplimiento disponibles',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'Pendiente',
       RunningLabel: 'En ejecución',
       ExecutedLabel: 'Ejecutado',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'No compatible',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Conforme',
       NonCompliantLabel: 'No conforme',
       UnverifiableLabel: 'No verificable',

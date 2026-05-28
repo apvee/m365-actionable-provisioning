@@ -11,6 +11,7 @@
  * @packageDocumentation
  */
 
+import type { JsonObject, JsonValue } from "./json";
 import { nowIso, normalizeError } from "./utils";
 
 /**
@@ -27,6 +28,30 @@ import { nowIso, normalizeError } from "./utils";
  * @public
  */
 export type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
+
+/**
+ * Context fields added to log events.
+ *
+ * @public
+ */
+export type LogScope = Readonly<Record<string, string | undefined>>;
+
+/**
+ * Structured, JSON-safe log payload.
+ *
+ * @public
+ */
+export type LogData = JsonValue;
+
+/**
+ * Error logging context.
+ *
+ * @public
+ */
+export type LogErrorContext = Readonly<{
+    error?: unknown;
+    data?: unknown;
+}>;
 
 /**
  * Internal ranking of log levels for comparison.
@@ -63,10 +88,10 @@ export type LogEvent = {
     message: string;
 
     /** Optional contextual scope (e.g., action path, verb, requestId) */
-    scope?: Record<string, string | undefined>;
+    scope?: LogScope;
 
     /** Optional structured data payload */
-    data?: unknown;
+    data?: LogData;
 
     /** Optional error details with message and stack trace */
     error?: { message: string; stack?: string };
@@ -148,10 +173,9 @@ export interface Logger {
      * Logs an error message.
      * 
      * @param message - The log message
-     * @param err - Optional error object (will be normalized)
-     * @param data - Optional structured data payload
+     * @param context - Optional error object and structured data payload
      */
-    error(message: string, err?: unknown, data?: unknown): void;
+    error(message: string, context?: LogErrorContext): void;
 
     /**
      * Creates a child logger with additional scope context.
@@ -165,7 +189,7 @@ export interface Logger {
      * childLogger.info("Starting action"); // Includes scope in log event
      * ```
      */
-    withScope(scope: Record<string, string | undefined>): Logger;
+    withScope(scope: LogScope): Logger;
 }
 
 /**
@@ -209,6 +233,57 @@ export const consoleSink: LogSink = {
     },
 };
 
+const sanitizeLogValue = (value: unknown, seen: WeakSet<object>, depth: number): JsonValue => {
+    if (value === null) return null;
+    if (typeof value === "string" || typeof value === "boolean") return value;
+
+    if (typeof value === "number") return Number.isFinite(value) ? value : String(value);
+    if (typeof value === "bigint") return value.toString();
+    if (typeof value === "symbol") return String(value);
+    if (typeof value === "function") return `[Function${value.name ? `: ${value.name}` : ""}]`;
+    if (value === undefined) return null;
+
+    if (value instanceof Date) return value.toISOString();
+    if (value instanceof Error) return sanitizeLogValue(normalizeError(value), seen, depth);
+
+    if (typeof value !== "object") return String(value);
+    if (seen.has(value)) return "[Circular]";
+    if (depth >= 8) return "[MaxDepth]";
+
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+        return value.slice(0, 100).map((item) => sanitizeLogValue(item, seen, depth + 1));
+    }
+
+    const out: Record<string, JsonValue> = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>).slice(0, 100)) {
+        if (entry === undefined) continue;
+        out[key] = sanitizeLogValue(entry, seen, depth + 1);
+    }
+
+    return out as JsonObject;
+};
+
+/**
+ * Converts arbitrary runtime values into JSON-safe log data.
+ *
+ * @public
+ */
+export const sanitizeLogData = (data: unknown): LogData =>
+    sanitizeLogValue(data, new WeakSet<object>(), 0);
+
+/**
+ * Fans out a log event to multiple sinks.
+ *
+ * @public
+ */
+export const createMultiSink = (...sinks: readonly LogSink[]): LogSink => ({
+    write: (event) => {
+        for (const sink of sinks) sink.write(event);
+    },
+});
+
 /**
  * Creates a new logger instance.
  * 
@@ -235,14 +310,18 @@ export const consoleSink: LogSink = {
 export const createLogger = (opts: {
     level: LogLevel;
     sink: LogSink;
-    scope?: LogEvent["scope"]
+    scope?: LogScope
 }): Logger => {
     const baseScope = opts.scope ?? {};
 
-    const write = (event: Omit<LogEvent, "at" | "scope"> & { scope?: LogEvent["scope"] }): void => {
+    const write = (event: Omit<LogEvent, "at" | "scope" | "data"> & { scope?: LogScope; data?: unknown }): void => {
         if (!shouldLog(opts.level, event.level)) return;
+        const data = event.data === undefined ? undefined : sanitizeLogData(event.data);
         opts.sink.write({
-            ...event,
+            level: event.level,
+            message: event.message,
+            ...(data !== undefined ? { data } : {}),
+            ...(event.error !== undefined ? { error: event.error } : {}),
             at: nowIso(),
             scope: { ...baseScope, ...(event.scope ?? {}) }
         });
@@ -254,11 +333,11 @@ export const createLogger = (opts: {
         debug: (message, data) => write({ level: "debug", message, data }),
         info: (message, data) => write({ level: "info", message, data }),
         warn: (message, data) => write({ level: "warn", message, data }),
-        error: (message, err, data) => write({
+        error: (message, context) => write({
             level: "error",
             message,
-            ...(err !== undefined && err !== null ? { error: normalizeError(err) } : {}),
-            data,
+            ...(context?.error !== undefined && context.error !== null ? { error: normalizeError(context.error) } : {}),
+            data: context?.data,
         }),
         withScope: (scope) => createLogger({
             level: opts.level,

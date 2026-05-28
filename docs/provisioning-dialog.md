@@ -129,7 +129,7 @@ import {
   Button 
 } from '@fluentui/react-components';
 import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
-import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning';
 import type { WebPartContext } from '@microsoft/sp-webpart-base';
 import { myPlan } from './provisioning-plan';
 
@@ -146,7 +146,7 @@ const MyWebPart: React.FC<IMyWebPartProps> = ({ context }) => {
 
   return (
     <IdPrefixProvider value="my-webpart-">
-      <FluentProvider theme={webLightTheme}>
+      <FluentProvider theme={webLightTheme} applyStylesToPortals>
         <Button 
           appearance="primary" 
           onClick={() => setOpen(true)}
@@ -464,7 +464,7 @@ type ProvisioningDialogStrings = Readonly<{
   // Nested component strings (optional)
   confirmDialogStrings?: Partial<ConfirmDialogStrings>;
   logPanelStrings?: Partial<LogPanelStrings>;
-  logEntryStrings?: Partial<ProvisioningLogEntryStrings>;
+  activityEntryStrings?: Partial<ProvisioningActivityEntryStrings>;
 }>;
 ```
 
@@ -474,18 +474,21 @@ type ProvisioningDialogStrings = Readonly<{
 
 ### Fluent UI 9 Theming
 
-The dialog automatically inherits the FluentProvider theme:
+The dialog should be rendered under a Fluent UI 9 provider with
+`applyStylesToPortals`. Fluent dialogs use body-level portals, which is the
+right behavior for SPFx overlays because it avoids SharePoint canvas stacking
+contexts while still carrying the provider theme into portal content.
 
 ```tsx
 import { FluentProvider, webLightTheme, webDarkTheme } from '@fluentui/react-components';
 
 // Light theme
-<FluentProvider theme={webLightTheme}>
+<FluentProvider theme={webLightTheme} applyStylesToPortals>
   <ProvisioningDialog {...props} />
 </FluentProvider>
 
 // Dark theme
-<FluentProvider theme={webDarkTheme}>
+<FluentProvider theme={webDarkTheme} applyStylesToPortals>
   <ProvisioningDialog {...props} />
 </FluentProvider>
 ```
@@ -498,7 +501,7 @@ For proper ID scoping in SPFx (required to avoid conflicts):
 import { IdPrefixProvider } from '@fluentui/react-components';
 
 <IdPrefixProvider value="my-webpart-provisioning-">
-  <FluentProvider theme={webLightTheme}>
+  <FluentProvider theme={webLightTheme} applyStylesToPortals>
     <ProvisioningDialog {...props} />
   </FluentProvider>
 </IdPrefixProvider>
@@ -526,7 +529,7 @@ import {
 } from '@fluentui/react-components';
 import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
 import type { ProvisioningCompletedEvent } from '@apvee/spfx-m365-actionable-provisioning';
-import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning';
 import { provisioningPlan } from './plans/provisioning-plan';
 
 interface IMyWebPartProps {
@@ -565,7 +568,7 @@ const MyWebPart: React.FC<IMyWebPartProps> = (props) => {
 
   return (
     <IdPrefixProvider value="my-webpart-">
-      <FluentProvider theme={webLightTheme}>
+      <FluentProvider theme={webLightTheme} applyStylesToPortals>
         <Card>
           <CardHeader
             header={<Title3>Site Configuration</Title3>}

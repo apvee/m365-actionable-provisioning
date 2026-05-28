@@ -12,17 +12,17 @@
  * @packageDocumentation
  */
 
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../../core/action";
-import type { PermissionCheckResult } from "../../../../../core/permissions";
-import { normalizeError } from "../../../../../core";
-import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../../m365";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
+import type { PermissionCheckResult } from "../../../../core/permissions";
+import { normalizeError } from "../../../../core";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../runtime";
 import type { ICreateCommSiteProps, ICreateTeamSiteProps, ISiteCreationResponse } from "@pnp/sp/sites/types";
 import { Web } from "@pnp/sp/webs";
 import { Site } from "@pnp/sp/sites";
 import "@pnp/sp/sites";
 import "@pnp/sp/webs";
 
-import { resolveTargetWeb } from "../../../../utils/sp-utils";
+import { resolveTargetWeb } from "../../utils/sp-utils";
 import { createSPSiteSchema, type CreateSPSitePayload } from "./schema";
 
 /* ========================================

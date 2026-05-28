@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Web } from '@pnp/sp/webs';
 import '@pnp/sp/webs';
 
-import type { EngineSnapshotTyped, ProvisioningEngine } from '@apvee/m365-actionable-provisioning/core';
+import type { EngineSnapshotTyped, ProvisioningEngine } from '@apvee/m365-actionable-provisioning';
 import {
   createM365ProvisioningEngine,
   type M365Clients,
   type M365Scope,
   type ProvisioningResultLight,
-} from '@apvee/m365-actionable-provisioning/m365';
-import { extractPnPjsHttpErrorDetails } from '@apvee/m365-actionable-provisioning/sharepoint';
+} from '@apvee/m365-actionable-provisioning';
+import { extractPnPjsHttpErrorDetails } from '@apvee/m365-actionable-provisioning';
 import { normalizeUrl } from '../../utils/url';
 
 import { useSPInstance } from '../useSPInstance/useSPInstance';

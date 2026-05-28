@@ -18,7 +18,7 @@ import type { AnyActionDefinition } from "./action";
 /**
  * Complete action catalog defining a provisioning vocabulary.
  * 
- * @template Scope - The scope object type (extends JsonObject)
+ * @template Scope - The runtime scope object type
  * 
  * @remarks
  * **Purpose:**

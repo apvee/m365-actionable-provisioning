@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'Ingen overholdelsesresultater tilgængelige',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'Afventer',
       RunningLabel: 'Kører',
       ExecutedLabel: 'Udført',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'Ikke understøttet',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Overholder',
       NonCompliantLabel: 'Overholder ikke',
       UnverifiableLabel: 'Kan ikke verificeres',

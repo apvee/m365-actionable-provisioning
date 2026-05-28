@@ -18,12 +18,12 @@ import {
   createSPListActionModule,
   deleteSPListActionModule,
   modifySPListActionModule,
-} from "./actions/lists";
+} from "./lists";
 import {
   createSPSiteActionModule,
   deleteSPSiteActionModule,
   modifySPSiteActionModule,
-} from "./actions/sites";
+} from "./sites";
 
 /* ========================================
    ROOT ACTION SCHEMAS

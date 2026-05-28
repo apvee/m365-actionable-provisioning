@@ -43,7 +43,7 @@ const useStyles = makeStyles({
 export const ProvisioningView: React.FC<ProvisioningViewProps> = ({
     snapshot,
     summary,
-    logEntries,
+    activityEntries,
     isPristine,
     uiError,
     openLogItems,
@@ -198,10 +198,10 @@ export const ProvisioningView: React.FC<ProvisioningViewProps> = ({
                 label={strings.viewLogsLabel}
                 openItems={openLogItems}
                 onOpenItemsChange={handleOpenLogItemsChange}
-                entries={logEntries}
+                entries={activityEntries}
                 mode="provisioning"
                 strings={strings.logPanelStrings}
-                logEntryStrings={strings.logEntryStrings}
+                activityEntryStrings={strings.activityEntryStrings}
             />
         </Stack>
     );

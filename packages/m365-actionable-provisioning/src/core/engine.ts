@@ -20,7 +20,7 @@
 
 import { z } from "zod";
 import type { JsonValue } from "./json";
-import type { Logger } from "./logger";
+import type { Logger, LogScope } from "./logger";
 import type { PermissionCheckResult } from "./permissions";
 import type { ActionPath, EngineOutput } from "./trace";
 import { buildInitialTrace, markAction } from "./trace";
@@ -46,6 +46,14 @@ import {
     PermissionCache,
     type EngineOptionsInternal,
 } from "./engine-internals";
+
+type EngineLogPhase = "preflight" | "jit" | "execute" | "compliance";
+
+type EngineLogScope = LogScope & Readonly<{
+    phase?: EngineLogPhase;
+    path?: ActionPath;
+    verb?: string;
+}>;
 
 /**
  * Engine execution status.
@@ -402,7 +410,10 @@ export class ProvisioningEngine<
                 },
             });
 
-            this.logger.error("Engine failed", e, enriched !== undefined ? { enriched } : undefined);
+            this.logger.error("Engine failed", {
+                error: e,
+                ...(enriched !== undefined ? { data: { enriched } } : {}),
+            });
             return this.snapshot();
         }
     }
@@ -479,7 +490,7 @@ export class ProvisioningEngine<
                 const verb = String(node.verb);
                 const def = defByVerb[verb];
 
-                const log = this.logger.withScope({ phase: "compliance", path, verb });
+                const log = this.logger.withScope({ phase: "compliance", path, verb } satisfies EngineLogScope);
 
                 const startedAt = nowIso();
                 setComplianceTraceItem(path, "running", { startedAt });
@@ -904,7 +915,7 @@ export class ProvisioningEngine<
                 const requiresOk = def.requiresScopeSchema ? def.requiresScopeSchema.safeParse(scope0).success : true;
 
                 if (requiresOk) {
-                    const log = this.logger.withScope({ phase: "preflight", path, verb: String(node.verb) });
+                    const log = this.logger.withScope({ phase: "preflight", path, verb: String(node.verb) } satisfies EngineLogScope);
 
                     const payload = node as z.infer<typeof def.actionSchema>;
 
@@ -990,7 +1001,7 @@ export class ProvisioningEngine<
             if (this.cancelled) return scopeIn;
 
             const def = this.defByVerb[String(node.verb)];
-            const log = this.logger.withScope({ path, verb: String(node.verb) });
+            const log = this.logger.withScope({ phase: "execute", path, verb: String(node.verb) } satisfies EngineLogScope);
 
             if (this.out.trace.byPath[path]?.status === "fail") {
                 return scopeIn;
@@ -1025,7 +1036,7 @@ export class ProvisioningEngine<
                             scopeIn: scopeForPerms,
                             clients: this.clients,
                             out: this.out,
-                            logger: log.withScope({ phase: "jit" }),
+                            logger: log.withScope({ phase: "jit" } satisfies EngineLogScope),
                             action: { path, verb: String(node.verb), payload },
                         };
 
@@ -1109,7 +1120,10 @@ export class ProvisioningEngine<
                         ...(details !== undefined ? { details } : {}),
                     },
                 });
-                log.error("Action failed", e, enriched !== undefined ? { enriched } : undefined);
+                log.error("Action failed", {
+                    error: e,
+                    ...(enriched !== undefined ? { data: { enriched } } : {}),
+                });
                 if (this.options.failFast) return scopeIn;
                 return scopeIn;
             }

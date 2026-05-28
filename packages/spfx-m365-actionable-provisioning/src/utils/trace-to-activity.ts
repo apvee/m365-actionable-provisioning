@@ -1,14 +1,14 @@
 /**
- * Internal utilities for converting engine trace data to UI log entries.
+ * Internal utilities for converting engine trace data to UI activity entries.
  *
  * @internal
  * @packageDocumentation
  */
 
-import type { EngineSnapshotTyped, EngineStatus } from '@apvee/m365-actionable-provisioning/core';
-import type { EngineTrace, ActionStatus } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
-import type { ProvisioningLogEntry, ProvisioningLogStatus } from '../models';
+import type { EngineSnapshotTyped, EngineStatus } from '@apvee/m365-actionable-provisioning';
+import type { EngineTrace, ActionStatus } from '@apvee/m365-actionable-provisioning';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
+import type { ProvisioningActivityEntry, ProvisioningActivityStatus } from '../models';
 
 export type ProvisioningUiProgress = Readonly<{
   completed: number;
@@ -23,7 +23,7 @@ export type ProvisioningUiSummary = Readonly<{
   counts: EngineTrace['counts'];
 }>;
 
-const mapActionStatusToLogStatus = (s: ActionStatus): ProvisioningLogStatus => {
+const mapActionStatusToActivityStatus = (s: ActionStatus): ProvisioningActivityStatus => {
   switch (s) {
     case 'idle':
       return 'pending';
@@ -40,14 +40,14 @@ const mapActionStatusToLogStatus = (s: ActionStatus): ProvisioningLogStatus => {
   }
 };
 
-const mapTraceAndResultToUiLogStatus = (
+const mapTraceAndResultToActivityStatus = (
   traceStatus: ActionStatus,
   result: ProvisioningResultLight | undefined
-): ProvisioningLogStatus => {
+): ProvisioningActivityStatus => {
   // Engine currently marks actions as "success" even when their domain result is "skipped".
   // Keep UI semantics by interpreting skipped outcomes as skipped status.
   if (traceStatus === 'success' && result?.outcome === 'skipped') return 'skipped';
-  return mapActionStatusToLogStatus(traceStatus);
+  return mapActionStatusToActivityStatus(traceStatus);
 };
 
 const isSubactionPath = (path: string): boolean => path.includes('/');
@@ -59,8 +59,8 @@ const calculateDepth = (path: string): number => {
 const buildHierarchicalEntries = (
   snapshot: EngineSnapshotTyped<ProvisioningResultLight>,
   trace: EngineTrace
-): ReadonlyArray<ProvisioningLogEntry> => {
-  const entriesByPath = new Map<string, ProvisioningLogEntry>();
+): ReadonlyArray<ProvisioningActivityEntry> => {
+  const entriesByPath = new Map<string, ProvisioningActivityEntry>();
 
   // Prima passata: crea tutte le entry
   for (const path of trace.order) {
@@ -70,12 +70,12 @@ const buildHierarchicalEntries = (
     const result = snapshot.out.byAction?.[path]?.result;
     const depth = calculateDepth(path);
 
-    const entry: ProvisioningLogEntry = {
+    const entry: ProvisioningActivityEntry = {
       id: path,
       verb: traceItem.verb,
       result,
       kind: isSubactionPath(path) ? 'subaction' : 'action',
-      status: mapTraceAndResultToUiLogStatus(traceItem.status, result),
+      status: mapTraceAndResultToActivityStatus(traceItem.status, result),
       durationMs: traceItem.durationMs,
       errorMessage: traceItem.error?.message,
       depth,
@@ -86,8 +86,8 @@ const buildHierarchicalEntries = (
   }
 
   // Seconda passata: costruisce la gerarchia
-  const rootEntries: ProvisioningLogEntry[] = [];
-  const childrenByParent = new Map<string, ProvisioningLogEntry[]>();
+  const rootEntries: ProvisioningActivityEntry[] = [];
+  const childrenByParent = new Map<string, ProvisioningActivityEntry[]>();
 
   for (const [path, entry] of entriesByPath) {
     if (entry.depth === 0) {
@@ -102,7 +102,7 @@ const buildHierarchicalEntries = (
   }
 
   // Terza passata: assegna children alle entry
-  const assignChildren = (entry: ProvisioningLogEntry): ProvisioningLogEntry => {
+  const assignChildren = (entry: ProvisioningActivityEntry): ProvisioningActivityEntry => {
     const children = childrenByParent.get(entry.id);
     if (!children || children.length === 0) {
       return entry;
@@ -165,9 +165,9 @@ const buildProvisioningUiCounts = (
   return counts;
 };
 
-export function buildProvisioningLogEntriesFromSnapshot(
+export function buildProvisioningActivityEntriesFromSnapshot(
   snapshot: EngineSnapshotTyped<ProvisioningResultLight> | undefined
-): ReadonlyArray<ProvisioningLogEntry> {
+): ReadonlyArray<ProvisioningActivityEntry> {
   const trace = snapshot?.out?.trace;
   if (!trace) return [];
 

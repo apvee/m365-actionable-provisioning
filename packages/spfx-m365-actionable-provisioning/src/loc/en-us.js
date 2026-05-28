@@ -22,8 +22,8 @@ define([], function () {
       EmptyMessage: 'No compliance results available',
     },
 
-    // Provisioning log entry strings
-    ProvisioningLogEntry: {
+    // Provisioning activity entry strings
+    ProvisioningActivityEntry: {
       PendingLabel: 'Pending',
       RunningLabel: 'Running',
       ExecutedLabel: 'Executed',
@@ -38,8 +38,8 @@ define([], function () {
       SkipReasonUnsupported: 'Unsupported',
     },
 
-    // Compliance log entry strings
-    ComplianceLogEntry: {
+    // Compliance activity entry strings
+    ComplianceActivityEntry: {
       CompliantLabel: 'Compliant',
       NonCompliantLabel: 'Non-compliant',
       UnverifiableLabel: 'Unverifiable',

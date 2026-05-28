@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'Ingen samsvarsresultater tilgjengelig',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'Venter',
       RunningLabel: 'Kjører',
       ExecutedLabel: 'Utført',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'Ikke støttet',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Samsvarende',
       NonCompliantLabel: 'Ikke samsvarende',
       UnverifiableLabel: 'Ikke verifiserbar',

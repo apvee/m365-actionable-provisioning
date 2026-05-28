@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'Nessun risultato di conformità disponibile',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'In attesa',
       RunningLabel: 'In esecuzione',
       ExecutedLabel: 'Eseguito',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'Non supportato',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Conforme',
       NonCompliantLabel: 'Non conforme',
       UnverifiableLabel: 'Non verificabile',

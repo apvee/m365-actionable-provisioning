@@ -5,7 +5,7 @@
  * @packageDocumentation
  */
 
-import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 
 export type Mode = 'provision' | 'deprovision' | 'compliance';
 

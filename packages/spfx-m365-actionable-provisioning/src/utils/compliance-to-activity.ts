@@ -1,14 +1,14 @@
 /**
- * Internal utilities for converting compliance data to log entries.
+ * Internal utilities for converting compliance data to UI activity entries.
  *
  * @internal
  * @packageDocumentation
  */
 
-import type { ActionPath } from '@apvee/m365-actionable-provisioning/core';
-import type { ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
-import type { ComplianceTrace } from '@apvee/m365-actionable-provisioning/core';
-import type { ComplianceLogEntry } from '../models';
+import type { ActionPath } from '@apvee/m365-actionable-provisioning';
+import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
+import type { ComplianceTrace } from '@apvee/m365-actionable-provisioning';
+import type { ComplianceActivityEntry } from '../models';
 
 const isSubactionPath = (path: string): boolean => path.includes('/');
 
@@ -35,15 +35,15 @@ const compareActionPaths = (a: ActionPath, b: ActionPath): number => {
   return aParts.length - bParts.length;
 };
 
-export function buildComplianceLogEntriesFromReport(
+export function buildComplianceActivityEntriesFromReport(
   report: ComplianceReport | undefined
-): ReadonlyArray<ComplianceLogEntry> {
+): ReadonlyArray<ComplianceActivityEntry> {
   if (!report) return [];
 
   const byPath = report.byPath;
   const paths = Object.keys(byPath).sort((a, b) => compareActionPaths(a as ActionPath, b as ActionPath));
 
-  const entriesByPath = new Map<ActionPath, ComplianceLogEntry>();
+  const entriesByPath = new Map<ActionPath, ComplianceActivityEntry>();
 
   for (const p of paths) {
     const item = byPath[p as ActionPath];
@@ -52,11 +52,11 @@ export function buildComplianceLogEntriesFromReport(
     const path = item.path;
     const depth = calculateDepth(path);
 
-    const status: ComplianceLogEntry['status'] = item.checked
+    const status: ComplianceActivityEntry['status'] = item.checked
       ? (item.outcome ?? 'unverifiable')
       : 'blocked';
 
-    const entry: ComplianceLogEntry = {
+    const entry: ComplianceActivityEntry = {
       id: path,
       verb: item.verb,
       status,
@@ -73,8 +73,8 @@ export function buildComplianceLogEntriesFromReport(
     entriesByPath.set(path, entry);
   }
 
-  const rootEntries: ComplianceLogEntry[] = [];
-  const childrenByParent = new Map<ActionPath, ComplianceLogEntry[]>();
+  const rootEntries: ComplianceActivityEntry[] = [];
+  const childrenByParent = new Map<ActionPath, ComplianceActivityEntry[]>();
 
   for (const [path, entry] of entriesByPath) {
     if (entry.depth === 0) {
@@ -90,7 +90,7 @@ export function buildComplianceLogEntriesFromReport(
     childrenByParent.get(parentPath)?.push(entry);
   }
 
-  const assignChildren = (entry: ComplianceLogEntry): ComplianceLogEntry => {
+  const assignChildren = (entry: ComplianceActivityEntry): ComplianceActivityEntry => {
     const children = childrenByParent.get(entry.id);
     if (!children || children.length === 0) {
       return entry;
@@ -108,15 +108,15 @@ export function buildComplianceLogEntriesFromReport(
   return rootEntries.sort((a, b) => compareActionPaths(a.id, b.id)).map(assignChildren);
 }
 
-export function buildComplianceLogEntriesFromTrace(
+export function buildComplianceActivityEntriesFromTrace(
   trace: ComplianceTrace | undefined
-): ReadonlyArray<ComplianceLogEntry> {
+): ReadonlyArray<ComplianceActivityEntry> {
   if (!trace) return [];
 
   const byPath = trace.byPath;
   const paths = [...trace.order];
 
-  const entriesByPath = new Map<ActionPath, ComplianceLogEntry>();
+  const entriesByPath = new Map<ActionPath, ComplianceActivityEntry>();
 
   for (const p of paths) {
     const item = byPath[p as ActionPath];
@@ -125,7 +125,7 @@ export function buildComplianceLogEntriesFromTrace(
     const path = item.path;
     const depth = calculateDepth(path);
 
-    const status: ComplianceLogEntry['status'] =
+    const status: ComplianceActivityEntry['status'] =
       item.status === 'idle'
         ? 'pending'
         : item.status === 'running'
@@ -138,7 +138,7 @@ export function buildComplianceLogEntriesFromTrace(
 
     const checked = status !== 'pending' && status !== 'running' && status !== 'blocked';
 
-    const entry: ComplianceLogEntry = {
+    const entry: ComplianceActivityEntry = {
       id: path,
       verb: item.verb,
       status,
@@ -155,8 +155,8 @@ export function buildComplianceLogEntriesFromTrace(
     entriesByPath.set(path, entry);
   }
 
-  const rootEntries: ComplianceLogEntry[] = [];
-  const childrenByParent = new Map<ActionPath, ComplianceLogEntry[]>();
+  const rootEntries: ComplianceActivityEntry[] = [];
+  const childrenByParent = new Map<ActionPath, ComplianceActivityEntry[]>();
 
   for (const [path, entry] of entriesByPath) {
     if (entry.depth === 0) {
@@ -172,7 +172,7 @@ export function buildComplianceLogEntriesFromTrace(
     childrenByParent.get(parentPath)?.push(entry);
   }
 
-  const assignChildren = (entry: ComplianceLogEntry): ComplianceLogEntry => {
+  const assignChildren = (entry: ComplianceActivityEntry): ComplianceActivityEntry => {
     const children = childrenByParent.get(entry.id);
     if (!children || children.length === 0) {
       return entry;

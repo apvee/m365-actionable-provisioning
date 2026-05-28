@@ -1,73 +1,65 @@
+import { z } from "zod";
+
 /**
- * Core type definitions for JSON-safe values and parameters.
- * 
+ * Core JSON value contract for serializable engine output.
+ *
  * @remarks
- * These types ensure type safety when working with JSON-serializable data structures.
- * The types support both standard JSON primitives and unknown values for compatibility
- * with dynamic runtime data and Zod parsing outputs.
- * 
+ * Runtime state such as scope and clients can contain SDK objects and must not use
+ * these types. Use this module only for values that can safely be emitted in
+ * snapshots, logs, audit output, and persisted JSON documents.
+ *
  * @packageDocumentation
  */
 
 /**
  * Primitive JSON value types.
- * 
- * @remarks
- * Includes null for JSON compatibility.
- * Undefined is included for optional property handling.
- * 
+ *
  * @public
  */
 // eslint-disable-next-line @rushstack/no-new-null
-export type JsonPrimitive = string | number | boolean | null | undefined;
+export type JsonPrimitive = string | number | boolean | null;
 
 /**
- * Readonly JSON object with string keys and JsonValue values.
- *
- * @remarks
- * This exists to model Zod-parsed and `as const` JSON structures
- * which commonly use readonly arrays/objects.
+ * JSON object with string keys and JSON values.
  *
  * @public
  */
-export type JsonReadonlyObject = { readonly [k: string]: JsonValue };
+export type JsonObject = { readonly [key: string]: JsonValue };
 
 /**
- * Readonly JSON array.
+ * JSON array.
  *
  * @public
  */
-export type JsonReadonlyArray = ReadonlyArray<JsonValue>;
+export type JsonArray = readonly JsonValue[];
 
 /**
- * Any valid JSON value, including complex objects and arrays.
- *
- * @remarks
- * This is intentionally **strict** (does NOT include `unknown`).
- * Use `unknown` explicitly where you need to model untyped runtime values.
+ * Any valid JSON value.
  *
  * @public
  */
-export type JsonValue =
-    | JsonPrimitive
-    | JsonObject
-    | JsonArray
-    | JsonReadonlyObject
-    | JsonReadonlyArray;
+export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
 
 /**
- * JSON object with string keys and JsonValue values.
- * 
- * @remarks
- * Used as the base type for scopes, payloads, and other structured data.
- * 
+ * Zod schema for runtime validation of JSON-safe values.
+ *
  * @public
  */
-export type JsonObject = { [k: string]: JsonValue };
+export const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
+    z.union([
+        z.string(),
+        z.number().finite(),
+        z.boolean(),
+        z.null(),
+        z.array(jsonValueSchema),
+        z.record(z.string(), jsonValueSchema),
+    ])
+);
 
 /**
- * Array of JSON values.
- * 
+ * Runtime type guard for JSON-safe values.
+ *
  * @public
  */
-export type JsonArray = JsonValue[];
+export const isJsonValue = (value: unknown): value is JsonValue =>
+    jsonValueSchema.safeParse(value).success;

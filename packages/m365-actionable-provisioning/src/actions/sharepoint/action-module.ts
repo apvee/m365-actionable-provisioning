@@ -1,7 +1,7 @@
 import type { z } from "zod";
 
-import type { AnyActionDefinition } from "../../../core/action";
-import type { M365Clients, M365Scope, ProvisioningResultLight } from "../../../m365";
+import type { AnyActionDefinition } from "../../core/action";
+import type { M365Clients, M365Scope, ProvisioningResultLight } from "../../runtime";
 
 export type SharePointActionDefinition = AnyActionDefinition<M365Scope, ProvisioningResultLight, M365Clients>;
 

@@ -1,5 +1,5 @@
 /**
- * Auto-generated barrel export.
+ * Public barrel export.
  * Only @public exports are included.
  * @module
  */
@@ -11,9 +11,10 @@ export { computeComplianceOverall } from "./compliance";
 export type { ComplianceOutcome, ComplianceOverall, CompliancePolicy, ComplianceItem, ComplianceReport } from "./compliance";
 export { ProvisioningEngine } from "./engine";
 export type { EngineStatus, EngineSnapshot, EngineSnapshotTyped, EngineOptions, EngineContextValidator, EngineErrorEnricher, ProvisioningEngineArgs } from "./engine";
-export type { JsonPrimitive, JsonReadonlyObject, JsonReadonlyArray, JsonValue, JsonObject, JsonArray } from "./json";
-export { consoleSink, createLogger } from "./logger";
-export type { LogSink, Logger, LogLevel, LogEvent } from "./logger";
+export { jsonValueSchema, isJsonValue } from "./json";
+export type { JsonPrimitive, JsonValue, JsonObject, JsonArray } from "./json";
+export { consoleSink, createLogger, createMultiSink, sanitizeLogData } from "./logger";
+export type { LogSink, Logger, LogLevel, LogEvent, LogScope, LogData, LogErrorContext } from "./logger";
 export type { PermissionDecision, PermissionFinding, PermissionCheckResult, PermissionSource } from "./permissions";
 export { createProvisioningPlanSchema, ProvisioningPlanTemplateError } from "./provisioning-plan";
 export type { ProvisioningPlanParameterMap, ProvisioningPlanParameter, BaseProvisioningPlan } from "./provisioning-plan";

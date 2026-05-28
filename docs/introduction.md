@@ -46,7 +46,7 @@ This library provides a powerful, type-safe provisioning engine for SPFx, built 
 │                              ▼                                  │
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │                  M365ProvisioningPlan (JSON)                   │ │
-│  │  ├─ schemaVersion, version, parameters                     │ │
+│  │  ├─ schemaVersion, parameters                              │ │
 │  │  └─ actions: [createSPSite, modifySPSite, ...]             │ │
 │  └────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
@@ -59,11 +59,10 @@ This library provides a powerful, type-safe provisioning engine for SPFx, built 
 A provisioning plan is a JSON object that declares what SharePoint resources to create or modify. Plans are **declarative**—you describe the desired state, and the engine handles the execution.
 
 ```typescript
-import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 
 const plan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
-  version: "1.0.0",
   parameters: [
     { key: "TenantUrl", value: "https://contoso.sharepoint.com" },
     { key: "ProjectName", value: "engineering" }
@@ -186,11 +185,10 @@ Add the library to your `tsconfig.json` if using path aliases:
 Create a plan file (`provisioning-plan.ts`):
 
 ```typescript
-import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 
 export const myPlan: M365ProvisioningPlan = {
   schemaVersion: "1.0",
-  version: "1.0.0",
   parameters: [
     { key: "SiteUrl", value: "https://contoso.sharepoint.com/sites/project" }
   ],
@@ -221,7 +219,7 @@ In your React component:
 import * as React from 'react';
 import { FluentProvider, webLightTheme, Button } from '@fluentui/react-components';
 import { ProvisioningDialog } from '@apvee/spfx-m365-actionable-provisioning';
-import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
+import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning';
 import { myPlan } from './provisioning-plan';
 
 const MyWebPart: React.FC<{ context: WebPartContext }> = ({ context }) => {
@@ -232,7 +230,7 @@ const MyWebPart: React.FC<{ context: WebPartContext }> = ({ context }) => {
   []);
 
   return (
-    <FluentProvider theme={webLightTheme}>
+    <FluentProvider theme={webLightTheme} applyStylesToPortals>
       <Button onClick={() => setOpen(true)}>Configure Site</Button>
       
       <ProvisioningDialog

@@ -1,8 +1,8 @@
-import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning/m365';
-import type { ProvisioningLogEntry } from '../../models';
-import type { ProvisioningUiSummary } from '../../utils/trace-to-log';
-import type { LogPanelStrings, ProvisioningLogEntryStrings } from '../LogPanel/LogPanel.types';
+import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
+import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
+import type { ProvisioningActivityEntry } from '../../models';
+import type { ProvisioningUiSummary } from '../../utils/trace-to-activity';
+import type { LogPanelStrings, ProvisioningActivityEntryStrings } from '../LogPanel/LogPanel.types';
 import type { DialogUiError } from './ProvisioningDialog.state';
 
 /**
@@ -33,7 +33,7 @@ export type ProvisioningViewStrings = Readonly<{
     /** Optional LogPanel string overrides */
     logPanelStrings?: Partial<LogPanelStrings>;
     /** Optional log entry string overrides */
-    logEntryStrings?: Partial<ProvisioningLogEntryStrings>;
+    activityEntryStrings?: Partial<ProvisioningActivityEntryStrings>;
 }>;
 
 /**
@@ -46,7 +46,7 @@ export type ProvisioningViewProps = Readonly<{
     /** Derived UI summary from snapshot */
     summary: ProvisioningUiSummary | undefined;
     /** Log entries to display */
-    logEntries: ReadonlyArray<ProvisioningLogEntry>;
+    activityEntries: ReadonlyArray<ProvisioningActivityEntry>;
 
     /** Whether dialog is in pristine state (no operations started) */
     isPristine: boolean;

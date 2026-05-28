@@ -16,7 +16,7 @@ define([], function () {
       EmptyMessage: 'Δεν υπάρχουν διαθέσιμα αποτελέσματα συμμόρφωσης',
     },
 
-    ProvisioningLogEntry: {
+    ProvisioningActivityEntry: {
       PendingLabel: 'Σε αναμονή',
       RunningLabel: 'Εκτελείται',
       ExecutedLabel: 'Εκτελέστηκε',
@@ -30,7 +30,7 @@ define([], function () {
       SkipReasonUnsupported: 'Δεν υποστηρίζεται',
     },
 
-    ComplianceLogEntry: {
+    ComplianceActivityEntry: {
       CompliantLabel: 'Συμμορφούμενο',
       NonCompliantLabel: 'Μη συμμορφούμενο',
       UnverifiableLabel: 'Μη επαληθεύσιμο',

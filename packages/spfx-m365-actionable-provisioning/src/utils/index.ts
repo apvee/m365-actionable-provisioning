@@ -1,9 +1,9 @@
 /**
- * Auto-generated barrel export.
+ * Public barrel export.
  * Only @public exports are included.
  * @module
  */
 
-export { buildComplianceLogEntriesFromReport, buildComplianceLogEntriesFromTrace } from "./compliance-to-log";
-export { buildProvisioningLogEntriesFromSnapshot, buildProvisioningUiSummary } from "./trace-to-log";
-export type { ProvisioningUiProgress, ProvisioningUiSummary } from "./trace-to-log";
+export { buildComplianceActivityEntriesFromReport, buildComplianceActivityEntriesFromTrace } from "./compliance-to-activity";
+export { buildProvisioningActivityEntriesFromSnapshot, buildProvisioningUiSummary } from "./trace-to-activity";
+export type { ProvisioningUiProgress, ProvisioningUiSummary } from "./trace-to-activity";

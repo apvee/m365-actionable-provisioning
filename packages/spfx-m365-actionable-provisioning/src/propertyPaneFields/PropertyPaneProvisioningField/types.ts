@@ -6,8 +6,8 @@
 
 import type { BaseComponentContext } from '@microsoft/sp-component-base';
 
-import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning/m365';
-import type { Logger } from '@apvee/m365-actionable-provisioning/core';
+import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
+import type { Logger } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningDialogStrings } from '../../components';
 import type { TemplateAppliedState } from '../../models';
 

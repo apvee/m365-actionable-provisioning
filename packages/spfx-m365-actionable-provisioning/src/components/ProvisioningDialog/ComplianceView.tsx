@@ -8,8 +8,8 @@ import {
 } from '@fluentui/react-components';
 import { Stack } from '@apvee/react-layout-kit';
 
-import type { ComplianceReport } from '@apvee/m365-actionable-provisioning/core';
-import { computeComplianceOverall } from '@apvee/m365-actionable-provisioning/core';
+import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
+import { computeComplianceOverall } from '@apvee/m365-actionable-provisioning';
 import type { KPIBadgeSpec } from './KPIDisplay.types';
 import type { ComplianceViewProps, ComplianceViewStrings } from './ComplianceView.types';
 import type { DialogUiError } from './ProvisioningDialog.state';
@@ -63,7 +63,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({
     uiError,
     openLogItems,
     onOpenLogItemsChange,
-    logEntries,
+    activityEntries,
     strings,
 }): React.ReactElement => {
     const compliance = snapshot?.compliance;
@@ -253,10 +253,10 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({
                 label={strings.viewLogsLabel}
                 openItems={openLogItems}
                 onOpenItemsChange={handleOpenLogItemsChange}
-                entries={logEntries}
+                entries={activityEntries}
                 mode="compliance"
                 strings={strings.complianceStrings}
-                logEntryStrings={strings.complianceLogEntryStrings}
+                activityEntryStrings={strings.complianceActivityEntryStrings}
             />
         </Stack>
     );
