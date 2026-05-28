@@ -16,10 +16,7 @@
     "build:spfx": "npm run build -w @apvee/spfx-m365-actionable-provisioning",
     "build:test-spfx": "npm run build -w test-spfx",
     "clean": "npm run clean --workspaces --if-present",
-    "serve:test-spfx": "npm run serve -w test-spfx",
-    "generate:barrels": "npx tsx scripts/generate-barrels.ts",
-    "generate:barrels:dry": "npx tsx scripts/generate-barrels.ts --dry-run",
-    "generate:barrels:strict": "npx tsx scripts/generate-barrels.ts --require-public"
+    "serve:test-spfx": "npm run serve -w test-spfx"
   },
   "devDependencies": {
     "@microsoft/eslint-config-spfx": "1.21.1",
@@ -33,9 +30,7 @@
     "@types/webpack-env": "~1.15.2",
     "eslint": "8.57.1",
     "eslint-plugin-react-hooks": "4.3.0",
-    "glob": "^13.0.1",
     "gulp": "4.0.2",
-    "ts-morph": "^27.0.2",
     "tsx": "^4.21.0",
     "typescript": "~5.3.3"
   }

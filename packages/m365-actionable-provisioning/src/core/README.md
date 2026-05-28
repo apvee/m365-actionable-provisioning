@@ -736,13 +736,15 @@ This makes traces more **user-friendly** (natural counting).
 
 ### Complete Example: SharePoint Provisioning
 
-See `catalogs/example-catalog.ts` and `engines/example-engine.ts` for a full implementation with:
-- ✅ Site creation and modification
-- ✅ List operations (create, modify, delete)
-- ✅ Permission checks with random denials
-- ✅ Dual-mode actions
-- ✅ Realistic delays
-- ✅ Scope propagation
+The M365 package composes the concrete SharePoint action catalog and
+provisioning schema under `src/sharepoint/catalogs`, then exposes the unified
+runtime through `ProvisioningEngine`. That implementation covers:
+
+- Site creation and modification
+- List operations (create, modify, delete)
+- Permission checks
+- Dual-mode actions
+- Scope propagation
 
 ### Minimal Example
 

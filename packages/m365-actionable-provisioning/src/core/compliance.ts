@@ -124,7 +124,7 @@ export type ComplianceReport = Readonly<{
  * @param args - The counts and policy to evaluate
  * @returns The overall compliance status
  *
- * @internal
+ * @public
  */
 export function computeComplianceOverall(args: {
     counts: Record<ComplianceOutcome, number>;

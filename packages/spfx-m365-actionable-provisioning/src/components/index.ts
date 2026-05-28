@@ -4,7 +4,7 @@ export type {
 	ProvisioningDialogProps,
 	ProvisioningDialogStrings,
 	ProvisioningRunOutcome,
-} from './ProvisioningDialog';
+} from './ProvisioningDialog/ProvisioningDialog.types';
 
 export {
 	type ProvisioningDialogMode,

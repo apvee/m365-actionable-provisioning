@@ -1,7 +1,7 @@
 /**
- * Auto-generated barrel export.
- * Only @public exports are included.
- * @module
+ * SharePoint catalog public exports.
+ *
+ * @packageDocumentation
  */
 
 export { sharePointActionDefinitions } from "./action-definitions";
