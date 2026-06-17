@@ -92,7 +92,7 @@ Expected: exit code `0` with `tsc -p tsconfig.json` and `node scripts/copy-loc.c
 Run:
 
 ```bash
-rg -n "ConfirmDialog|KPIDisplay|LogSection|DialogShell|ErrorBoundary|ProvisioningView|ComplianceView|useDialogOrchestration|DialogState|mode=" packages/spfx-m365-actionable-provisioning/src apps/test-spfx/src docs
+rg -n "ConfirmDialog|KPIDisplay|LogSection|DialogShell|ErrorBoundary|ProvisioningView|ComplianceView|useDialogOrchestration|DialogState|mode=" packages/spfx-m365-actionable-provisioning/src apps/test-spfx/src docs/provisioning-dialog.md docs/introduction.md docs/property-pane-fields.md
 ```
 
 Expected: current usages in the dialog package, property pane, demo app, and docs. Use this output as the checklist for rename closure in Task 10.
@@ -1553,10 +1553,10 @@ Expected: docs use new names.
 Run:
 
 ```bash
-rg -n "ConfirmDialog|KPIDisplay|LogSection|DialogShell|ErrorBoundary|ProvisioningView|ComplianceView|useDialogOrchestration|DialogState|mode=" packages/spfx-m365-actionable-provisioning/src apps/test-spfx/src docs
+rg -n "ConfirmDialog|KPIDisplay|LogSection|DialogShell|ErrorBoundary|ProvisioningView|ComplianceView|useDialogOrchestration|DialogState|mode=" packages/spfx-m365-actionable-provisioning/src/components packages/spfx-m365-actionable-provisioning/src/hooks packages/spfx-m365-actionable-provisioning/src/propertyPaneFields apps/test-spfx/src docs/provisioning-dialog.md docs/introduction.md docs/property-pane-fields.md
 ```
 
-Expected: no results for old implementation names. If docs intentionally mention old names in migration notes, remove those notes because backward compatibility is not required.
+Expected: no live public `ProvisioningDialog` JSX usage with `mode=`, and no old implementation symbol/path references. Ignore only localization keys that intentionally remain named `ConfirmDialog` under `locStrings.ConfirmDialog`.
 
 - [ ] **Step 5: Build**
 
@@ -1621,10 +1621,10 @@ Expected: no output.
 Run:
 
 ```bash
-rg -n "ConfirmDialog|KPIDisplay|LogSection|DialogShell|ProvisioningView|ComplianceView|useDialogOrchestration|DialogState|mode=" packages/spfx-m365-actionable-provisioning/src apps/test-spfx/src docs
+rg -n "ConfirmDialog|KPIDisplay|LogSection|DialogShell|ProvisioningView|ComplianceView|useDialogOrchestration|DialogState|mode=" packages/spfx-m365-actionable-provisioning/src/components packages/spfx-m365-actionable-provisioning/src/hooks packages/spfx-m365-actionable-provisioning/src/propertyPaneFields apps/test-spfx/src docs/provisioning-dialog.md docs/introduction.md docs/property-pane-fields.md
 ```
 
-Expected: no output.
+Expected: no live public `ProvisioningDialog` JSX usage with `mode=`, and no old implementation symbol/path references. Ignore only localization keys that intentionally remain named `ConfirmDialog` under `locStrings.ConfirmDialog`.
 
 - [ ] **Step 5: Manual SPFx verification checklist**
 
