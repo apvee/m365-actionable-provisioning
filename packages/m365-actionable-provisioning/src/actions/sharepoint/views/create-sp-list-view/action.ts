@@ -51,14 +51,14 @@ export class CreateSPListViewAction extends ActionDefinition<
       : getListViewByTitle(list, (await list.views.add(payload.title, false, buildListViewCreateProps())).Title);
 
     const updateProps = buildListViewUpdateProps(payload);
+    if (payload.fields !== undefined) {
+      await replaceViewFields(list, view, payload.fields);
+    }
     if (Object.keys(updateProps).length > 0) {
       await view.update(updateProps);
     }
 
     const appliedState = !existingInfo || Object.keys(updateProps).length > 0 || payload.fields !== undefined;
-    if (payload.fields !== undefined) {
-      await replaceViewFields(list, view, payload.fields);
-    }
 
     const scopeDelta = {
       list,

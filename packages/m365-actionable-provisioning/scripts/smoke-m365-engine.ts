@@ -11,6 +11,7 @@ import { contentTypeSubactionSchema } from "../src/actions/sharepoint/_compositi
 import { listSubactionSchema } from "../src/actions/sharepoint/_composition/list-subactions-schema";
 import { siteSubactionSchema } from "../src/actions/sharepoint/_composition/site-subactions-schema";
 import { CreateSPSiteColumnAction } from "../src/actions/sharepoint/fields/create-sp-site-column";
+import { CreateSPListViewAction } from "../src/actions/sharepoint/views/create-sp-list-view";
 import { resolveFieldReferenceFromScope } from "../src/actions/sharepoint/domains/content-types";
 import { checkFieldStructuralCompatibility } from "../src/actions/sharepoint/domains/fields/field-structural-compatibility";
 import { checkListStructuralCompatibility } from "../src/actions/sharepoint/domains/lists/list-structural-compatibility";
@@ -787,6 +788,92 @@ async function assertCreateSPSiteColumnIgnoresStaleListScope(): Promise<void> {
   );
 }
 
+async function assertCreateSPListViewAppliesFieldsBeforeScalarUpdate(): Promise<void> {
+  const calls: string[] = [];
+  let viewCreated = false;
+
+  const viewFields = Object.assign(
+    async () => ({ Items: ["Title"] }),
+    {
+      removeAll: async () => {
+        calls.push("fields.removeAll");
+      },
+      add: async (fieldName: string) => {
+        calls.push(`fields.add:${fieldName}`);
+      },
+    }
+  );
+
+  const view = {
+    select: () => async () => {
+      if (!viewCreated) {
+        const error = new Error("not found") as Error & { status: number };
+        error.status = 404;
+        throw error;
+      }
+      return {
+        Id: "view-id",
+        Title: "Smoke view",
+        DefaultView: false,
+        ViewQuery: "",
+        RowLimit: 30,
+        Paged: true,
+        TabularView: true,
+        Scope: 0,
+      };
+    },
+    update: async (props: Record<string, unknown>) => {
+      calls.push(`view.update:${Object.keys(props).sort().join(",")}`);
+    },
+    fields: viewFields,
+  };
+
+  const list = {
+    views: {
+      getByTitle: () => view,
+      add: async (_title: string, _personalView: boolean, settings: Record<string, unknown>) => {
+        calls.push(`views.add:${Object.keys(settings).join(",")}`);
+        viewCreated = true;
+        return { Title: "Smoke view" };
+      },
+    },
+    fields: {
+      getByInternalNameOrTitle: (fieldName: string) => ({
+        select: () => async () => ({ Id: `field-${fieldName}`, InternalName: fieldName, Title: fieldName }),
+      }),
+    },
+  };
+
+  const action = new CreateSPListViewAction();
+  await action.handler({
+    scopeIn: { list } as unknown as M365Scope,
+    clients: {},
+    out: { byAction: {}, trace: { status: "idle", byPath: {}, order: [] } },
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: {
+        verb: "createSPListView",
+        title: "Smoke view",
+        fields: ["Title", "Modified"],
+        viewQuery: "<OrderBy><FieldRef Name=\"Modified\" Ascending=\"FALSE\" /></OrderBy>",
+        rowLimit: 50,
+        defaultView: true,
+      },
+    },
+  });
+
+  const removeAllIndex = calls.indexOf("fields.removeAll");
+  const updateIndex = calls.findIndex((call) => call.startsWith("view.update:"));
+  assert(removeAllIndex >= 0, "createSPListView should replace fields when declared fields differ");
+  assert(updateIndex >= 0, "createSPListView should apply scalar view updates");
+  assert(
+    removeAllIndex < updateIndex,
+    `createSPListView should replace fields before scalar/default updates to avoid transient invalid default views; calls: ${calls.join(" -> ")}`
+  );
+}
+
 async function main(): Promise<void> {
   assertSharePointCatalogComposition();
   assertSharePointListViewV1Contract();
@@ -797,6 +884,7 @@ async function main(): Promise<void> {
   assertLoggerContract();
   await assertComplianceCancelContract();
   await assertCreateSPSiteColumnIgnoresStaleListScope();
+  await assertCreateSPListViewAppliesFieldsBeforeScalarUpdate();
   await assertSharePointGraphClientPreflight();
 
   const spOnly = await runSmoke({
