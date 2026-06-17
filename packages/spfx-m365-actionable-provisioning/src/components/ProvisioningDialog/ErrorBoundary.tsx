@@ -1,8 +1,11 @@
 import * as React from 'react';
+import type { Logger } from '@apvee/m365-actionable-provisioning';
 
 type ErrorBoundaryProps = Readonly<{
     children: React.ReactNode;
     fallback?: React.ReactNode;
+    fallbackTitle: string;
+    logger?: Logger;
 }>;
 
 type ErrorBoundaryState = Readonly<{
@@ -28,8 +31,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     }
 
     override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-        // Log error for debugging - uses console as Logger may not be available here
-        console.error('ErrorBoundary caught error:', error, errorInfo);
+        this.props.logger?.error('Provisioning dialog render failed', {
+            error,
+            data: { componentStack: errorInfo.componentStack },
+        });
     }
 
     override render(): React.ReactNode {
@@ -48,7 +53,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                         color: 'var(--colorNeutralForeground1)',
                     }}
                 >
-                    <strong>Something went wrong</strong>
+                    <strong>{this.props.fallbackTitle}</strong>
                     {this.state.error?.message && (
                         <p style={{ margin: '8px 0 0', fontSize: '12px', color: 'var(--colorNeutralForeground2)' }}>
                             {this.state.error.message}

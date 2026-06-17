@@ -184,18 +184,21 @@ export const useDialogOrchestration = (options: DialogOrchestrationOptions): Dia
 
     // Close handler
     const handleClose = React.useCallback(() => {
-        // Mark as closing to suppress badge display during close animation
-        dispatch({ type: 'SET_CLOSING', value: true });
-
         if (state.activeMode === 'provisioning') {
-            if (isRunning) return;
+            if (isRunning || state.runInFlight) return;
+            // Mark as closing to suppress badge display during close animation
+            dispatch({ type: 'SET_CLOSING', value: true });
             onClose();
             return;
         }
+
+        // Mark as closing to suppress badge display during close animation
+        dispatch({ type: 'SET_CLOSING', value: true });
+
         // Compliance mode
         if (state.complianceIsChecking) cancel();
         onClose();
-    }, [cancel, dispatch, isRunning, onClose, state.activeMode, state.complianceIsChecking]);
+    }, [cancel, dispatch, isRunning, onClose, state.activeMode, state.complianceIsChecking, state.runInFlight]);
 
     // Run provisioning
     const handleRun = React.useCallback(async () => {

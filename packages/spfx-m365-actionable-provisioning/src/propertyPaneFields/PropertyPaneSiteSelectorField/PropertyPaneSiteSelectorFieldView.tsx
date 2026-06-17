@@ -48,8 +48,8 @@ import {
   resolveHub,
   searchSites,
 } from './PropertyPaneSiteSelectorFieldView.utils';
-import { useDebounce } from '../../hooks/useDebounce';
-import { useSPInstance } from '../../hooks/useSPInstance';
+import { useDebounce } from '../../hooks/useDebounce/useDebounce';
+import { useSPInstance } from '../../hooks/useSPInstance/useSPInstance';
 
 export const PropertyPaneSiteSelectorFieldView: React.FC<PropertyPaneSiteSelectorFieldViewProps> = ({
   label,

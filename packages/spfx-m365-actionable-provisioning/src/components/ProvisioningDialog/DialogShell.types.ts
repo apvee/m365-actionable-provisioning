@@ -1,4 +1,5 @@
 import type * as React from 'react';
+import type { Logger } from '@apvee/m365-actionable-provisioning';
 
 /**
  * Props for the DialogShell presentational component.
@@ -25,6 +26,10 @@ export type DialogShellProps = Readonly<{
 
     /** Accessible label for close button */
     closeButtonAriaLabel: string;
+    /** Localized title for unexpected render errors. */
+    errorFallbackTitle: string;
+    /** Optional logger for unexpected render errors. */
+    logger?: Logger;
 
     /** Called when close button is clicked */
     onClose: () => void;

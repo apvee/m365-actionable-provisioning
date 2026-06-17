@@ -7,8 +7,9 @@ import {
 } from '@fluentui/react-components';
 import { ShieldCheckmarkColor, WrenchScrewdriverColor } from '@fluentui/react-icons';
 
-import { useSPFxProvisioningEngine, useProvisioningDerivedState } from '../../hooks';
-import { useNavigationGuard } from '../../hooks/useNavigationGuard';
+import { useProvisioningDerivedState } from '../../hooks/useProvisioningDerivedState/useProvisioningDerivedState';
+import { useNavigationGuard } from '../../hooks/useNavigationGuard/useNavigationGuard';
+import { useSPFxProvisioningEngine } from '../../hooks/useSPFxProvisioningEngine/useSPFxProvisioningEngine';
 import { buildComplianceActivityEntriesFromReport, buildComplianceActivityEntriesFromTrace } from '../../utils/compliance-to-activity';
 import { normalizeUrl } from '../../utils/url';
 import type { ComplianceActivityEntry } from '../../models';
@@ -28,7 +29,7 @@ import { ComplianceView } from './ComplianceView';
 import type { ComplianceViewStrings } from './ComplianceView.types';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
-import { useDialogOrchestration } from '../../hooks/useDialogOrchestration';
+import { useDialogOrchestration } from '../../hooks/useDialogOrchestration/useDialogOrchestration';
 
 // Re-export public types
 export type {
@@ -455,6 +456,8 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
                         isPristine={shellIsPristine}
                         closeDisabled={shellCloseDisabled}
                         closeButtonAriaLabel={s.closeButtonAriaLabel}
+                        errorFallbackTitle={s.complianceErrorFallbackTitle}
+                        logger={logger}
                         onClose={handleClose}
                         footer={isComplianceMode ? renderComplianceFooter() : renderProvisioningFooter()}
                     >

@@ -102,9 +102,18 @@ export function PropertyPaneProvisioningField(
     const confirmDeprovisionRun = props.confirmDeprovisionRun ?? false;
     const appearance = props.appearance ?? 'filled';
 
+    const overrideStrings = props.strings;
     const s: PropertyPaneProvisioningFieldStrings = {
       ...DEFAULT_STRINGS,
-      ...(props.strings ?? {}),
+      ...(overrideStrings ?? {}),
+      deprovisioningDialogStrings: {
+        ...DEFAULT_STRINGS.deprovisioningDialogStrings,
+        ...(overrideStrings?.deprovisioningDialogStrings ?? {}),
+        confirmDialogStrings: {
+          ...DEFAULT_STRINGS.deprovisioningDialogStrings?.confirmDialogStrings,
+          ...(overrideStrings?.deprovisioningDialogStrings?.confirmDialogStrings ?? {}),
+        },
+      },
     };
 
     // Use explicit label or fall back to localized default

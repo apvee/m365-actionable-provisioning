@@ -9,6 +9,7 @@ import type { EngineSnapshotTyped, EngineStatus } from '@apvee/m365-actionable-p
 import type { EngineTrace, ActionStatus } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningActivityEntry, ProvisioningActivityStatus } from '../models';
+import { buildActivityTree, calculateDepth, isSubactionPath } from './activity-tree';
 
 export type ProvisioningUiProgress = Readonly<{
   completed: number;
@@ -50,19 +51,12 @@ const mapTraceAndResultToActivityStatus = (
   return mapActionStatusToActivityStatus(traceStatus);
 };
 
-const isSubactionPath = (path: string): boolean => path.includes('/');
-
-const calculateDepth = (path: string): number => {
-  return path.split('/').length - 1;
-};
-
 const buildHierarchicalEntries = (
   snapshot: EngineSnapshotTyped<ProvisioningResultLight>,
   trace: EngineTrace
 ): ReadonlyArray<ProvisioningActivityEntry> => {
-  const entriesByPath = new Map<string, ProvisioningActivityEntry>();
+  const entries: ProvisioningActivityEntry[] = [];
 
-  // Prima passata: crea tutte le entry
   for (const path of trace.order) {
     const traceItem = trace.byPath[path];
     if (!traceItem) continue;
@@ -82,41 +76,12 @@ const buildHierarchicalEntries = (
       children: undefined,
     };
 
-    entriesByPath.set(path, entry);
+    entries.push(entry);
   }
 
-  // Seconda passata: costruisce la gerarchia
-  const rootEntries: ProvisioningActivityEntry[] = [];
-  const childrenByParent = new Map<string, ProvisioningActivityEntry[]>();
-
-  for (const [path, entry] of entriesByPath) {
-    if (entry.depth === 0) {
-      rootEntries.push(entry);
-    } else {
-      const parentPath = path.substring(0, path.lastIndexOf('/'));
-      if (!childrenByParent.has(parentPath)) {
-        childrenByParent.set(parentPath, []);
-      }
-      childrenByParent.get(parentPath)?.push(entry);
-    }
-  }
-
-  // Terza passata: assegna children alle entry
-  const assignChildren = (entry: ProvisioningActivityEntry): ProvisioningActivityEntry => {
-    const children = childrenByParent.get(entry.id);
-    if (!children || children.length === 0) {
-      return entry;
-    }
-
-    const childrenWithGrandchildren = children.map(assignChildren);
-
-    return {
-      ...entry,
-      children: childrenWithGrandchildren,
-    };
-  };
-
-  return rootEntries.map(assignChildren);
+  return buildActivityTree(entries, {
+    withChildren: (entry, children) => ({ ...entry, children }),
+  });
 };
 
 const buildProvisioningUiCounts = (

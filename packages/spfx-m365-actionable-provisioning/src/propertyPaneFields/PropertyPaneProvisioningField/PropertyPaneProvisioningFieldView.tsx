@@ -211,12 +211,18 @@ export const PropertyPaneProvisioningFieldView: React.FC<PropertyPaneProvisionin
     setDialogOpen(true);
   };
 
-  const dialogTitle = mode === 'deprovision'
-    ? props.strings.deprovisioningDialogTitle
-    : props.strings.provisioningDialogTitle;
-  const dialogDescription = mode === 'deprovision'
-    ? props.strings.deprovisioningDialogDescription
-    : props.strings.provisioningDialogDescription;
+  const dialogTitle =
+    mode === 'deprovision'
+      ? props.strings.deprovisioningDialogTitle
+      : mode === 'provision'
+        ? props.strings.provisioningDialogTitle
+        : undefined;
+  const dialogDescription =
+    mode === 'deprovision'
+      ? props.strings.deprovisioningDialogDescription
+      : mode === 'provision'
+        ? props.strings.provisioningDialogDescription
+        : undefined;
 
   const dialogStrings: Partial<ProvisioningDialogStrings> | undefined =
     mode === 'deprovision' ? props.strings.deprovisioningDialogStrings : props.strings.provisioningDialogStrings;

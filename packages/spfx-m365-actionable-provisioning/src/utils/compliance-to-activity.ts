@@ -9,31 +9,7 @@ import type { ActionPath } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceTrace } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceActivityEntry } from '../models';
-
-const isSubactionPath = (path: string): boolean => path.includes('/');
-
-const calculateDepth = (path: string): number => {
-  return path.split('/').length - 1;
-};
-
-const compareActionPaths = (a: ActionPath, b: ActionPath): number => {
-  const aParts = String(a).split('/').map((x) => Number.parseInt(x, 10));
-  const bParts = String(b).split('/').map((x) => Number.parseInt(x, 10));
-
-  const len = Math.max(aParts.length, bParts.length);
-  for (let i = 0; i < len; i++) {
-    const av = aParts[i];
-    const bv = bParts[i];
-
-    if (Number.isNaN(av) && Number.isNaN(bv)) return 0;
-    if (Number.isNaN(av)) return -1;
-    if (Number.isNaN(bv)) return 1;
-
-    if (av !== bv) return av - bv;
-  }
-
-  return aParts.length - bParts.length;
-};
+import { buildActivityTree, calculateDepth, compareActionPaths, isSubactionPath } from './activity-tree';
 
 export function buildComplianceActivityEntriesFromReport(
   report: ComplianceReport | undefined
@@ -43,7 +19,7 @@ export function buildComplianceActivityEntriesFromReport(
   const byPath = report.byPath;
   const paths = Object.keys(byPath).sort((a, b) => compareActionPaths(a as ActionPath, b as ActionPath));
 
-  const entriesByPath = new Map<ActionPath, ComplianceActivityEntry>();
+  const entries: ComplianceActivityEntry[] = [];
 
   for (const p of paths) {
     const item = byPath[p as ActionPath];
@@ -70,42 +46,13 @@ export function buildComplianceActivityEntriesFromReport(
       children: undefined,
     };
 
-    entriesByPath.set(path, entry);
+    entries.push(entry);
   }
 
-  const rootEntries: ComplianceActivityEntry[] = [];
-  const childrenByParent = new Map<ActionPath, ComplianceActivityEntry[]>();
-
-  for (const [path, entry] of entriesByPath) {
-    if (entry.depth === 0) {
-      rootEntries.push(entry);
-      continue;
-    }
-
-    const parentPath = path.substring(0, path.lastIndexOf('/')) as ActionPath;
-    if (!childrenByParent.has(parentPath)) {
-      childrenByParent.set(parentPath, []);
-    }
-
-    childrenByParent.get(parentPath)?.push(entry);
-  }
-
-  const assignChildren = (entry: ComplianceActivityEntry): ComplianceActivityEntry => {
-    const children = childrenByParent.get(entry.id);
-    if (!children || children.length === 0) {
-      return entry;
-    }
-
-    const sortedChildren = [...children].sort((a, b) => compareActionPaths(a.id, b.id));
-    const childrenWithGrandchildren = sortedChildren.map(assignChildren);
-
-    return {
-      ...entry,
-      children: childrenWithGrandchildren,
-    };
-  };
-
-  return rootEntries.sort((a, b) => compareActionPaths(a.id, b.id)).map(assignChildren);
+  return buildActivityTree(entries, {
+    sort: (a, b) => compareActionPaths(a.id, b.id),
+    withChildren: (entry, children) => ({ ...entry, children }),
+  });
 }
 
 export function buildComplianceActivityEntriesFromTrace(
@@ -116,7 +63,7 @@ export function buildComplianceActivityEntriesFromTrace(
   const byPath = trace.byPath;
   const paths = [...trace.order];
 
-  const entriesByPath = new Map<ActionPath, ComplianceActivityEntry>();
+  const entries: ComplianceActivityEntry[] = [];
 
   for (const p of paths) {
     const item = byPath[p as ActionPath];
@@ -152,40 +99,11 @@ export function buildComplianceActivityEntriesFromTrace(
       children: undefined,
     };
 
-    entriesByPath.set(path, entry);
+    entries.push(entry);
   }
 
-  const rootEntries: ComplianceActivityEntry[] = [];
-  const childrenByParent = new Map<ActionPath, ComplianceActivityEntry[]>();
-
-  for (const [path, entry] of entriesByPath) {
-    if (entry.depth === 0) {
-      rootEntries.push(entry);
-      continue;
-    }
-
-    const parentPath = path.substring(0, path.lastIndexOf('/')) as ActionPath;
-    if (!childrenByParent.has(parentPath)) {
-      childrenByParent.set(parentPath, []);
-    }
-
-    childrenByParent.get(parentPath)?.push(entry);
-  }
-
-  const assignChildren = (entry: ComplianceActivityEntry): ComplianceActivityEntry => {
-    const children = childrenByParent.get(entry.id);
-    if (!children || children.length === 0) {
-      return entry;
-    }
-
-    const sortedChildren = [...children].sort((a, b) => compareActionPaths(a.id, b.id));
-    const childrenWithGrandchildren = sortedChildren.map(assignChildren);
-
-    return {
-      ...entry,
-      children: childrenWithGrandchildren,
-    };
-  };
-
-  return rootEntries.sort((a, b) => compareActionPaths(a.id, b.id)).map(assignChildren);
+  return buildActivityTree(entries, {
+    sort: (a, b) => compareActionPaths(a.id, b.id),
+    withChildren: (entry, children) => ({ ...entry, children }),
+  });
 }

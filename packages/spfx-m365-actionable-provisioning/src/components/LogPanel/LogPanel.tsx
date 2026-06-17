@@ -342,48 +342,19 @@ const createComplianceActivityRenderers = (s: ComplianceActivityEntryStrings): L
   };
 };
 
-export const LogPanel: React.FC<LogPanelProps> = ({
+type ProvisioningLogPanelProps = Readonly<{
+  entries: ReadonlyArray<ProvisioningActivityEntry>;
+  className?: string;
+  strings?: Partial<LogPanelStrings>;
+  activityEntryStrings?: Partial<ProvisioningActivityEntryStrings>;
+}>;
+
+const ProvisioningLogPanel: React.FC<ProvisioningLogPanelProps> = ({
   entries,
   className = '',
-  mode = 'provisioning',
   strings,
   activityEntryStrings,
-  complianceStrings,
-  complianceActivityEntryStrings,
 }) => {
-  if (mode === 'compliance') {
-    const s = React.useMemo(() => {
-      return {
-        ...DEFAULT_COMPLIANCE_STRINGS,
-        ...(complianceStrings ?? {}),
-      } satisfies ComplianceLogPanelStrings;
-    }, [complianceStrings]);
-
-    const itemStrings = React.useMemo(() => {
-      return {
-        ...DEFAULT_COMPLIANCE_ACTIVITY_ENTRY_STRINGS,
-        ...(complianceActivityEntryStrings ?? {}),
-      } satisfies ComplianceActivityEntryStrings;
-    }, [complianceActivityEntryStrings]);
-
-    const renderers = React.useMemo(() => {
-      return createComplianceActivityRenderers(itemStrings);
-    }, [itemStrings]);
-
-    const visibleEntries = React.useMemo(() => {
-      return prunePendingComplianceEntries(entries as ReadonlyArray<ComplianceActivityEntry>);
-    }, [entries]);
-
-    return (
-      <InternalLogScrollPanel
-        className={className}
-        entries={visibleEntries}
-        emptyMessage={s.emptyMessage}
-        renderItem={(entry) => <LogItem entry={entry} renderers={renderers} />}
-      />
-    );
-  }
-
   const s = React.useMemo(() => {
     return {
       ...DEFAULT_STRINGS,
@@ -403,7 +374,7 @@ export const LogPanel: React.FC<LogPanelProps> = ({
   }, [itemStrings]);
 
   const visibleEntries = React.useMemo(() => {
-    return prunePendingEntries(entries as ReadonlyArray<ProvisioningActivityEntry>);
+    return prunePendingEntries(entries);
   }, [entries]);
 
   return (
@@ -412,6 +383,81 @@ export const LogPanel: React.FC<LogPanelProps> = ({
       entries={visibleEntries}
       emptyMessage={s.emptyMessage}
       renderItem={(entry) => <LogItem entry={entry} renderers={renderers} />}
+    />
+  );
+};
+
+type ComplianceLogPanelProps = Readonly<{
+  entries: ReadonlyArray<ComplianceActivityEntry>;
+  className?: string;
+  complianceStrings?: Partial<ComplianceLogPanelStrings>;
+  complianceActivityEntryStrings?: Partial<ComplianceActivityEntryStrings>;
+}>;
+
+const ComplianceLogPanel: React.FC<ComplianceLogPanelProps> = ({
+  entries,
+  className = '',
+  complianceStrings,
+  complianceActivityEntryStrings,
+}) => {
+  const s = React.useMemo(() => {
+    return {
+      ...DEFAULT_COMPLIANCE_STRINGS,
+      ...(complianceStrings ?? {}),
+    } satisfies ComplianceLogPanelStrings;
+  }, [complianceStrings]);
+
+  const itemStrings = React.useMemo(() => {
+    return {
+      ...DEFAULT_COMPLIANCE_ACTIVITY_ENTRY_STRINGS,
+      ...(complianceActivityEntryStrings ?? {}),
+    } satisfies ComplianceActivityEntryStrings;
+  }, [complianceActivityEntryStrings]);
+
+  const renderers = React.useMemo(() => {
+    return createComplianceActivityRenderers(itemStrings);
+  }, [itemStrings]);
+
+  const visibleEntries = React.useMemo(() => {
+    return prunePendingComplianceEntries(entries);
+  }, [entries]);
+
+  return (
+    <InternalLogScrollPanel
+      className={className}
+      entries={visibleEntries}
+      emptyMessage={s.emptyMessage}
+      renderItem={(entry) => <LogItem entry={entry} renderers={renderers} />}
+    />
+  );
+};
+
+export const LogPanel: React.FC<LogPanelProps> = ({
+  entries,
+  className = '',
+  mode = 'provisioning',
+  strings,
+  activityEntryStrings,
+  complianceStrings,
+  complianceActivityEntryStrings,
+}) => {
+  if (mode === 'compliance') {
+    return (
+      <ComplianceLogPanel
+        className={className}
+        entries={entries as ReadonlyArray<ComplianceActivityEntry>}
+        complianceStrings={complianceStrings}
+        complianceActivityEntryStrings={complianceActivityEntryStrings}
+      />
+    );
+  }
+
+  return (
+    <ProvisioningLogPanel
+      className={className}
+      entries={entries as ReadonlyArray<ProvisioningActivityEntry>}
+      strings={strings}
+      activityEntryStrings={activityEntryStrings}
     />
   );
 };

@@ -9,3 +9,6 @@ export type {
 export {
 	type ProvisioningDialogMode,
 } from './ProvisioningDialog/ProvisioningDialog.types';
+
+export { SPFxFluentProvider } from './SPFxFluentProvider/SPFxFluentProvider';
+export type { SPFxFluentProviderProps } from './SPFxFluentProvider/SPFxFluentProvider.types';

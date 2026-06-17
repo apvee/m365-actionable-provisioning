@@ -1,7 +1,0 @@
-/**
- * Public barrel export.
- * Only @public exports are included.
- * @module
- */
-
-export { useDebounce } from "./useDebounce";

@@ -43,6 +43,8 @@ export const DialogShell: React.FC<DialogShellProps> = ({
     children,
     footer,
     closeButtonAriaLabel,
+    errorFallbackTitle,
+    logger,
     onClose,
     className,
 }): React.ReactElement => {
@@ -80,7 +82,9 @@ export const DialogShell: React.FC<DialogShellProps> = ({
 
             <DialogContent className={contentClassName}>
                 <Stack gap={{ xs: 'md', lg: 'lg' }} py={{ xs: 'sm', md: 'md' }}>
-                    <ErrorBoundary>{children}</ErrorBoundary>
+                    <ErrorBoundary fallbackTitle={errorFallbackTitle} logger={logger}>
+                        {children}
+                    </ErrorBoundary>
                 </Stack>
             </DialogContent>
 

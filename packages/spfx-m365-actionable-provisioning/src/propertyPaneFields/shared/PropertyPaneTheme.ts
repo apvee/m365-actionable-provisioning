@@ -13,31 +13,11 @@ import {
 } from '@microsoft/sp-component-base';
 import type { ISPEventObserver } from '@microsoft/sp-core-library';
 
-/**
- * @remarks
- * **Intentional Fluent UI v8 Bridge**
- * 
- * This file imports `createTheme` from `@fluentui/react` (v8) because:
- * 1. SPFx PropertyPane theming requires v8 theme objects for proper integration
- * 2. The `createV9Theme` migration utility from `@fluentui/react-migration-v8-v9`
- *    requires a v8 theme as input to produce a v9 theme
- * 3. There is no direct v9 API to convert SPFx `IReadonlyTheme` to Fluent UI 9 tokens
- * 
- * This is an intentional exception to Constitution Principle III (Fluent UI 9 only).
- * The v8 dependency will be removed when SPFx provides native v9 theming support.
- * 
- * Related: specs/002-audit-remediation/spec.md (Edge Cases section)
- */
-import {
-    createTheme,
-    type Theme as V8Theme,
-} from '@fluentui/react';
-
 import {
     type Theme,
-    webLightTheme,
 } from '@fluentui/react-components';
-import { createV9Theme } from '@fluentui/react-migration-v8-v9';
+
+import { createFluentV9ThemeFromSPFxTheme } from '../../utils/spfx-theme';
 
 export type PropertyPaneThemeController = Readonly<{
     ensureInitialized: () => void;
@@ -67,20 +47,7 @@ export function createPropertyPaneThemeController(
     };
 
     const getFluentV9Theme = (): Theme => {
-        if (!themeVariant) return webLightTheme;
-
-        try {
-            const v8Theme: V8Theme = createTheme({
-                palette: themeVariant.palette,
-                semanticColors: themeVariant.semanticColors,
-                fonts: themeVariant.fonts,
-                isInverted: themeVariant.isInverted,
-            });
-
-            return createV9Theme(v8Theme);
-        } catch {
-            return webLightTheme;
-        }
+        return createFluentV9ThemeFromSPFxTheme(themeVariant);
     };
 
     const handleThemeChanged = (args: ThemeChangedEventArgs): void => {
