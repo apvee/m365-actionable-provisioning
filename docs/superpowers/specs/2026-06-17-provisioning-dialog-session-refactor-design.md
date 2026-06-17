@@ -14,21 +14,23 @@ The target refactor moves the runtime boundary so each dialog opening owns a sho
 
 ## Goals
 
-- Preserve the public `ProvisioningDialogProps` API.
+- Clean the public and internal API names where current names hide intent or lifecycle.
 - Preserve current visible behavior for provisioning, deprovisioning, compliance checks, auto-run compliance, confirmation, cancellation, and completion callbacks.
 - Make a new dialog opening start from a fresh runtime session by construction.
 - Remove lifecycle/reset code that exists only because the runtime currently survives close.
 - Keep the refactor incremental enough to validate with TypeScript build and focused manual SPFx demo flows.
 - Improve component boundaries so UI controls are easier to reason about and reuse.
+- Move shared dialog controls into explicit shared folders instead of leaving them mixed with mode-specific views.
 
 ## Non-Goals
 
+- Backward compatibility is not required for this refactor. Public exports, props, and type names may change if the new names are clearer and all in-repo consumers/docs are updated in the same change.
 - Do not change provisioning engine behavior.
 - Do not change SharePoint action schemas or runtime semantics.
 - Do not redesign the visual UI.
 - Do not remove the property pane update buffering, because SPFx property changes can re-render or remount the property pane while the dialog is open.
 - Do not introduce new runtime dependencies.
-- Do not make `mode` a fully controlled prop while the dialog is already open.
+- Do not make the initial dialog mode a fully controlled prop while the dialog is already open.
 
 ## Current Problems
 
@@ -66,6 +68,19 @@ Those concerns should have different lifetimes.
 
 `PropertyPaneProvisioningFieldView` derives title, description, strings, plan, mode, auto-run, and confirmation through multiple local branches. The behavior is understandable but more fragile than necessary.
 
+### Names Mix Lifetime, Domain, And Rendering
+
+Current names such as `ProvisioningView`, `ComplianceView`, `KPIDisplay`, `LogSection`, `DialogState`, and `useDialogOrchestration` are understandable locally, but they do not consistently communicate whether the unit is:
+
+- a public component,
+- a per-open runtime session,
+- a mode-specific view,
+- a shared control,
+- a state type,
+- or an action hook.
+
+This matters because the refactor is primarily about moving lifecycle boundaries. Names should make those boundaries obvious.
+
 ## Target Architecture
 
 ### Component Boundary
@@ -74,7 +89,7 @@ Split the dialog into two layers:
 
 ```text
 ProvisioningDialog
-  - public API component
+  - public controlled component
   - owns only controlled open/close shell concerns
   - renders Fluent Dialog with explicit unmountOnClose
   - mounts ProvisioningDialogSession inside DialogSurface
@@ -87,7 +102,70 @@ ProvisioningDialogSession
   - is discarded on close
 ```
 
-`ProvisioningDialog` remains the only exported component. `ProvisioningDialogSession` is internal.
+`ProvisioningDialog` remains the top-level dialog component. There should not be separate public `ProvisioningDialog` and `ComplianceDialog` components. Compliance is a mode of the same provisioning workflow, shares the same shell, target site, plan, engine, log model, close handling, and navigation path, and can be entered from inside the provisioning flow.
+
+The implementation should split by lifetime and mode, not by creating two independent dialogs:
+
+```text
+ProvisioningDialog
+  ProvisioningDialogSession
+    ProvisioningRunView
+    ComplianceCheckView
+```
+
+Rename the public prop currently named `mode` to `initialMode` because it is not controlled after open. This is allowed by the no-backward-compatibility constraint and avoids implying a controlled mode prop.
+
+### Target Folder Layout
+
+Use folder boundaries to distinguish shared controls from mode-specific views:
+
+```text
+components/
+  shared/
+    ConfirmationDialog/
+      ConfirmationDialog.tsx
+      ConfirmationDialog.types.ts
+  ProvisioningDialog/
+    ProvisioningDialog.tsx
+    ProvisioningDialog.types.ts
+    ProvisioningDialogSession.tsx
+    ProvisioningDialogSession.state.ts
+    ProvisioningDialog.styles.ts
+    hooks/
+      useProvisioningDialogActions.ts
+      useProvisioningDialogActions.types.ts
+    views/
+      ProvisioningRunView.tsx
+      ProvisioningRunView.types.ts
+      ComplianceCheckView.tsx
+      ComplianceCheckView.types.ts
+    shared/
+      DialogErrorMessage.tsx
+      DialogLogSection.tsx
+      DialogLogSection.types.ts
+      KpiSummaryBar.tsx
+      KpiSummaryBar.types.ts
+      ProvisioningDialogShell.tsx
+      ProvisioningDialogShell.types.ts
+      ProvisioningDialogErrorBoundary.tsx
+```
+
+Keep low-level `LogPanel` as a package-level shared component if it is intended to be reusable outside `ProvisioningDialog`. Keep dialog-specific wrappers such as accordion layout under `ProvisioningDialog/shared`.
+
+### Naming Rules
+
+- Use `ProvisioningDialog` for the top-level controlled component.
+- Use `ProvisioningDialogSession` for anything whose lifetime is one open dialog instance.
+- Use `ProvisioningRunView` for the execution/provisioning/deprovisioning mode view.
+- Use `ComplianceCheckView` for the compliance mode view.
+- Use `ProvisioningDialogShell` for dialog chrome if the component stays domain-specific.
+- Use `ConfirmationDialog`, not `ConfirmDialog`, for a generic reusable confirmation control.
+- Use `KpiSummaryBar`, not `KPIDisplay`, for KPI badge summaries.
+- Use `DialogLogSection`, not `LogSection`, for the dialog accordion wrapper around `LogPanel`.
+- Use `DialogErrorMessage` for the repeated Fluent `MessageBar` error block.
+- Use `useProvisioningDialogActions`, not `useDialogOrchestration`, after lifecycle logic is removed.
+- Use `ProvisioningDialogSessionState`, not `DialogState`, once state becomes session-owned.
+- Use `PropertyPaneProvisioningDialogIntent`, not `Mode`, for the property-pane intent union.
 
 ### Lifecycle Model
 
@@ -96,7 +174,7 @@ When `open` becomes true:
 1. `ProvisioningDialog` renders `<Dialog open={true} unmountOnClose>`.
 2. Fluent mounts the surface.
 3. `ProvisioningDialogSession` is created with fresh reducer state and fresh engine state.
-4. Initial mode is read from `props.mode ?? 'provisioning'`.
+4. Initial mode is read from `props.initialMode ?? 'provisioning'`.
 5. Compliance auto-run may start if mode and props allow it.
 
 When the user requests close:
@@ -145,11 +223,11 @@ Remove state and actions whose only purpose is close/reset simulation:
 
 ### Simplify Initial State
 
-`buildInitialDialogState` can remain, but it should only initialize a session. It should not need close reset semantics.
+`buildInitialProvisioningDialogSessionState` can remain, but it should only initialize a session. It should not need close reset semantics.
 
-## Orchestration Hook Design
+## Action Hook Design
 
-Refactor `useDialogOrchestration` into a session action hook.
+Refactor `useDialogOrchestration` into `useProvisioningDialogActions`.
 
 ### Keep Responsibilities
 
@@ -186,7 +264,7 @@ These refs reset naturally when the session unmounts.
 The wrapper should:
 
 - Compute strings that are pure public API defaults if needed by the shell.
-- Keep `ConfirmDialog` session-owned so confirmation state is disposed with the rest of the opened dialog session.
+- Keep `ConfirmationDialog` session-owned so confirmation state is disposed with the rest of the opened dialog session.
 - Pass all public props to `ProvisioningDialogSession`.
 - Handle `onOpenChange` by routing close requests into the session close handler.
 
@@ -195,46 +273,66 @@ Because close permission depends on session state, the wrapper needs a stable br
 - Keep `<Dialog>` in the wrapper.
 - Store the active session close handler in a wrapper ref.
 - Let `ProvisioningDialogSession` register its `handleClose` on mount and clear it on unmount.
-- Let `DialogShell` close button call the same session-owned `handleClose`.
+- Let `ProvisioningDialogShell` close button call the same session-owned `handleClose`.
 - Let `<Dialog onOpenChange>` call the registered session close handler when `data.open === false`.
 - If no session close handler is registered, do nothing except for already-closed cleanup paths.
 
 The current dialog uses `modalType="alert"`. Fluent's installed implementation sends `onOpenChange` for Escape, but backdrop clicks only request close for `modalType="modal"`. Keep `modalType="alert"` unless there is a separate product decision to change dismissal semantics. The ref bridge must therefore preserve Escape and close-button behavior; backdrop dismissal is not part of the current contract.
 
-`ConfirmDialog` can remain implemented with Fluent `Dialog`, but it should be rendered from the session so `confirmOpen` does not need to move to the wrapper. Because this makes it a nested dialog in React context, confirm/cancel focus behavior must be included in manual verification.
+`ConfirmationDialog` can remain implemented with Fluent `Dialog`, but it should be rendered from the session so `confirmOpen` does not need to move to the wrapper. Because this makes it a nested dialog in React context, confirm/cancel focus behavior must be included in manual verification.
 
 ## UI Component Rationalization
 
-### ProvisioningView and ComplianceView
+### Mode Views
 
-Keep both views separate because they represent different domain states, but extract tiny shared helpers only where duplication is exact:
+Rename the current mode views:
 
-- `DialogMessageBar` or `renderDialogError`
-- optional KPI badge builder helpers if they stay readable
+- `ProvisioningView` -> `ProvisioningRunView`
+- `ComplianceView` -> `ComplianceCheckView`
 
-Do not force a generic `OperationView` unless it clearly reduces code after the lifecycle refactor.
+Keep these as separate mode views because they represent different domain states. Do not merge them into a generic `OperationView`; that would hide domain differences. Instead, move exact shared UI pieces into `ProvisioningDialog/shared`.
+
+### Shared Dialog Controls
+
+Move shared controls used by both mode views into `ProvisioningDialog/shared`:
+
+- `DialogErrorMessage`: one Fluent `MessageBar` implementation for user-facing errors.
+- `KpiSummaryBar`: shared badge summary container used by both modes.
+- `DialogLogSection`: shared accordion wrapper around `LogPanel`.
+- `ProvisioningDialogShell`: shared title/description/icon/content/footer chrome.
+- `ProvisioningDialogErrorBoundary`: shell-level boundary, renamed for domain clarity.
+
+Keep each shared control small and presentational. Shared controls must not know about provisioning engine snapshots or compliance reports; mode views should compute view models and pass plain props.
 
 ### Footer Models
 
-Keep `getComplianceFooterModel` and consider adding `getProvisioningFooterModel` if it makes button rendering declarative. Footer model functions should be pure and testable without React.
+Keep `getComplianceFooterModel` and add `getProvisioningRunFooterModel` if it makes button rendering declarative. Footer model functions should be pure and testable without React.
 
 ### Log and KPI Controls
 
-Keep `LogSection` and `KPIDisplay` as reusable internal controls. They are already useful boundaries. Only adjust them if the session refactor exposes direct duplication or typing friction.
+Keep `LogPanel` as the lower-level renderer for provisioning and compliance activity entries. Rename dialog-specific controls to avoid generic names that look package-wide when they are not.
+
+### Package-Level Shared Controls
+
+Move `ConfirmDialog` out of `components/ConfirmDialog` and rename it to `components/shared/ConfirmationDialog` only if it remains generic after review. If it becomes provisioning-run-specific, keep it under `ProvisioningDialog/shared` as `RunConfirmationDialog`.
+
+Recommended choice: `components/shared/ConfirmationDialog`, because the current props are generic enough and no provisioning domain types leak into it.
 
 ## Property Pane Rationalization
 
-Introduce a pure helper, likely in `PropertyPaneProvisioningFieldView.utils.ts`:
+Rename the property pane intent type and introduce a pure config helper in `PropertyPaneProvisioningFieldView.utils.ts`:
 
 ```ts
-getDialogConfigForMode(mode, props)
+type PropertyPaneProvisioningDialogIntent = 'provision' | 'deprovision' | 'compliance';
+
+getProvisioningFieldDialogConfig(intent, props)
 ```
 
 It should derive:
 
 - `title`
 - `description`
-- `dialogMode`
+- `initialMode`
 - `planTemplate`
 - `strings`
 - `confirmRun`
@@ -254,7 +352,7 @@ Preserve current user-facing errors:
 
 - Missing target site in provisioning mode sets provisioning UI error.
 - Missing target site in compliance mode sets compliance UI error.
-- Engine errors are displayed from the snapshot in provisioning view.
+- Engine errors are displayed from the snapshot in `ProvisioningRunView`.
 - Compliance check exceptions show `complianceErrorFallbackTitle`.
 
 Session unmount should not emit new errors. It should cancel or ignore stale async results.
@@ -290,11 +388,14 @@ Using the test SPFx app:
 
 ## Acceptance Criteria
 
-- Public exports remain compatible.
+- Public exports, prop names, docs, and in-repo consumers use the new cleaned names.
 - `ProvisioningDialog` no longer needs delayed close reset logic.
-- `useDialogOrchestration` no longer returns or manages `engineResetKey`.
-- `ProvisioningDialog.state.ts` no longer contains close-reset actions or `isClosing`.
+- `useProvisioningDialogActions` replaces `useDialogOrchestration` and no longer returns or manages `engineResetKey`.
+- `ProvisioningDialogSession.state.ts` no longer contains close-reset actions or `isClosing`.
 - `useSPFxProvisioningEngine` is reset by session unmount, not by an artificial reset key from dialog close.
+- Shared controls that are reused by both mode views live under `ProvisioningDialog/shared`.
+- Generic confirmation UI is named `ConfirmationDialog`; if kept package-level, it lives under `components/shared`.
+- The property pane uses `PropertyPaneProvisioningDialogIntent` and `getProvisioningFieldDialogConfig`.
 - `npm run build:spfx` passes.
 - User-visible provisioning and compliance flows remain equivalent.
 
@@ -305,24 +406,27 @@ Using the test SPFx app:
 - The active dialog uses `modalType="alert"`, so backdrop close should not accidentally become enabled while refactoring close handling.
 - Removing `isClosing` could briefly show terminal badges during close animation. If this is visually observable, prefer solving it with session unmount timing or a local visual-only flag, not by restoring hard reset.
 - Completion callbacks must not be lost if `run()` resolves and the parent closes immediately after success. The action handler should emit from the returned final snapshot before close.
-- Moving `ConfirmDialog` under the session changes it from sibling-owned state to session-owned nested dialog state. Confirm/cancel and focus restoration need manual verification.
+- Moving `ConfirmationDialog` under the session changes it from sibling-owned state to session-owned nested dialog state. Confirm/cancel and focus restoration need manual verification.
 
 ## Implementation Slices
 
-1. Extract `ProvisioningDialogSession` without changing behavior.
-2. Move reducer, engine, derived state, navigation guard, orchestration, content, and footer into the session.
-3. Set explicit `unmountOnClose={true}` on Fluent `Dialog`.
-4. Remove close-reset logic and `engineResetKey`.
-5. Remove obsolete reducer actions and state fields.
-6. Simplify `useDialogOrchestration` around session actions.
-7. Add `getDialogConfigForMode` for the property pane.
-8. Verify Escape, close button, confirm/cancel, and external parent-close behavior.
-9. Run `npm run build:spfx` and perform manual demo checks.
+1. Rename mode/shared controls to the target names and update imports while preserving behavior.
+2. Extract `ProvisioningDialogSession` without changing behavior.
+3. Move reducer, engine, derived state, navigation guard, actions, content, and footer into the session.
+4. Rename `mode` to `initialMode` and update in-repo call sites/docs.
+5. Set explicit `unmountOnClose={true}` on Fluent `Dialog`.
+6. Remove close-reset logic and `engineResetKey`.
+7. Remove obsolete reducer actions and state fields.
+8. Replace `useDialogOrchestration` with `useProvisioningDialogActions`.
+9. Add `getProvisioningFieldDialogConfig` and `PropertyPaneProvisioningDialogIntent` for the property pane.
+10. Move shared controls to `ProvisioningDialog/shared` or `components/shared` according to the target folder layout.
+11. Verify Escape, close button, confirm/cancel, and external parent-close behavior.
+12. Run `npm run build:spfx` and perform manual demo checks.
 
 ## Self-Review
 
 - No unresolved drafting markers remain.
 - Scope is limited to the SPFx UI package dialog/property pane lifecycle and control rationalization.
-- The design preserves the public API and current behavior.
+- The design intentionally allows public API cleanup and preserves current visible behavior.
 - The primary simplification mechanism is explicit: move runtime state into a mounted session instead of resetting it manually.
 - Risks call out the critical behavioral points: close routing, alert dismissal semantics, completion callback emission, and nested confirmation behavior.
