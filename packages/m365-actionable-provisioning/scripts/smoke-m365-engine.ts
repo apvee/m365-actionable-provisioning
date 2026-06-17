@@ -53,12 +53,19 @@ const successSmokeSchema = z.object({
   subactions: z.array(z.never()).optional(),
 });
 
+const complianceSmokeSchema = z.object({
+  verb: z.literal("complianceSmoke"),
+  resource: z.string(),
+  subactions: z.array(z.never()).optional(),
+});
+
 const smokeActionSchema = z.discriminatedUnion("verb", [
   graphSmokeSchema,
   spSmokeSchema,
   failSmokeSchema,
   permissionSmokeSchema,
   successSmokeSchema,
+  complianceSmokeSchema,
 ]);
 
 const smokeProvisioningSchema = createProvisioningPlanSchema(z.array(smokeActionSchema));
@@ -149,6 +156,29 @@ class SuccessSmokeAction extends ActionDefinition<
 
   override async handler(ctx: ActionRuntimeContext<SmokeScope, z.infer<typeof successSmokeSchema>, SmokeResult, SmokeClients>) {
     return { result: { outcome: "executed" as const, resource: ctx.action.payload.resource } };
+  }
+}
+
+class ComplianceSmokeAction extends ActionDefinition<
+  "complianceSmoke",
+  typeof complianceSmokeSchema,
+  SmokeScope,
+  SmokeResult,
+  SmokeClients
+> {
+  readonly verb = "complianceSmoke";
+  readonly actionSchema = complianceSmokeSchema;
+
+  constructor(private readonly waitForRelease?: () => Promise<void>) {
+    super();
+  }
+
+  override async checkCompliance() {
+    await this.waitForRelease?.();
+    return {
+      outcome: "compliant" as const,
+      resource: "smoke-compliance",
+    };
   }
 }
 
@@ -311,10 +341,67 @@ async function runSmoke(
   return engine.run();
 }
 
+async function assertComplianceCancelContract(): Promise<void> {
+  const completedEngine = new ProvisioningEngine<SmokeScope, SmokeResult, SmokeClients>({
+    clients: {},
+    initialScope: {},
+    planTemplate: { actions: [{ verb: "complianceSmoke", resource: "completed" }] },
+    logger,
+    definitions: [new ComplianceSmokeAction()],
+    provisioningSchema: smokeProvisioningSchema,
+  });
+
+  await completedEngine.checkCompliance();
+  assert(
+    completedEngine.snapshot().compliance?.status === "completed",
+    "Compliance smoke should complete before testing late cancellation"
+  );
+
+  completedEngine.cancel();
+  assert(
+    completedEngine.snapshot().compliance?.status === "completed",
+    "cancel() after completed compliance should preserve completed compliance status"
+  );
+
+  let releaseCompliance!: () => void;
+  const releasePromise = new Promise<void>((resolve) => {
+    releaseCompliance = resolve;
+  });
+  const runningEngine = new ProvisioningEngine<SmokeScope, SmokeResult, SmokeClients>({
+    clients: {},
+    initialScope: {},
+    planTemplate: { actions: [{ verb: "complianceSmoke", resource: "running" }] },
+    logger,
+    definitions: [new ComplianceSmokeAction(() => releasePromise)],
+    provisioningSchema: smokeProvisioningSchema,
+  });
+
+  const runningCheck = runningEngine.checkCompliance();
+  await Promise.resolve();
+  assert(
+    runningEngine.snapshot().compliance?.status === "running",
+    "Compliance smoke should be running before active cancellation"
+  );
+
+  runningEngine.cancel();
+  assert(
+    runningEngine.snapshot().compliance?.status === "cancelled",
+    "cancel() during running compliance should mark compliance as cancelled"
+  );
+
+  releaseCompliance();
+  await runningCheck;
+  assert(
+    runningEngine.snapshot().compliance?.status === "cancelled",
+    "Cancelled running compliance should remain cancelled after the pending checker resolves"
+  );
+}
+
 async function main(): Promise<void> {
   assertSharePointCatalogComposition();
   assertJsonResultContract();
   assertLoggerContract();
+  await assertComplianceCancelContract();
 
   const spOnly = await runSmoke({
     clients: { spfi: { marker: "spfi" } },

@@ -325,7 +325,7 @@ export class ProvisioningEngine<
         this.cancelled = true;
         if (this.complianceCancel) this.complianceCancel.cancelled = true;
 
-        if (this.compliance) {
+        if (this.compliance?.status === "running") {
             const endedAt = nowIso();
             const prevTrace = this.compliance.trace;
             const nextByPath: typeof prevTrace.byPath = { ...prevTrace.byPath };

@@ -3,6 +3,7 @@ import * as React from 'react';
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningRunOutcome } from '../ProvisioningDialog.types';
+import { shouldCancelComplianceOnClose } from '../ProvisioningDialogSession.state';
 import type { ProvisioningDialogActionsOptions, ProvisioningDialogActionsReturn } from './useProvisioningDialogActions.types';
 
 // Re-export types
@@ -134,9 +135,15 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
             return;
         }
 
-        if (state.complianceIsChecking) cancel();
+        if (shouldCancelComplianceOnClose({
+            isChecking: state.complianceIsChecking,
+            hasComplianceReport: Boolean(state.complianceReport),
+            complianceStatus: snapshot?.compliance?.status,
+        })) {
+            cancel();
+        }
         onClose();
-    }, [cancel, isRunning, onClose, state.activeMode, state.complianceIsChecking, state.runInFlight]);
+    }, [cancel, isRunning, onClose, snapshot?.compliance?.status, state.activeMode, state.complianceIsChecking, state.complianceReport, state.runInFlight]);
 
     // Run provisioning
     const handleRun = React.useCallback(async () => {

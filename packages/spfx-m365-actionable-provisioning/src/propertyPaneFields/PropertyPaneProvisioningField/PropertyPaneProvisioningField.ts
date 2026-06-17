@@ -80,13 +80,15 @@ export function PropertyPaneProvisioningField(
 
   const getEffectiveValue = (): TemplateAppliedState | undefined => currentValue;
 
-  const getLogger = (): Logger =>
+  const defaultLogger =
     props.logger ??
     createLogger({
       level: 'silent',
       sink: consoleSink,
       scope: { component: 'PropertyPaneProvisioningField' },
     });
+
+  const getLogger = (): Logger => defaultLogger;
 
   const handleEffectiveStateChange = (next: TemplateAppliedState): void => {
     currentValue = next;

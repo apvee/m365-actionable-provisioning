@@ -48,10 +48,23 @@ export const DEFAULT_STRINGS: SiteSelectorFieldStrings = {
   noResultsLabel: locStrings.SiteSelectorField.NoResultsLabel,
 };
 
+function parseTitleCache(input: unknown): Record<string, string> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+
+  return Object.entries(input).reduce<Record<string, string>>((acc, [key, value]) => {
+    const normalizedKey = normalizeUrl(key);
+    if (!normalizedKey) return acc;
+    if (typeof value !== 'string') return acc;
+
+    acc[normalizedKey] = value;
+    return acc;
+  }, {});
+}
+
 export function loadTitleCache(): Record<string, string> {
   try {
     const saved = sessionStorage.getItem(STORAGE_KEY);
-    return saved ? (JSON.parse(saved) as Record<string, string>) : {};
+    return saved ? parseTitleCache(JSON.parse(saved)) : {};
   } catch {
     return {};
   }
@@ -169,9 +182,14 @@ export async function fetchSiteTitle(sp: SPFI, siteUrl: string): Promise<string 
   return (info as { Title?: string }).Title;
 }
 
+export function buildSiteSearchQuery(queryText: string): string {
+  const escapedQueryText = queryText.replace(/'/g, "''");
+  return `'${escapedQueryText}' contentclass:STS_Site`;
+}
+
 export async function searchSites(sp: SPFI, queryText: string): Promise<SiteSearchResult[]> {
   const searchResults = await sp.search({
-    Querytext: `'${queryText}' contentclass:STS_Site`,
+    Querytext: buildSiteSearchQuery(queryText),
     RowLimit: MAX_SEARCH_RESULTS,
     SelectProperties: ['Title', 'Path'],
   });

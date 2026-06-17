@@ -110,11 +110,19 @@ export const PropertyPaneSiteSelectorFieldView: React.FC<PropertyPaneSiteSelecto
   }, [titleCache]);
 
   React.useEffect(() => {
+    let cancelled = false;
+
     (async () => {
       const hub = await resolveHub(sp);
+      if (cancelled) return;
+
       setHasHubSite(hub.hasHubSite);
       setHubUrl(hub.hubUrl);
     })().catch((): void => undefined);
+
+    return () => {
+      cancelled = true;
+    };
   }, [sp]);
 
   React.useEffect(() => {
@@ -159,8 +167,11 @@ export const PropertyPaneSiteSelectorFieldView: React.FC<PropertyPaneSiteSelecto
     const inResults = results.some((r) => normalizeUrl(r.url) === effectiveSelected);
     if (inResults || titleCache[effectiveSelected]) return;
 
+    let cancelled = false;
+
     (async () => {
       const title = await fetchSiteTitle(sp, effectiveSelected);
+      if (cancelled) return;
       if (!title) return;
 
       setTitleCache((prev) => ({
@@ -168,6 +179,10 @@ export const PropertyPaneSiteSelectorFieldView: React.FC<PropertyPaneSiteSelecto
         [effectiveSelected]: title,
       }));
     })().catch((): void => undefined);
+
+    return () => {
+      cancelled = true;
+    };
   }, [mode, selectedSiteUrl, currentWebUrl, hubUrl, sp, results, titleCache]);
 
   const handleModeChange = React.useCallback(

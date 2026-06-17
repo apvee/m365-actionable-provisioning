@@ -1,4 +1,4 @@
-import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
+import type { ComplianceCheckStatus, ComplianceReport } from '@apvee/m365-actionable-provisioning';
 
 import type { ProvisioningDialogMode } from './ProvisioningDialog.types';
 
@@ -286,4 +286,23 @@ export const getComplianceFooterModel = (args: Readonly<{ isChecking: boolean; h
         showCancel: args.isChecking,
         runDisabled: args.isChecking || !args.hasTargetSite,
     };
+};
+
+/**
+ * Determines whether closing the compliance dialog should actively cancel the engine.
+ *
+ * @remarks
+ * React state updates can lag behind the final engine snapshot during dialog close animations.
+ * Only cancel when the check is still effectively running; do not rewrite a completed/failed
+ * compliance result into a cancelled state during close cleanup.
+ */
+export const shouldCancelComplianceOnClose = (args: Readonly<{
+    isChecking: boolean;
+    hasComplianceReport: boolean;
+    complianceStatus?: ComplianceCheckStatus;
+}>): boolean => {
+    if (!args.isChecking) return false;
+    if (args.hasComplianceReport) return false;
+
+    return args.complianceStatus === undefined || args.complianceStatus === 'running';
 };
