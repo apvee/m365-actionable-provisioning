@@ -18,13 +18,11 @@ import {
 } from '@fluentui/react-components';
 import { Flex } from '@apvee/react-layout-kit';
 
-import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 
 import {
   ProvisioningDialog,
   type ProvisioningDialogProps,
-  type ProvisioningDialogStrings,
 } from '../../components';
 import type { TemplateAppliedState } from '../../models';
 import { normalizeUrl } from '../../utils/url';
@@ -32,7 +30,10 @@ import { useSPFxProvisioningEngine } from '../../hooks/useSPFxProvisioningEngine
 
 import type { PropertyPaneProvisioningFieldStrings, PropertyPaneProvisioningFieldViewProps } from './types';
 import { useStyles } from './PropertyPaneProvisioningFieldView.styles';
-import { getDialogPlanTemplate, type Mode } from './PropertyPaneProvisioningFieldView.utils';
+import {
+  getProvisioningFieldDialogConfig,
+  type PropertyPaneProvisioningDialogIntent,
+} from './PropertyPaneProvisioningFieldView.utils';
 
 const AppliedStateBadge: React.FC<{ state?: TemplateAppliedState; strings: PropertyPaneProvisioningFieldStrings }> = ({
   state,
@@ -101,7 +102,7 @@ export const PropertyPaneProvisioningFieldView: React.FC<PropertyPaneProvisionin
   });
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [mode, setMode] = React.useState<Mode>('provision');
+  const [dialogIntent, setDialogIntent] = React.useState<PropertyPaneProvisioningDialogIntent>('provision');
   const [isCheckingEffectiveState, setIsCheckingEffectiveState] = React.useState(false);
 
   // When this custom field calls the SPFx `changeCallback`, SPFx may re-render (or re-mount)
@@ -197,61 +198,45 @@ export const PropertyPaneProvisioningFieldView: React.FC<PropertyPaneProvisionin
   }, [checkCompliance, persistAppliedState, props.enableComplianceCheck, rawTargetSiteUrl, targetSiteUrl]);
 
   const openProvisionDialog = (): void => {
-    setMode('provision');
+    setDialogIntent('provision');
     setDialogOpen(true);
   };
 
   const openDeprovisionDialog = (): void => {
-    setMode('deprovision');
+    setDialogIntent('deprovision');
     setDialogOpen(true);
   };
 
   const openComplianceDialog = (): void => {
-    setMode('compliance');
+    setDialogIntent('compliance');
     setDialogOpen(true);
   };
 
-  const dialogTitle =
-    mode === 'deprovision'
-      ? props.strings.deprovisioningDialogTitle
-      : mode === 'provision'
-        ? props.strings.provisioningDialogTitle
-        : undefined;
-  const dialogDescription =
-    mode === 'deprovision'
-      ? props.strings.deprovisioningDialogDescription
-      : mode === 'provision'
-        ? props.strings.provisioningDialogDescription
-        : undefined;
-
-  const dialogStrings: Partial<ProvisioningDialogStrings> | undefined =
-    mode === 'deprovision' ? props.strings.deprovisioningDialogStrings : props.strings.provisioningDialogStrings;
-
-  const effectiveDialogStrings: Partial<ProvisioningDialogStrings> | undefined = React.useMemo(() => {
-    const defaultProvisioningHelp =
-      mode === 'provision'
-        ? 'Use Run to apply the template to the target site. You can monitor progress and review logs as actions execute.'
-        : 'Use Run to remove the template from the target site (deprovision). You can monitor progress and review logs as actions execute.';
-
-    const defaultComplianceHelp =
-      'Use Check to preview compliance issues before applying changes.';
-
-    return {
-      ...dialogStrings,
-      initialHelpProvisioningText: dialogStrings?.initialHelpProvisioningText ?? defaultProvisioningHelp,
-      initialHelpComplianceText: dialogStrings?.initialHelpComplianceText ?? defaultComplianceHelp,
-    };
-  }, [dialogStrings, mode]);
-
-  const dialogPlanTemplate: M365ProvisioningPlan = getDialogPlanTemplate(mode, {
-    provisioningActionPlan: props.provisioningActionPlan,
-    deprovisioningActionPlan: props.deprovisioningActionPlan,
-  });
+  const dialogConfig = React.useMemo(
+    () =>
+      getProvisioningFieldDialogConfig(dialogIntent, {
+        plans: {
+          provisioningActionPlan: props.provisioningActionPlan,
+          deprovisioningActionPlan: props.deprovisioningActionPlan,
+        },
+        strings: props.strings,
+        complianceAutoRunOnOpen: props.complianceAutoRunOnOpen,
+        confirmDeprovisionRun: props.confirmDeprovisionRun,
+      }),
+    [
+      dialogIntent,
+      props.complianceAutoRunOnOpen,
+      props.confirmDeprovisionRun,
+      props.deprovisioningActionPlan,
+      props.provisioningActionPlan,
+      props.strings,
+    ]
+  );
 
   const handleProvisioningCompleted: ProvisioningDialogProps['onProvisioningCompleted'] = (ev) => {
     const next: TemplateAppliedState =
       ev.outcome === 'succeeded'
-        ? (mode === 'deprovision' ? 'notApplied' : 'applied')
+        ? (dialogIntent === 'deprovision' ? 'notApplied' : 'applied')
         : 'unknown';
     persistAppliedState(next);
   };
@@ -297,16 +282,16 @@ export const PropertyPaneProvisioningFieldView: React.FC<PropertyPaneProvisionin
         onClose={handleDialogClose}
         onProvisioningCompleted={handleProvisioningCompleted}
         context={props.context}
-        planTemplate={dialogPlanTemplate}
+        planTemplate={dialogConfig.planTemplate}
         logger={props.logger}
-        title={dialogTitle}
-        description={dialogDescription}
+        title={dialogConfig.title}
+        description={dialogConfig.description}
         targetSiteUrl={targetSiteUrl}
-        initialMode={mode === 'compliance' ? 'compliance' : 'provisioning'}
+        initialMode={dialogConfig.initialMode}
         enableComplianceCheck={false}
-        complianceAutoRunOnOpen={mode === 'compliance' ? true : (mode !== 'deprovision' && props.complianceAutoRunOnOpen)}
-        confirmRun={mode === 'deprovision' && props.confirmDeprovisionRun}
-        strings={effectiveDialogStrings}
+        complianceAutoRunOnOpen={dialogConfig.complianceAutoRunOnOpen}
+        confirmRun={dialogConfig.confirmRun}
+        strings={dialogConfig.strings}
       />
     </Card>
   );
