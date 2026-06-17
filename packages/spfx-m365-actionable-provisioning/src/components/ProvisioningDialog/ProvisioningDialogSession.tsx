@@ -234,6 +234,7 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
         overallNonCompliantLabel: s.overallNonCompliantLabel,
         overallRunningLabel: s.overallRunningLabel,
         overallCancelledLabel: s.overallCancelledLabel,
+        initialHelpComplianceText: s.initialHelpComplianceText,
         errorFallbackTitle: s.complianceErrorFallbackTitle,
         finalOutcomeFailedLabel: s.finalOutcomeFailedLabel,
         finalOutcomeCancelledLabel: s.finalOutcomeCancelledLabel,

@@ -4,6 +4,7 @@ import {
     AccordionHeader,
     AccordionItem,
     AccordionPanel,
+    Body1Strong,
     makeStyles,
     tokens,
 } from '@fluentui/react-components';
@@ -109,7 +110,9 @@ export const DialogLogSection: React.FC<DialogLogSectionProps> = ({
             onToggle={handleToggle}
         >
             <AccordionItem value="logs">
-                <AccordionHeader>{label}</AccordionHeader>
+                <AccordionHeader>
+                    <Body1Strong>{label}</Body1Strong>
+                </AccordionHeader>
                 <AccordionPanel className={styles.accordionPanel}>
                     <Flex className={styles.logsContainer}>
                         <LogPanel

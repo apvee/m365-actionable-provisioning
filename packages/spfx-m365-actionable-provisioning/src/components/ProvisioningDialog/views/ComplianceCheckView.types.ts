@@ -29,6 +29,8 @@ export type ComplianceCheckViewStrings = Readonly<{
     overallNonCompliantLabel: string;
     overallRunningLabel: string;
     overallCancelledLabel: string;
+    /** Help text shown when compliance check has not started yet */
+    initialHelpComplianceText: string;
     /** Fallback title for errors */
     errorFallbackTitle: string;
     /** Label shown when check failed */

@@ -1,17 +1,20 @@
 import * as React from 'react';
 import {
-    Field,
-    ProgressBar,
+    Text,
 } from '@fluentui/react-components';
 import { Stack } from '@apvee/react-layout-kit';
 
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import { computeComplianceOverall } from '@apvee/m365-actionable-provisioning';
-import type { KpiBadgeSpec } from '../shared/KpiSummaryBar.types';
 import type { ComplianceCheckViewProps, ComplianceCheckViewStrings } from './ComplianceCheckView.types';
-import { KpiSummaryBar } from '../shared/KpiSummaryBar';
 import { DialogLogSection } from '../shared/DialogLogSection';
 import { DialogErrorMessage } from '../shared/DialogErrorMessage';
+import { OperationInspector } from '../shared/OperationInspector';
+import type {
+    OperationInspectorStatus,
+    OperationInspectorStatusTone,
+    OperationInspectorSummaryCard,
+} from '../shared/OperationInspector.types';
 
 export type { ComplianceCheckViewProps, ComplianceCheckViewStrings };
 
@@ -118,79 +121,70 @@ export const ComplianceCheckView: React.FC<ComplianceCheckViewProps> = ({
         return undefined;
     }, [complianceReport, compliance, isChecking, strings]);
 
-    // Status badge (memoized)
-    const statusBadge = React.useMemo<KpiBadgeSpec | undefined>(() => {
+    // Status strip state (memoized)
+    const inspectorStatus = React.useMemo<OperationInspectorStatus | undefined>(() => {
         if (!displayedKpis?.badge) return undefined;
+
+        const tone: OperationInspectorStatusTone =
+            displayedKpis.badge.color === 'success'
+                ? 'success'
+                : displayedKpis.badge.color === 'danger'
+                    ? 'danger'
+                    : displayedKpis.badge.color === 'warning'
+                        ? 'warning'
+                        : displayedKpis.badge.color === 'subtle'
+                            ? 'subtle'
+                            : 'brand';
+
         return {
-            key: 'overall-status',
-            text: displayedKpis.badge.text,
-            color: displayedKpis.badge.color ?? 'brand',
-            appearance: 'filled',
+            label: displayedKpis.badge.text,
+            tone,
+            badgeAppearance: 'tint',
         };
     }, [displayedKpis?.badge]);
 
-    // Metric badges (memoized)
-    const metricBadges = React.useMemo<ReadonlyArray<KpiBadgeSpec>>(() => {
+    // Summary cards (memoized)
+    const summaryCards = React.useMemo<ReadonlyArray<OperationInspectorSummaryCard>>(() => {
         if (!displayedKpis) return [];
 
-        const badges: KpiBadgeSpec[] = [];
-
-        if (displayedKpis.checked > 0) {
-            badges.push({
-                key: 'checked',
-                text: `${strings.checkedLabel} ${displayedKpis.checked}/${displayedKpis.total}`,
-                color: 'brand',
-                appearance: 'tint',
-            });
-        }
-
-        if (displayedKpis.blocked > 0) {
-            badges.push({
-                key: 'blocked',
-                text: `${strings.blockedLabel} ${displayedKpis.blocked}/${displayedKpis.total}`,
-                color: 'subtle',
-                appearance: 'tint',
-            });
-        }
-
-        if (displayedKpis.counts.compliant > 0) {
-            badges.push({
+        return [
+            {
                 key: 'compliant',
-                text: `${strings.compliantLabel} ${displayedKpis.counts.compliant}`,
-                color: 'success',
-                appearance: 'tint',
-            });
-        }
-
-        if (displayedKpis.counts.non_compliant > 0) {
-            badges.push({
+                label: strings.compliantLabel,
+                value: displayedKpis.counts.compliant,
+                tone: 'success',
+                hiddenWhenZero: false,
+            },
+            {
                 key: 'non_compliant',
-                text: `${strings.nonCompliantLabel} ${displayedKpis.counts.non_compliant}`,
-                color: 'danger',
-                appearance: 'tint',
-            });
-        }
-
-        if (displayedKpis.counts.unverifiable > 0) {
-            badges.push({
+                label: strings.nonCompliantLabel,
+                value: displayedKpis.counts.non_compliant,
+                tone: 'danger',
+                hiddenWhenZero: false,
+            },
+            {
                 key: 'unverifiable',
-                text: `${strings.unverifiableLabel} ${displayedKpis.counts.unverifiable}`,
-                color: 'brand',
-                appearance: 'tint',
-            });
-        }
-
-        if (displayedKpis.counts.ignored > 0) {
-            badges.push({
+                label: strings.unverifiableLabel,
+                value: displayedKpis.counts.unverifiable,
+                tone: 'warning',
+                hiddenWhenZero: false,
+            },
+            {
+                key: 'blocked',
+                label: strings.blockedLabel,
+                value: displayedKpis.blocked,
+                tone: 'subtle',
+                hiddenWhenZero: false,
+            },
+            {
                 key: 'ignored',
-                text: `${strings.ignoredLabel} ${displayedKpis.counts.ignored}`,
-                color: 'subtle',
-                appearance: 'tint',
-            });
-        }
-
-        return badges;
-    }, [displayedKpis, strings.checkedLabel, strings.blockedLabel, strings.compliantLabel, strings.nonCompliantLabel, strings.unverifiableLabel, strings.ignoredLabel]);
+                label: strings.ignoredLabel,
+                value: displayedKpis.counts.ignored,
+                tone: 'subtle',
+                hiddenWhenZero: true,
+            },
+        ];
+    }, [displayedKpis, strings.blockedLabel, strings.compliantLabel, strings.nonCompliantLabel, strings.unverifiableLabel, strings.ignoredLabel]);
 
     // Progress calculation (memoized)
     const progress = React.useMemo(() => {
@@ -216,26 +210,30 @@ export const ComplianceCheckView: React.FC<ComplianceCheckViewProps> = ({
         [onOpenLogItemsChange]
     );
 
+    const pristineContent = (
+        <Text>{strings.initialHelpComplianceText}</Text>
+    );
+
     return (
         <Stack gap="md">
             <DialogErrorMessage error={uiError} />
-
-            {progress && (
-                <Field label={progress.label}>
-                    <ProgressBar value={progress.value} thickness="large" />
-                </Field>
-            )}
-
-            <KpiSummaryBar statusBadge={statusBadge} metricBadges={metricBadges} />
-
-            <DialogLogSection
-                label={strings.viewLogsLabel}
-                openItems={openLogItems}
-                onOpenItemsChange={handleOpenLogItemsChange}
-                entries={activityEntries}
-                mode="compliance"
-                strings={strings.complianceStrings}
-                activityEntryStrings={strings.complianceActivityEntryStrings}
+            <OperationInspector
+                status={inspectorStatus}
+                progress={progress}
+                summaryCards={summaryCards}
+                pristine={pristineContent}
+                activity={
+                    <DialogLogSection
+                        label={strings.viewLogsLabel}
+                        openItems={openLogItems}
+                        onOpenItemsChange={handleOpenLogItemsChange}
+                        entries={activityEntries}
+                        mode="compliance"
+                        strings={strings.complianceStrings}
+                        activityEntryStrings={strings.complianceActivityEntryStrings}
+                    />
+                }
+                isPristine={isPristine}
             />
         </Stack>
     );

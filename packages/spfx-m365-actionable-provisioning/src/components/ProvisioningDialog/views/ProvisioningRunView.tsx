@@ -1,29 +1,21 @@
 import * as React from 'react';
 import {
-    Field,
-    ProgressBar,
     Text,
-    makeStyles,
-    tokens,
 } from '@fluentui/react-components';
 import { Stack } from '@apvee/react-layout-kit';
 
 import type { ProvisioningRunOutcome } from '../ProvisioningDialog.types';
-import type { KpiBadgeSpec } from '../shared/KpiSummaryBar.types';
 import type { ProvisioningRunViewProps, ProvisioningRunViewStrings } from './ProvisioningRunView.types';
 import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
-import { KpiSummaryBar } from '../shared/KpiSummaryBar';
 import { DialogLogSection } from '../shared/DialogLogSection';
 import { DialogErrorMessage } from '../shared/DialogErrorMessage';
+import { OperationInspector } from '../shared/OperationInspector';
+import type {
+    OperationInspectorStatus,
+    OperationInspectorSummaryCard,
+} from '../shared/OperationInspector.types';
 
 export type { ProvisioningRunViewProps, ProvisioningRunViewStrings };
-
-const useStyles = makeStyles({
-    // Layout styles removed - now using @apvee/react-layout-kit components
-    initialHelp: {
-        color: tokens.colorNeutralForeground2,
-    },
-});
 
 /**
  * ProvisioningRunView renders the provisioning mode content.
@@ -48,8 +40,6 @@ export const ProvisioningRunView: React.FC<ProvisioningRunViewProps> = ({
     canOpenCompliance,
     strings,
 }): React.ReactElement => {
-    const styles = useStyles();
-
     // Derived state: final outcome
     const finalOutcome = React.useMemo<ProvisioningRunOutcome | undefined>(() => {
         if (!snapshot) return undefined;
@@ -64,24 +54,24 @@ export const ProvisioningRunView: React.FC<ProvisioningRunViewProps> = ({
 
     const isRunning = summary?.isRunning === true;
 
-    // Status badge (memoized for performance)
-    const statusBadge = React.useMemo<KpiBadgeSpec | undefined>(() => {
+    // Status strip state (memoized for performance)
+    const inspectorStatus = React.useMemo<OperationInspectorStatus | undefined>(() => {
         if (isRunning) {
-            return { key: 'status', text: strings.finalOutcomeRunningLabel, color: 'brand', appearance: 'filled' };
+            return { label: strings.finalOutcomeRunningLabel, tone: 'brand', badgeAppearance: 'tint' };
         }
         if (finalOutcome === 'succeeded') {
-            return { key: 'status', text: strings.finalOutcomeSucceededLabel, color: 'success', appearance: 'filled' };
+            return { label: strings.finalOutcomeSucceededLabel, tone: 'success', badgeAppearance: 'tint' };
         }
         if (finalOutcome === 'failed') {
-            return { key: 'status', text: strings.finalOutcomeFailedLabel, color: 'danger', appearance: 'filled' };
+            return { label: strings.finalOutcomeFailedLabel, tone: 'danger', badgeAppearance: 'tint' };
         }
         if (finalOutcome === 'cancelled') {
-            return { key: 'status', text: strings.finalOutcomeCancelledLabel, color: 'warning', appearance: 'filled' };
+            return { label: strings.finalOutcomeCancelledLabel, tone: 'warning', badgeAppearance: 'tint' };
         }
         return undefined;
     }, [isRunning, finalOutcome, strings.finalOutcomeRunningLabel, strings.finalOutcomeSucceededLabel, strings.finalOutcomeFailedLabel, strings.finalOutcomeCancelledLabel]);
 
-    // Metric badges (memoized for performance)
+    // Summary cards (memoized for performance)
     const counts = summary?.counts;
     const total = snapshot?.out?.trace?.total;
     const ratioDenominator = summary?.progress?.total ?? total;
@@ -95,39 +85,33 @@ export const ProvisioningRunView: React.FC<ProvisioningRunViewProps> = ({
         [ratioDenominator]
     );
 
-    const metricBadges = React.useMemo<ReadonlyArray<KpiBadgeSpec>>(() => {
-        const hasDenominator = ratioDenominator !== undefined;
-        const badges: KpiBadgeSpec[] = [];
+    const summaryCards = React.useMemo<ReadonlyArray<OperationInspectorSummaryCard>>(() => {
+        if (ratioDenominator === undefined) return [];
 
-        if (hasDenominator && (counts?.success ?? 0) > 0) {
-            badges.push({
+        return [
+            {
                 key: 'success',
-                text: `${strings.successLabel} ${formatRatio(counts?.success)}`,
-                color: 'success',
-                appearance: 'tint',
-            });
-        }
-
-        if (hasDenominator && (counts?.skipped ?? 0) > 0) {
-            badges.push({
+                label: strings.successLabel,
+                value: counts?.success ?? 0,
+                tone: 'success',
+                hiddenWhenZero: false,
+            },
+            {
                 key: 'skipped',
-                text: `${strings.skippedLabel} ${formatRatio(counts?.skipped)}`,
-                color: 'subtle',
-                appearance: 'tint',
-            });
-        }
-
-        if (hasDenominator && (counts?.fail ?? 0) > 0) {
-            badges.push({
+                label: strings.skippedLabel,
+                value: counts?.skipped ?? 0,
+                tone: 'subtle',
+                hiddenWhenZero: false,
+            },
+            {
                 key: 'fail',
-                text: `${strings.failLabel} ${formatRatio(counts?.fail)}`,
-                color: 'danger',
-                appearance: 'tint',
-            });
-        }
-
-        return badges;
-    }, [counts?.success, counts?.skipped, counts?.fail, ratioDenominator, formatRatio, strings.successLabel, strings.skippedLabel, strings.failLabel]);
+                label: strings.failLabel,
+                value: counts?.fail ?? 0,
+                tone: 'danger',
+                hiddenWhenZero: false,
+            },
+        ];
+    }, [counts?.success, counts?.skipped, counts?.fail, ratioDenominator, strings.successLabel, strings.skippedLabel, strings.failLabel]);
 
     // Progress calculation (memoized)
     const completed = summary?.progress?.completed;
@@ -140,6 +124,14 @@ export const ProvisioningRunView: React.FC<ProvisioningRunViewProps> = ({
 
     const showCompletedKpi = (ratioDenominator !== undefined) && (completed ?? 0) > 0;
     const showProgress = !isPristine && progressRatio !== undefined;
+
+    const inspectorProgress = React.useMemo(() => {
+        if (!showProgress) return undefined;
+        return {
+            label: showCompletedKpi ? `${strings.completedLabel} ${formatRatio(completed)}` : undefined,
+            value: progressRatio ?? 0,
+        };
+    }, [showProgress, showCompletedKpi, strings.completedLabel, formatRatio, completed, progressRatio]);
 
     // Engine error
     const engineError = React.useMemo<ProvisioningDialogUiError | undefined>(() => {
@@ -158,34 +150,35 @@ export const ProvisioningRunView: React.FC<ProvisioningRunViewProps> = ({
         [onOpenLogItemsChange]
     );
 
+    const pristineContent = (
+        <>
+            <Text>{strings.initialHelpProvisioningText}</Text>
+            {canOpenCompliance ? <Text>{strings.initialHelpComplianceText}</Text> : null}
+        </>
+    );
+
     return (
         <Stack gap="md">
             <DialogErrorMessage error={uiError} />
             <DialogErrorMessage error={engineError} />
 
-            {isPristine && (
-                <Stack gap="sm" className={styles.initialHelp}>
-                    <Text>{strings.initialHelpProvisioningText}</Text>
-                    {canOpenCompliance && <Text>{strings.initialHelpComplianceText}</Text>}
-                </Stack>
-            )}
-
-            {showProgress && (
-                <Field label={showCompletedKpi ? `${strings.completedLabel} ${formatRatio(completed)}` : undefined}>
-                    <ProgressBar value={progressRatio ?? 0} thickness="large" />
-                </Field>
-            )}
-
-            <KpiSummaryBar statusBadge={statusBadge} metricBadges={metricBadges} />
-
-            <DialogLogSection
-                label={strings.viewLogsLabel}
-                openItems={openLogItems}
-                onOpenItemsChange={handleOpenLogItemsChange}
-                entries={activityEntries}
-                mode="provisioning"
-                strings={strings.logPanelStrings}
-                activityEntryStrings={strings.activityEntryStrings}
+            <OperationInspector
+                status={inspectorStatus}
+                progress={inspectorProgress}
+                summaryCards={summaryCards}
+                pristine={pristineContent}
+                activity={
+                    <DialogLogSection
+                        label={strings.viewLogsLabel}
+                        openItems={openLogItems}
+                        onOpenItemsChange={handleOpenLogItemsChange}
+                        entries={activityEntries}
+                        mode="provisioning"
+                        strings={strings.logPanelStrings}
+                        activityEntryStrings={strings.activityEntryStrings}
+                    />
+                }
+                isPristine={isPristine}
             />
         </Stack>
     );
