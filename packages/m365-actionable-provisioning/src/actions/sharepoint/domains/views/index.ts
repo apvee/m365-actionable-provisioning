@@ -1,5 +1,6 @@
 export {
   areViewFieldsEqual,
+  buildListViewCreateProps,
   buildListViewUpdateProps,
   compareListViewState,
   mapListViewScope,

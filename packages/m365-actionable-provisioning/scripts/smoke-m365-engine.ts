@@ -16,6 +16,7 @@ import { checkFieldStructuralCompatibility } from "../src/actions/sharepoint/dom
 import { checkListStructuralCompatibility } from "../src/actions/sharepoint/domains/lists/list-structural-compatibility";
 import {
   areViewFieldsEqual,
+  buildListViewCreateProps,
   buildListViewUpdateProps,
   compareListViewState,
   mapListViewScope,
@@ -396,6 +397,12 @@ function assertSharePointListViewV1Contract(): void {
     },
   ]);
   assert(!rootCreateView.success, "SharePoint root schema should reject list view actions in V1");
+
+  const createProps = buildListViewCreateProps();
+  assert(
+    Object.keys(createProps).length === 0,
+    "List view create props should stay minimal because mutable view state is applied after SharePoint creates the view"
+  );
 
   const updateProps = buildListViewUpdateProps({
     newTitle: "Recently changed documents",

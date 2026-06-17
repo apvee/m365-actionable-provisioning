@@ -4,6 +4,7 @@ import type { M365ActionResult, M365Clients, M365RuntimeContext, M365Scope, Prov
 import { actionExecuted, actionSkipped, compliant, nonCompliant, unverifiable, unverifiableError } from "../../_shared/action-results";
 import { probeManageListsPermission } from "../../domains/lists";
 import {
+  buildListViewCreateProps,
   buildListViewUpdateProps,
   compareListViewState,
   getListViewByTitle,
@@ -47,9 +48,9 @@ export class CreateSPListViewAction extends ActionDefinition<
 
     const view = existingInfo
       ? getListViewByTitle(list, payload.title)
-      : getListViewByTitle(list, (await list.views.add(payload.title, false, buildListViewUpdateProps(payload))).Title);
+      : getListViewByTitle(list, (await list.views.add(payload.title, false, buildListViewCreateProps())).Title);
 
-    const updateProps = existingInfo ? buildListViewUpdateProps(payload) : {};
+    const updateProps = buildListViewUpdateProps(payload);
     if (Object.keys(updateProps).length > 0) {
       await view.update(updateProps);
     }

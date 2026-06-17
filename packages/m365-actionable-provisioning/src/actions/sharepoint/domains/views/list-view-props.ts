@@ -41,6 +41,10 @@ export function normalizeViewQuery(value: string): string {
   return value.trim();
 }
 
+export function buildListViewCreateProps(): Record<string, never> {
+  return {};
+}
+
 export function buildListViewUpdateProps(input: ListViewStateInput): Partial<IViewInfo> {
   const props: Partial<IViewInfo> = {};
   if (input.newTitle !== undefined) props.Title = input.newTitle;
