@@ -1,9 +1,6 @@
 import * as React from 'react';
 import {
     Field,
-    MessageBar,
-    MessageBarBody,
-    MessageBarTitle,
     ProgressBar,
     Text,
     makeStyles,
@@ -17,6 +14,7 @@ import type { ProvisioningRunViewProps, ProvisioningRunViewStrings } from './Pro
 import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
 import { KpiSummaryBar } from '../shared/KpiSummaryBar';
 import { DialogLogSection } from '../shared/DialogLogSection';
+import { DialogErrorMessage } from '../shared/DialogErrorMessage';
 
 export type { ProvisioningRunViewProps, ProvisioningRunViewStrings };
 
@@ -160,23 +158,10 @@ export const ProvisioningRunView: React.FC<ProvisioningRunViewProps> = ({
         [onOpenLogItemsChange]
     );
 
-    // Render helpers
-    const renderErrorBox = (err: ProvisioningDialogUiError | undefined): React.ReactNode => {
-        if (!err) return null;
-        return (
-            <MessageBar intent="error">
-                <MessageBarBody>
-                    <MessageBarTitle>{err.title}</MessageBarTitle>
-                    {err.message}
-                </MessageBarBody>
-            </MessageBar>
-        );
-    };
-
     return (
         <Stack gap="md">
-            {renderErrorBox(uiError)}
-            {renderErrorBox(engineError)}
+            <DialogErrorMessage error={uiError} />
+            <DialogErrorMessage error={engineError} />
 
             {isPristine && (
                 <Stack gap="sm" className={styles.initialHelp}>

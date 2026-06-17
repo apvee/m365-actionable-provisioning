@@ -1,9 +1,6 @@
 import * as React from 'react';
 import {
     Field,
-    MessageBar,
-    MessageBarBody,
-    MessageBarTitle,
     ProgressBar,
 } from '@fluentui/react-components';
 import { Stack } from '@apvee/react-layout-kit';
@@ -12,9 +9,9 @@ import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import { computeComplianceOverall } from '@apvee/m365-actionable-provisioning';
 import type { KpiBadgeSpec } from '../shared/KpiSummaryBar.types';
 import type { ComplianceCheckViewProps, ComplianceCheckViewStrings } from './ComplianceCheckView.types';
-import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
 import { KpiSummaryBar } from '../shared/KpiSummaryBar';
 import { DialogLogSection } from '../shared/DialogLogSection';
+import { DialogErrorMessage } from '../shared/DialogErrorMessage';
 
 export type { ComplianceCheckViewProps, ComplianceCheckViewStrings };
 
@@ -219,22 +216,9 @@ export const ComplianceCheckView: React.FC<ComplianceCheckViewProps> = ({
         [onOpenLogItemsChange]
     );
 
-    // Render error box helper
-    const renderErrorBox = (err: ProvisioningDialogUiError | undefined): React.ReactNode => {
-        if (!err) return null;
-        return (
-            <MessageBar intent="error">
-                <MessageBarBody>
-                    <MessageBarTitle>{err.title}</MessageBarTitle>
-                    {err.message}
-                </MessageBarBody>
-            </MessageBar>
-        );
-    };
-
     return (
         <Stack gap="md">
-            {renderErrorBox(uiError)}
+            <DialogErrorMessage error={uiError} />
 
             {progress && (
                 <Field label={progress.label}>
