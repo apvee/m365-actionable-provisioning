@@ -368,6 +368,13 @@ function assertSharePointListViewV1Contract(): void {
   });
   assert(!invalidCreateView.success, "createSPListView schema should reject empty title, empty fields, and unsupported scopes");
 
+  const wrappedQueryCreateView = createSPListViewSchema.safeParse({
+    verb: "createSPListView",
+    title: "Wrapped query",
+    viewQuery: "<View><Query><OrderBy><FieldRef Name=\"Modified\" /></OrderBy></Query></View>",
+  });
+  assert(!wrappedQueryCreateView.success, "createSPListView schema should reject full ViewXml wrappers in viewQuery");
+
   const modifyView = modifySPListViewSchema.safeParse({
     verb: "modifySPListView",
     title: "Active documents",

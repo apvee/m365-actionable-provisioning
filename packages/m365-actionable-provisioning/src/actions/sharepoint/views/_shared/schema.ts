@@ -17,9 +17,14 @@ export const listViewFieldsSchema = z
 
 export const listViewScopeSchema = z.enum(["default", "recursive", "recursiveAll", "filesOnly"]);
 
+const listViewQuerySchema = z.string().refine((value) => {
+  const normalized = value.trim().toLowerCase();
+  return !normalized.startsWith("<view") && !normalized.startsWith("<query");
+}, "List view query must be a CAML Query fragment such as <Where> or <OrderBy>, without <View> or <Query> wrappers");
+
 export const listViewMutableStateSchema = {
   fields: listViewFieldsSchema,
-  viewQuery: z.string().optional(),
+  viewQuery: listViewQuerySchema.optional(),
   rowLimit: z.number().int().min(1).max(50000).optional(),
   paged: z.boolean().optional(),
   defaultView: z.boolean().optional(),

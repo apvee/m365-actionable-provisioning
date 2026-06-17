@@ -128,6 +128,9 @@ Example:
 V1 supports ordered visible field membership, CAML view query fragments, row
 limit, paging, default view promotion, tabular view, and standard SharePoint
 view scopes: `default`, `recursive`, `recursiveAll`, and `filesOnly`.
+`viewQuery` expects the contents of the CAML `<Query>` node, such as
+`<Where>...</Where>` or `<OrderBy>...</OrderBy>`, without wrapping it in
+`<View>` or `<Query>`.
 
 `defaultView: false` is compliance-only drift information. Runtime changes the
 default view by setting `defaultView: true` on another view; it does not send a
