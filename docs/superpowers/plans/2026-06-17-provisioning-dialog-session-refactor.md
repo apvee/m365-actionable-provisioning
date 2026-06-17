@@ -670,6 +670,14 @@ Replace hook call:
 
 - [ ] **Step 6: Update hook index**
 
+Before editing the index, run:
+
+```bash
+rg -n "useDialogOrchestration|useProvisioningDialogActions" packages/spfx-m365-actionable-provisioning/src apps/test-spfx/src docs
+```
+
+Expected: the only runtime imports are inside `ProvisioningDialog.tsx` or the moved hook files.
+
 In `packages/spfx-m365-actionable-provisioning/src/hooks/index.ts`, remove any export for `useDialogOrchestration` if present. Do not export the new dialog-internal hook from the package-level hooks index.
 
 - [ ] **Step 7: Build**
@@ -710,6 +718,7 @@ In `ProvisioningDialog.types.ts`, add:
 /** @internal */
 export type ProvisioningDialogSessionProps = Omit<ProvisioningDialogProps, 'open' | 'onClose'> & Readonly<{
     onClose: () => void;
+    defaultStrings: ProvisioningDialogStrings;
     registerCloseHandler: (handler: (() => void) | undefined) => void;
 }>;
 ```
@@ -762,10 +771,6 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
         strings,
         confirmRun,
         defaultStrings,
-        surfaceContentClassName,
-    } = props as ProvisioningDialogSessionProps & {
-        defaultStrings?: ProvisioningDialogStrings;
-        surfaceContentClassName?: string;
     };
 
     const defaultOpenLogItems = React.useMemo(() => ['logs'], []);
@@ -776,31 +781,66 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
     } satisfies ProvisioningDialogStrings), [defaultStrings, strings]);
     const initialMode: ProvisioningDialogMode = initialModeProp ?? 'provisioning';
 
-    // Paste the existing reducer, engine, derived state, action hook, footer, and content code
-    // from the current ProvisioningDialog body below this point. In this task keep behavior
-    // unchanged, including engineResetKey and close reset logic; Task 7 removes that lifecycle code.
+    // Runtime code moved from ProvisioningDialog.tsx continues below.
 };
 
 ProvisioningDialogSession.displayName = 'ProvisioningDialogSession';
 ```
 
-Then move all runtime code currently inside `ProvisioningDialog` into this component:
+Then move all runtime code currently inside `ProvisioningDialog` into this component in this order:
 
-- normalized target URL
-- merged strings
-- effective title/description
-- reducer
+- effective title/description, using `initialMode` instead of the removed wrapper-local `mode`
+- reducer initialization with `buildInitialProvisioningDialogSessionState`
 - `localEngineResetKey`
 - `useSPFxProvisioningEngine`
-- derived state
-- navigation guard
+- `useProvisioningDerivedState`
+- `useNavigationGuard`
 - `useProvisioningDialogActions`
+- the effect that syncs `localEngineResetKey` from `engineResetKey`
+- compliance availability wrappers for `enableComplianceCheck`
 - final outcome and compliance derived state
+- open-log handlers
+- `ProvisioningRunViewStrings` and `ComplianceCheckViewStrings`
 - footer render functions
 - content render function
+- `ProvisioningDialogShell`
 - `ConfirmationDialog`
 
-Do not include `<Dialog>` or `<DialogSurface>` in the session.
+Do not include `<Dialog>` or `<DialogSurface>` in the session. Use this session return:
+
+```tsx
+return (
+    <>
+        <ProvisioningDialogShell
+            title={shellTitle}
+            description={shellDescription}
+            headerIcon={shellHeaderIcon}
+            isPristine={shellIsPristine}
+            closeDisabled={shellCloseDisabled}
+            closeButtonAriaLabel={s.closeButtonAriaLabel}
+            errorFallbackTitle={s.complianceErrorFallbackTitle}
+            logger={logger}
+            onClose={handleClose}
+            footer={isComplianceMode ? renderComplianceFooter() : renderProvisioningFooter()}
+        >
+            {renderContent()}
+        </ProvisioningDialogShell>
+
+        <ConfirmationDialog
+            open={state.confirmOpen}
+            title={s.confirmRunTitle}
+            message={s.confirmRunMessage}
+            strings={s.confirmDialogStrings}
+            confirmAppearance="primary"
+            onCancel={() => dispatch({ type: 'SET_CONFIRM_OPEN', value: false })}
+            onConfirm={() => {
+                dispatch({ type: 'SET_CONFIRM_OPEN', value: false });
+                handleRun().catch(() => undefined);
+            }}
+        />
+    </>
+);
+```
 
 - [ ] **Step 3: Register close handler from session**
 
@@ -826,12 +866,13 @@ In `ProvisioningDialog.tsx`, keep:
 - `<DialogSurface>`
 - `ProvisioningDialogSession`
 
-The component body should be shaped like:
+Use this wrapper component body shape:
 
 ```tsx
 export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = (props) => {
     const styles = useProvisioningDialogStyles();
     const closeHandlerRef = React.useRef<(() => void) | undefined>(undefined);
+    const { open, ...sessionProps } = props;
 
     const registerCloseHandler = React.useCallback((handler: (() => void) | undefined) => {
         closeHandlerRef.current = handler;
@@ -843,7 +884,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = (props) => 
 
     return (
         <Dialog
-            open={props.open}
+            open={open}
             modalType="alert"
             unmountOnClose={true}
             onOpenChange={(_, data) => {
@@ -852,7 +893,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = (props) => 
         >
             <DialogSurface className={styles.surface}>
                 <ProvisioningDialogSession
-                    {...props}
+                    {...sessionProps}
                     defaultStrings={DEFAULT_STRINGS}
                     registerCloseHandler={registerCloseHandler}
                 />
@@ -862,7 +903,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = (props) => 
 };
 ```
 
-If TypeScript rejects `defaultStrings` because it is not in the session props, add it explicitly to `ProvisioningDialogSessionProps`.
+Expected: `ProvisioningDialog.tsx` no longer imports engine hooks, derived-state hooks, mode views, or `ConfirmationDialog`; those imports live in `ProvisioningDialogSession.tsx`.
 
 - [ ] **Step 5: Build**
 
@@ -899,12 +940,13 @@ Expected: commit created.
 
 - [ ] **Step 1: Remove open/close lifecycle from action hook options**
 
-In `useProvisioningDialogActions.types.ts`, remove these option fields:
+In `useProvisioningDialogActions.types.ts`, remove this option field:
 
 ```ts
 open: boolean;
-defaultOpenLogItems: ReadonlyArray<string>;
 ```
+
+Keep `defaultOpenLogItems: ReadonlyArray<string>;` because `switchToCompliance` still uses it to initialize compliance log accordion state.
 
 Remove return field:
 
@@ -934,6 +976,14 @@ dispatch({ type: 'SET_CLOSING', value: true });
 ```
 
 Keep `checkRunIdRef`, `runSiteUrlRef`, `awaitingCompletionRef`, `completionEmittedRef`, and auto-run refs.
+
+Also remove `open` from the hook options destructuring.
+
+In `ProvisioningDialogSession.tsx`, remove this field from the `useProvisioningDialogActions` call:
+
+```ts
+open,
+```
 
 - [ ] **Step 3: Add unmount cleanup in the action hook**
 
@@ -970,6 +1020,68 @@ const handleClose = React.useCallback(() => {
 ```
 
 Expected: close button and Escape use the same logic.
+
+- [ ] **Step 4.1: Remove open guards from compliance auto-run effects**
+
+In `useProvisioningDialogActions.ts`, update the "Auto-run compliance when entering via Check button" effect from:
+
+```ts
+React.useEffect(() => {
+    if (!open) return;
+    if (state.activeMode !== 'compliance') return;
+    if (!complianceAutoRunRequestedRef.current) return;
+
+    complianceAutoRunRequestedRef.current = false;
+    handleRunCompliance().catch(() => undefined);
+}, [handleRunCompliance, open, state.activeMode]);
+```
+
+to:
+
+```ts
+React.useEffect(() => {
+    if (state.activeMode !== 'compliance') return;
+    if (!complianceAutoRunRequestedRef.current) return;
+
+    complianceAutoRunRequestedRef.current = false;
+    handleRunCompliance().catch(() => undefined);
+}, [handleRunCompliance, state.activeMode]);
+```
+
+Update the "Auto-run compliance when opening directly in compliance mode" effect from:
+
+```ts
+React.useEffect(() => {
+    if (!open) return;
+    if (state.activeMode !== 'compliance') return;
+    if (complianceAutoRunOnOpen !== true) return;
+    if (complianceAutoRunDoneRef.current) return;
+
+    const canStart = !state.complianceIsChecking && Boolean(normalizedTargetSiteUrl);
+    if (!canStart) return;
+
+    complianceAutoRunDoneRef.current = true;
+    handleRunCompliance().catch(() => undefined);
+}, [complianceAutoRunOnOpen, handleRunCompliance, normalizedTargetSiteUrl, open, state.activeMode, state.complianceIsChecking]);
+```
+
+to:
+
+```ts
+React.useEffect(() => {
+    if (state.activeMode !== 'compliance') return;
+    if (complianceAutoRunOnOpen !== true) return;
+    if (complianceAutoRunDoneRef.current) return;
+
+    const canStart = !state.complianceIsChecking && Boolean(normalizedTargetSiteUrl);
+    if (!canStart) return;
+
+    complianceAutoRunDoneRef.current = true;
+    handleRunCompliance().catch(() => undefined);
+}, [complianceAutoRunOnOpen, handleRunCompliance, normalizedTargetSiteUrl, state.activeMode, state.complianceIsChecking]);
+```
+
+Expected: auto-run still happens once per mounted session; it no longer depends on parent `open`.
 
 - [ ] **Step 5: Remove close-reset state actions**
 
@@ -1409,10 +1521,22 @@ Do not export dialog-internal session/action/view/shared components unless an in
 Run:
 
 ```bash
-perl -0pi -e 's/\bmode\b/initialMode/g' docs/provisioning-dialog.md docs/introduction.md
+rg -n "mode=| mode |`mode`|mode:" docs/provisioning-dialog.md docs/introduction.md
 ```
 
-Then manually review the changed docs and fix grammar where needed. Keep prose accurate: `initialMode` is read on open and is not controlled while already open.
+Manually update only references to the `ProvisioningDialog` prop:
+
+```tsx
+<ProvisioningDialog initialMode="compliance" />
+```
+
+Use this prose where the prop behavior is documented:
+
+```md
+`initialMode` selects the mode used when the dialog opens. It is not a controlled prop while the dialog is already open.
+```
+
+Do not replace unrelated uses of the word "mode" in normal prose.
 
 - [ ] **Step 3: Update docs for renamed internals only where mentioned**
 
