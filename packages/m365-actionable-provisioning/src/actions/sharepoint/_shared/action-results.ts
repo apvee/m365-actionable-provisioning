@@ -1,6 +1,6 @@
 import { normalizeError } from "../../../core";
 import type { ComplianceActionCheckResult } from "../../../core/action";
-import type { M365ActionResult, M365Scope, SkipReason } from "../../../runtime";
+import type { M365ActionResult, M365Scope, ProvisioningResultLight, ProvisioningWarning, SkipReason } from "../../../runtime";
 
 type ComplianceResultArgs = Readonly<{
   resource?: string;
@@ -17,6 +17,13 @@ function withScopeDelta(
   return scopeDelta ? { result, scopeDelta } : { result };
 }
 
+function withWarnings<T extends ProvisioningResultLight>(
+  result: T,
+  warnings?: readonly ProvisioningWarning[]
+): T {
+  return warnings && warnings.length > 0 ? ({ ...result, warnings } as T) : result;
+}
+
 function complianceResult(
   outcome: ComplianceActionCheckResult<M365Scope>["outcome"],
   args: ComplianceResultArgs = {}
@@ -31,16 +38,21 @@ function complianceResult(
   };
 }
 
-export function actionExecuted(resource: string, scopeDelta?: Partial<M365Scope>): M365ActionResult {
-  return withScopeDelta({ outcome: "executed", resource }, scopeDelta);
+export function actionExecuted(
+  resource: string,
+  scopeDelta?: Partial<M365Scope>,
+  warnings?: readonly ProvisioningWarning[]
+): M365ActionResult {
+  return withScopeDelta(withWarnings({ outcome: "executed", resource }, warnings), scopeDelta);
 }
 
 export function actionSkipped(
   resource: string,
   reason: SkipReason,
-  scopeDelta?: Partial<M365Scope>
+  scopeDelta?: Partial<M365Scope>,
+  warnings?: readonly ProvisioningWarning[]
 ): M365ActionResult {
-  return withScopeDelta({ outcome: "skipped", resource, reason }, scopeDelta);
+  return withScopeDelta(withWarnings({ outcome: "skipped", resource, reason }, warnings), scopeDelta);
 }
 
 export function compliant(args: ComplianceResultArgs = {}): ComplianceActionCheckResult<M365Scope> {

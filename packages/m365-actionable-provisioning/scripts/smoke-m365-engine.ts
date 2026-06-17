@@ -9,6 +9,8 @@ import { sharePointActionDefinitions, sharePointActionsSchema } from "../src/act
 import { sharePointActionModules } from "../src/actions/sharepoint/action-modules";
 import { listSubactionSchema } from "../src/actions/sharepoint/_composition/list-subactions-schema";
 import { siteSubactionSchema } from "../src/actions/sharepoint/_composition/site-subactions-schema";
+import { checkFieldStructuralCompatibility } from "../src/actions/sharepoint/domains/fields/field-structural-compatibility";
+import { checkListStructuralCompatibility } from "../src/actions/sharepoint/domains/lists/list-structural-compatibility";
 
 type SmokeScope = {
   parentReady?: boolean;
@@ -19,9 +21,19 @@ type SmokeClients = {
   graphClient?: { marker: "graph" };
 };
 
+type SmokeWarningDetails = null | boolean | number | string | readonly SmokeWarningDetails[] | {
+  readonly [key: string]: SmokeWarningDetails;
+};
+
+type SmokeWarning = {
+  code: string;
+  message: string;
+  details?: SmokeWarningDetails;
+};
+
 type SmokeResult =
-  | { outcome: "executed"; resource: string }
-  | { outcome: "skipped"; resource: string; reason: string };
+  | { outcome: "executed"; resource: string; warnings?: readonly SmokeWarning[] }
+  | { outcome: "skipped"; resource: string; reason: string; warnings?: readonly SmokeWarning[] };
 
 const graphSmokeSchema = z.object({
   verb: z.literal("graphSmoke"),
@@ -228,6 +240,26 @@ function assertSharePointCatalogComposition(): void {
   });
   assert(listField.success, "SharePoint list subaction schema should accept addSPField");
 
+  const lookupField = listSubactionSchema.safeParse({
+    verb: "addSPField",
+    fieldType: "Lookup",
+    fieldName: "SmokeLookup",
+    displayName: "Smoke Lookup",
+    lookupListName: "SmokeCategories",
+    showField: "Title",
+  });
+  assert(lookupField.success, "SharePoint list subaction schema should accept documented lookup field shape");
+
+  const staleLookupField = listSubactionSchema.safeParse({
+    verb: "addSPField",
+    fieldType: "Lookup",
+    fieldName: "SmokeLookup",
+    displayName: "Smoke Lookup",
+    lookupList: "SmokeCategories",
+    lookupField: "Title",
+  });
+  assert(!staleLookupField.success, "SharePoint list subaction schema should reject stale lookupList/lookupField names");
+
   const nestedList = siteSubactionSchema.safeParse({
     verb: "createSPList",
     listName: "SmokeNestedList",
@@ -251,6 +283,66 @@ function assertSharePointCatalogComposition(): void {
   assert(!listCreatesList.success, "SharePoint list subaction schema should reject nested list creation");
 }
 
+function assertFieldStructuralCompatibility(): void {
+  const compatibleText = checkFieldStructuralCompatibility("Text", {
+    Id: "1",
+    InternalName: "SmokeText",
+    Title: "Smoke Text",
+    TypeAsString: "Text",
+  });
+  assert(compatibleText.compatible, "Text create compliance should accept SharePoint Text fields");
+
+  const incompatibleText = checkFieldStructuralCompatibility("Text", {
+    Id: "2",
+    InternalName: "SmokeText",
+    Title: "Smoke Text",
+    TypeAsString: "Lookup",
+  });
+  assert(!incompatibleText.compatible, "Text create compliance should reject SharePoint Lookup fields");
+  assert(
+    "reason" in incompatibleText && incompatibleText.reason === "field_type_mismatch",
+    "Wrong SharePoint field type should be reported as field_type_mismatch"
+  );
+
+  const userMulti = checkFieldStructuralCompatibility("User", {
+    Id: "3",
+    InternalName: "SmokeUser",
+    Title: "Smoke User",
+    TypeAsString: "UserMulti",
+  });
+  assert(userMulti.compatible, "User create compliance should accept UserMulti as structurally compatible");
+
+  const unverifiable = checkFieldStructuralCompatibility("Text", {
+    Id: "4",
+    InternalName: "SmokeUnknown",
+    Title: "Smoke Unknown",
+  });
+  assert(!unverifiable.compatible, "Missing TypeAsString should be treated as structurally unverifiable");
+  assert(
+    "reason" in unverifiable && unverifiable.reason === "field_type_unverifiable",
+    "Missing TypeAsString should be reported as field_type_unverifiable"
+  );
+}
+
+function assertListStructuralCompatibility(): void {
+  const compatible = checkListStructuralCompatibility(100, { BaseTemplate: 100 });
+  assert(compatible.compatible, "List create compatibility should accept matching BaseTemplate");
+
+  const mismatch = checkListStructuralCompatibility(100, { BaseTemplate: 101 });
+  assert(!mismatch.compatible, "List create compatibility should reject mismatched BaseTemplate");
+  assert(
+    "reason" in mismatch && mismatch.reason === "list_template_mismatch",
+    "Mismatched BaseTemplate should be reported as list_template_mismatch"
+  );
+
+  const unverifiable = checkListStructuralCompatibility(100, {});
+  assert(!unverifiable.compatible, "Missing BaseTemplate should be treated as structurally unverifiable");
+  assert(
+    "reason" in unverifiable && unverifiable.reason === "list_template_unverifiable",
+    "Missing BaseTemplate should be reported as list_template_unverifiable"
+  );
+}
+
 function assertJsonResultContract(): void {
   assert(
     defaultActionResultSchema.safeParse({ result: { ok: true, values: ["a", 1, null] } }).success,
@@ -270,6 +362,23 @@ function assertJsonResultContract(): void {
   assert(
     !defaultActionResultSchema.safeParse({ result: undefined }).success,
     "Default action result schema should reject explicit undefined output"
+  );
+
+  assert(
+    defaultActionResultSchema.safeParse({
+      result: {
+        outcome: "executed",
+        resource: "warning-smoke",
+        warnings: [
+          {
+            code: "SMOKE_WARNING",
+            message: "Smoke warning",
+            details: { key: "value" },
+          },
+        ],
+      },
+    }).success,
+    "Default action result schema should accept JSON-safe provisioning warnings"
   );
 }
 
@@ -399,6 +508,8 @@ async function assertComplianceCancelContract(): Promise<void> {
 
 async function main(): Promise<void> {
   assertSharePointCatalogComposition();
+  assertFieldStructuralCompatibility();
+  assertListStructuralCompatibility();
   assertJsonResultContract();
   assertLoggerContract();
   await assertComplianceCancelContract();

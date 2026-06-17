@@ -4,6 +4,8 @@
  * @packageDocumentation
  */
 
+import type { JsonValue } from "../core/json";
+
 /**
  * High-level outcome for audit/result payloads.
  *
@@ -24,11 +26,32 @@ export type SkipReason =
   | "unsupported";
 
 /**
+ * Non-blocking warning emitted by a provisioning action.
+ *
+ * @remarks
+ * Warnings describe best-effort work or structural concerns that did not make
+ * the action throw. They are audit data; action outcome still remains either
+ * `executed` or `skipped`.
+ *
+ * @public
+ */
+export type ProvisioningWarning = Readonly<{
+  code: string;
+  message: string;
+  details?: JsonValue;
+}>;
+
+type ProvisioningResultBase = Readonly<{
+  resource: string;
+  warnings?: readonly ProvisioningWarning[];
+}>;
+
+/**
  * Minimal, audit-friendly action result shape.
  *
  * @public
  */
 export type ProvisioningResultLight = Readonly<
-  | { outcome: "executed"; resource: string }
-  | { outcome: "skipped"; resource: string; reason: SkipReason }
+  | (ProvisioningResultBase & { outcome: "executed" })
+  | (ProvisioningResultBase & { outcome: "skipped"; reason: SkipReason })
 >;

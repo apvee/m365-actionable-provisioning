@@ -303,7 +303,7 @@ export const baseFieldLookupSchema = z.object({
     showInDisplayForm: z.boolean().optional(),
     showInEditForm: z.boolean().optional(),
     showInNewForm: z.boolean().optional(),
-});
+}).strict();
 
 /**
  * Base schema for Url fields (without verb).

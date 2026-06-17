@@ -10,6 +10,18 @@ This module provides a declarative approach to SharePoint provisioning through:
 - **Real-time tracing** for monitoring provisioning progress
 - **Compliance checking** to detect drift between desired and actual state
 
+## Action Semantics
+
+SharePoint actions follow a deliberate create/modify/delete split:
+
+- `createSPSite`, `createSPList`, `addSPField`, and `createSPSiteColumn` ensure that the target resource exists.
+- `modifySPSite`, `modifySPList`, and `modifySPField` enforce mutable configuration on existing resources.
+- `deleteSPSite`, `deleteSPList`, and `deleteSPField` ensure absence.
+
+Create actions do not reconcile mutable properties on already-existing resources. For example, an existing list with the requested `listName` but a different `Title` still satisfies the create action. Add a `modifySPList` action when the title must be enforced.
+
+Compliance for create actions checks existence and structural compatibility. It does not fail because mutable properties differ. Structural collisions, such as an existing field with a different SharePoint field type, can return `non_compliant` because descendant actions may otherwise operate against the wrong shape.
+
 ## Architecture
 
 ```

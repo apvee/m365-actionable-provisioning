@@ -17,6 +17,34 @@ This document provides a complete reference for the `@apvee/m365-actionable-prov
 
 ## Plan Structure
 
+### Action Semantics
+
+The schema separates existence from mutable desired state:
+
+| Action family | Meaning | Drift behavior |
+|---------------|---------|----------------|
+| `create*` | Ensure the resource exists | Existing mutable property differences are accepted |
+| `modify*` | Enforce mutable state | Declared mutable property differences are non-compliant |
+| `delete*` | Ensure the resource is absent | Existing resource is non-compliant |
+
+Create action payload properties are used when creating a missing resource. If the resource already exists, those properties are not automatically reconciled. Use a follow-up `modify*` action when the plan must enforce configuration.
+
+```ts
+{
+  verb: "createSPList",
+  listName: "requests",
+  title: "Requests"
+},
+{
+  verb: "modifySPList",
+  listName: "requests",
+  title: "Richieste",
+  enableVersioning: true
+}
+```
+
+Create compliance still detects structural collisions when possible. For example, an existing field with the same `fieldName` but an incompatible SharePoint field type is not treated as a clean create match.
+
 A provisioning plan is a JSON object validated by Zod schemas. The root structure includes metadata and an array of actions.
 
 ### Schema Definition
@@ -643,7 +671,7 @@ The library supports the following SharePoint field types:
 | `MultiChoice` | Multiple choices | `choices`, `fillInChoice`, `defaultValue` |
 | `Url` | Hyperlink/Picture | `displayFormat` ("Hyperlink" or "Image") |
 | `User` | Person/Group | `selectionMode`, `selectionGroup` |
-| `Lookup` | Lookup to another list | `lookupList`, `lookupField` |
+| `Lookup` | Lookup to another list | `lookupListName`, `lookupListId`, `showField` |
 | `Calculated` | Calculated value | `formula`, `outputType` |
 | `Location` | Location picker | (no additional properties) |
 
@@ -805,11 +833,26 @@ All field types share these base properties:
   fieldType: "Lookup",
   fieldName: "Category",
   displayName: "Category",
-  lookupList: "Categories",      // List internal name
-  lookupField: "Title",          // Field to display
+  lookupListName: "Categories",  // List root folder name
+  showField: "Title",            // Field to display
   allowMultipleValues: false
 }
 ```
+
+### Best-Effort Field Settings
+
+Some SharePoint field settings are applied after field creation because PnPjs or SharePoint REST does not apply them reliably during the initial create call. The action still succeeds when the field is created, but the result can include warnings if these best-effort updates fail.
+
+Current best-effort settings include:
+
+| Field type | Settings |
+|------------|----------|
+| All list fields | `addToDefaultView` membership |
+| `MultilineText` | `required` post-create update |
+| `User` | `allowMultipleValues`, `presence`, `selectionGroup` |
+| `Lookup` | post-create lookup settings and `dependentLookupFields` |
+
+Use `modifySPField` after creation when a plan must enforce mutable field settings and surface drift through compliance.
 
 #### Calculated Field
 

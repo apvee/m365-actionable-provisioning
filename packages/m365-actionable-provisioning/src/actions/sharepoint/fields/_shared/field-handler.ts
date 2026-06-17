@@ -12,7 +12,7 @@
  */
 
 import type { BaseFieldPayload } from "./field-base-schema";
-import type { M365Scope, M365ActionResult } from "../../../../runtime";
+import type { M365Scope, M365ActionResult, ProvisioningWarning } from "../../../../runtime";
 import type { ActionRuntimeContext } from "../../../../core/action";
 import { pickDefined } from "../../utils/object-utils";
 
@@ -31,11 +31,11 @@ import "@pnp/sp/lists";
 
 import {
     applyFieldViewSettings,
-    checkFieldExists,
     extractFieldId,
-    getFieldByNameOrTitle,
+    getFieldStructuralInfoByNameOrTitle,
     updateFieldDisplayName,
 } from "../../domains/fields/field-lookup";
+import { checkFieldStructuralCompatibility } from "../../domains/fields/field-structural-compatibility";
 
 import { normalizeError } from "../../../../core";
 import type { ComplianceActionCheckResult, ComplianceRuntimeContext } from "../../../../core/action";
@@ -73,6 +73,22 @@ export interface FieldHandlerContext {
 export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M365ActionResult> {
     const { def, scopeIn, logger } = ctx;
     const resource = def.fieldName;
+    const warnings: ProvisioningWarning[] = [];
+
+    const addWarning = (
+        code: string,
+        message: string,
+        details?: Record<string, string | number | boolean | null>
+    ): void => {
+        const warning: ProvisioningWarning = details ? { code, message, details } : { code, message };
+        warnings.push(warning);
+        logger.warn(message, {
+            code,
+            fieldName: def.fieldName,
+            fieldType: def.fieldType,
+            ...(details ?? {}),
+        });
+    };
 
     const list = scopeIn.list;
     const web = scopeIn.web;
@@ -89,8 +105,34 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
     }
 
     // Step 1: idempotency check
-    const exists = await checkFieldExists(container, def.fieldName);
-    if (exists) {
+    const existingField = await getFieldStructuralInfoByNameOrTitle(container, def.fieldName);
+    if (existingField) {
+        const compatibility = checkFieldStructuralCompatibility(def.fieldType, existingField);
+        const structuralWarnings: ProvisioningWarning[] = [];
+
+        if ("reason" in compatibility) {
+            const isUnverifiable = compatibility.reason === "field_type_unverifiable";
+            structuralWarnings.push({
+                code: isUnverifiable ? "FIELD_STRUCTURAL_UNVERIFIABLE" : "FIELD_STRUCTURAL_COLLISION",
+                message: isUnverifiable
+                    ? "Field already exists, but its SharePoint field type could not be verified."
+                    : "Field already exists with a structural type that does not match the create action payload.",
+                details: {
+                    fieldName: def.fieldName,
+                    expectedFieldType: def.fieldType,
+                    actualTypeAsString: compatibility.actualTypeAsString ?? null,
+                    reason: compatibility.reason,
+                },
+            });
+
+            logger.warn("Field structural compatibility issue detected while skipping create", {
+                fieldName: def.fieldName,
+                expectedFieldType: def.fieldType,
+                actualTypeAsString: compatibility.actualTypeAsString,
+                reason: compatibility.reason,
+            });
+        }
+
         logger.info("Field already exists - skipping creation", {
             container: list ? "list" : "web",
             fieldName: def.fieldName,
@@ -101,6 +143,7 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
                 outcome: "skipped",
                 resource,
                 reason: "already_exists",
+                ...(structuralWarnings.length > 0 ? { warnings: structuralWarnings } : {}),
             },
         };
     }
@@ -452,8 +495,12 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
     if (def.fieldType === "MultilineText" && def.required !== undefined) {
         try {
             await container.fields.getById(fieldId).update({ Required: def.required });
-        } catch {
-            // Best-effort: don't fail provisioning if only Required can't be set.
+        } catch (e) {
+            addWarning(
+                "FIELD_BEST_EFFORT_REQUIRED_FAILED",
+                "Field was created, but Required could not be applied as a best-effort post-create update.",
+                { error: normalizeError(e).message }
+            );
         }
     }
 
@@ -474,8 +521,12 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
                 }),
                 "SP.FieldUser"
             );
-        } catch {
-            // Best-effort: don't fail provisioning if these props can't be set.
+        } catch (e) {
+            addWarning(
+                "FIELD_BEST_EFFORT_USER_SETTINGS_FAILED",
+                "Field was created, but one or more user field settings could not be applied as best-effort post-create updates.",
+                { error: normalizeError(e).message }
+            );
         }
     }
 
@@ -519,8 +570,12 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
                     }),
                     "SP.FieldLookup"
                 );
-            } catch {
-                // Best-effort: don't fail provisioning if some lookup-only properties can't be set.
+            } catch (e) {
+                addWarning(
+                    "FIELD_BEST_EFFORT_LOOKUP_SETTINGS_FAILED",
+                    "Field was created, but one or more lookup field settings could not be applied as best-effort post-create updates.",
+                    { error: normalizeError(e).message }
+                );
             }
         }
 
@@ -533,8 +588,12 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
                         fieldId,
                         showField
                     );
-                } catch {
-                    // Best-effort: dependent lookups are optional.
+                } catch (e) {
+                    addWarning(
+                        "FIELD_BEST_EFFORT_DEPENDENT_LOOKUP_FAILED",
+                        "Field was created, but a dependent lookup field could not be added.",
+                        { showField, error: normalizeError(e).message }
+                    );
                 }
             }
         }
@@ -547,6 +606,10 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
             showInDisplayForm: def.showInDisplayForm,
             showInEditForm: def.showInEditForm,
             showInNewForm: def.showInNewForm,
+        }, {
+            onBestEffortFailure: ({ code, message, error }) => {
+                addWarning(code, message, { error: normalizeError(error).message });
+            },
         });
     }
 
@@ -562,6 +625,7 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
         result: {
             outcome: "executed",
             resource,
+            ...(warnings.length > 0 ? { warnings } : {}),
         },
     };
 }
@@ -591,9 +655,26 @@ export async function checkFieldCompliance(
     }
 
     try {
-        const fieldInfo = await getFieldByNameOrTitle(container, def.fieldName);
+        const fieldInfo = await getFieldStructuralInfoByNameOrTitle(container, def.fieldName);
         if (!fieldInfo) {
             return { outcome: "non_compliant", resource, reason: "not_found" };
+        }
+
+        const compatibility = checkFieldStructuralCompatibility(def.fieldType, fieldInfo);
+        if ("reason" in compatibility) {
+            return {
+                outcome: compatibility.reason === "field_type_unverifiable" ? "unverifiable" : "non_compliant",
+                resource,
+                reason: compatibility.reason,
+                message:
+                    compatibility.reason === "field_type_unverifiable"
+                        ? "Field exists, but its SharePoint field type could not be verified."
+                        : "Field exists, but its SharePoint field type does not match the create action payload.",
+                details: {
+                    expectedFieldType: def.fieldType,
+                    actualTypeAsString: compatibility.actualTypeAsString,
+                },
+            };
         }
 
         return { outcome: "compliant", resource };

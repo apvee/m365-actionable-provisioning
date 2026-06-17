@@ -37,6 +37,7 @@ export function escapeODataStringLiteral(value: string): string {
 export interface ListInfo {
   Id: string;
   Title?: string;
+  BaseTemplate?: number;
   RootFolder?: { Name?: string };
 }
 
@@ -67,7 +68,7 @@ export async function getListInfoByRootFolderName(
 
   const results = await web.lists
     .expand("RootFolder")
-    .select("Id", "Title", "RootFolder/Name")
+    .select("Id", "Title", "BaseTemplate", "RootFolder/Name")
     .filter(`RootFolder/Name eq '${safe}'`)();
 
   if (!Array.isArray(results) || results.length === 0) {

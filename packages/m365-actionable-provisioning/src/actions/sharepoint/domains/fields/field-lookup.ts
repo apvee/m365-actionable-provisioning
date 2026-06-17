@@ -22,6 +22,10 @@ import type { IFieldInfo } from "@pnp/sp/fields";
  */
 export type FieldInfoLite = Pick<IFieldInfo, "Id" | "InternalName" | "Title">;
 
+export type FieldStructuralInfo = FieldInfoLite & Readonly<{
+  TypeAsString?: string;
+}>;
+
 /**
  * Container that can hold fields (List or Web).
  */
@@ -58,6 +62,22 @@ export async function getFieldByNameOrTitle(
   } catch {
     // Not found / forbidden / transient failure → treat as missing for idempotent callers
     return undefined;
+  }
+}
+
+export async function getFieldStructuralInfoByNameOrTitle(
+  container: FieldContainer,
+  internalNameOrTitle: string
+): Promise<FieldStructuralInfo | undefined> {
+  try {
+    const field = container.fields.getByInternalNameOrTitle(internalNameOrTitle);
+    const info = (await field.select("Id", "InternalName", "Title", "TypeAsString")()) as FieldStructuralInfo;
+    if (!info?.Id) return undefined;
+    return info;
+  } catch {
+    // Fall back to existence-only metadata so callers can report an
+    // unverifiable structural type instead of treating the field as missing.
+    return getFieldByNameOrTitle(container, internalNameOrTitle);
   }
 }
 
@@ -132,6 +152,16 @@ export interface FieldViewSettings {
   showInNewForm?: boolean;
 }
 
+export type FieldViewSettingsBestEffortFailure = Readonly<{
+  code: "FIELD_BEST_EFFORT_DEFAULT_VIEW_ADD_FAILED" | "FIELD_BEST_EFFORT_DEFAULT_VIEW_REMOVE_FAILED";
+  message: string;
+  error: unknown;
+}>;
+
+export type ApplyFieldViewSettingsOptions = Readonly<{
+  onBestEffortFailure?: (failure: FieldViewSettingsBestEffortFailure) => void;
+}>;
+
 /**
  * Applies view settings to a field in a list.
  *
@@ -155,14 +185,19 @@ export interface FieldViewSettings {
 export async function applyFieldViewSettings(
   list: IList,
   fieldInternalName: string,
-  settings: FieldViewSettings
+  settings: FieldViewSettings,
+  options: ApplyFieldViewSettingsOptions = {}
 ): Promise<void> {
   // Handle default view membership
   if (settings.addToDefaultView === true) {
     try {
       await list.defaultView.fields.add(fieldInternalName);
-    } catch {
-      // Ignore - idempotent add
+    } catch (e) {
+      options.onBestEffortFailure?.({
+        code: "FIELD_BEST_EFFORT_DEFAULT_VIEW_ADD_FAILED",
+        message: "Field was created, but it could not be added to the default view as a best-effort post-create update.",
+        error: e,
+      });
     }
   } else if (settings.addToDefaultView === false) {
     try {
@@ -171,8 +206,12 @@ export async function applyFieldViewSettings(
       if (exists) {
         await list.defaultView.fields.remove(fieldInternalName);
       }
-    } catch {
-      // Ignore - idempotent remove
+    } catch (e) {
+      options.onBestEffortFailure?.({
+        code: "FIELD_BEST_EFFORT_DEFAULT_VIEW_REMOVE_FAILED",
+        message: "Field was created, but it could not be removed from the default view as a best-effort post-create update.",
+        error: e,
+      });
     }
   }
 

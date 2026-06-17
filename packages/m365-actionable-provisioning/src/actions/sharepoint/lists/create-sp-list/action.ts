@@ -20,9 +20,10 @@
 
 import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
 import type { PermissionCheckResult } from "../../../../core/permissions";
-import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult } from "../../../../runtime";
+import type { M365Clients, ProvisioningResultLight, M365Scope, M365RuntimeContext, M365ActionResult, ProvisioningWarning } from "../../../../runtime";
 import { pickDefined } from "../../utils/object-utils";
 import { getListInfoByRootFolderName, probeManageListsPermission, resolveWebUrlString } from "../../domains/lists";
+import { checkListStructuralCompatibility } from "../../domains/lists/list-structural-compatibility";
 import { actionExecuted, actionSkipped, compliant, nonCompliant, unverifiable, unverifiableError } from "../../_shared/action-results";
 
 import { createSPListSchema, type CreateSPListPayload } from "./schema";
@@ -36,6 +37,31 @@ import { resolveTargetWeb } from "../../utils/sp-utils";
 /* ========================================
    ACTION DEFINITION
    ======================================== */
+
+function buildListStructuralWarning(
+  listName: string,
+  compatibility: ReturnType<typeof checkListStructuralCompatibility>
+): ProvisioningWarning | undefined {
+  if (!("reason" in compatibility)) return undefined;
+
+  if (compatibility.reason === "list_template_unverifiable") {
+    return {
+      code: "LIST_TEMPLATE_UNVERIFIABLE",
+      message: "List already exists, but its template could not be verified.",
+      details: { listName, expectedTemplate: compatibility.expectedTemplate },
+    };
+  }
+
+  return {
+    code: "LIST_STRUCTURAL_COLLISION",
+    message: "List already exists with a template that does not match the create action payload.",
+    details: {
+      listName,
+      expectedTemplate: compatibility.expectedTemplate,
+      actualTemplate: compatibility.actualTemplate,
+    },
+  };
+}
 
 /**
  * CreateSPList action implementation.
@@ -117,6 +143,19 @@ export class CreateSPListAction extends ActionDefinition<
         return nonCompliant({ resource: listName, reason: "not_found" });
       }
 
+      const compatibility = checkListStructuralCompatibility(ctx.action.payload.template, found);
+      if ("reason" in compatibility && compatibility.reason === "list_template_mismatch") {
+        return nonCompliant({
+          resource: listName,
+          reason: "template_mismatch",
+          message: "List exists, but its template does not match the create action payload.",
+          details: {
+            expectedTemplate: compatibility.expectedTemplate,
+            actualTemplate: compatibility.actualTemplate,
+          },
+        });
+      }
+
       const list = web.lists.getById(found.Id);
       return compliant({
         resource: listName,
@@ -161,10 +200,23 @@ export class CreateSPListAction extends ActionDefinition<
     const resolvedWebUrl = await resolveWebUrlString(web, effectiveWebUrl);
     const listName = ctx.action.payload.listName;
     const displayTitle = ctx.action.payload.title;
+    const template = ctx.action.payload.template;
+    const enableContentTypes = ctx.action.payload.enableContentTypes ?? false;
 
     // Idempotency: check by RootFolder/Name
     const existing = await getListInfoByRootFolderName(web, listName);
     if (existing?.Id) {
+      const compatibility = checkListStructuralCompatibility(template, existing);
+      const structuralWarning = buildListStructuralWarning(listName, compatibility);
+      if (structuralWarning) {
+        ctx.logger.warn("List structural collision detected while skipping create", {
+          listName,
+          expectedTemplate: template,
+          actualTemplate: existing.BaseTemplate,
+          warningCode: structuralWarning.code,
+        });
+      }
+
       ctx.logger.info("List already exists - skipping creation", {
         webUrl: resolvedWebUrl,
         listName,
@@ -177,7 +229,8 @@ export class CreateSPListAction extends ActionDefinition<
         {
           web,
           list: web.lists.getById(existing.Id),
-        }
+        },
+        structuralWarning ? [structuralWarning] : undefined
       );
     }
 
@@ -200,8 +253,6 @@ export class CreateSPListAction extends ActionDefinition<
     });
 
     const createDescription = ctx.action.payload.desc ?? "";
-    const template = ctx.action.payload.template;
-    const enableContentTypes = ctx.action.payload.enableContentTypes ?? false;
 
     // Step 1: create list with URL-friendly name
     const created = await web.lists.add(
