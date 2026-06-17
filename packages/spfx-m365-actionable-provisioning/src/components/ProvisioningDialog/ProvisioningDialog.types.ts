@@ -11,7 +11,7 @@ import type { EngineStatus } from '@apvee/m365-actionable-provisioning';
 import type { Logger } from '@apvee/m365-actionable-provisioning';
 import type { CompliancePolicy } from '@apvee/m365-actionable-provisioning';
 
-import type { ConfirmDialogStrings } from '../ConfirmDialog/ConfirmDialog.types';
+import type { ConfirmationDialogStrings } from '../shared/ConfirmationDialog/ConfirmationDialog.types';
 import type { LogPanelProps, LogPanelStrings, ProvisioningActivityEntryStrings } from '../LogPanel/LogPanel.types';
 
 /**
@@ -85,8 +85,8 @@ export type ProvisioningDialogStrings = Readonly<{
     complianceTargetSiteMissingMessage: string;
     complianceErrorFallbackTitle: string;
 
-    /** Optional pass-through localized strings for nested ConfirmDialog. */
-    confirmDialogStrings?: Partial<ConfirmDialogStrings>;
+    /** Optional pass-through localized strings for nested ConfirmationDialog. */
+    confirmDialogStrings?: Partial<ConfirmationDialogStrings>;
 
     /** Optional pass-through localized strings for nested controls. */
     logPanelStrings?: Partial<LogPanelStrings>;

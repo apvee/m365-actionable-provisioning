@@ -1,5 +1,5 @@
 /**
- * Internal ConfirmDialog component for user confirmation prompts.
+ * Internal confirmation dialog component for user confirmation prompts.
  *
  * @internal
  * @packageDocumentation
@@ -16,16 +16,16 @@ import {
   DialogTitle,
 } from '@fluentui/react-components';
 
-import type { ConfirmDialogProps, ConfirmDialogStrings } from './ConfirmDialog.types';
+import type { ConfirmationDialogProps, ConfirmationDialogStrings } from './ConfirmationDialog.types';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
 
-const DEFAULT_STRINGS: ConfirmDialogStrings = {
+const DEFAULT_STRINGS: ConfirmationDialogStrings = {
   confirmLabel: locStrings.ConfirmDialog.ConfirmLabel,
   cancelLabel: locStrings.ConfirmDialog.CancelLabel,
 };
 
-export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   open,
   title,
   message,
@@ -38,7 +38,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     return {
       ...DEFAULT_STRINGS,
       ...(strings ?? {}),
-    } satisfies ConfirmDialogStrings;
+    } satisfies ConfirmationDialogStrings;
   }, [strings]);
 
   const handleConfirm = React.useCallback(() => {
@@ -74,3 +74,5 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     </Dialog>
   );
 };
+
+ConfirmationDialog.displayName = 'ConfirmationDialog';

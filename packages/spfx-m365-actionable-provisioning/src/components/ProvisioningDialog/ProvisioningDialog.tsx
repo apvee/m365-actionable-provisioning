@@ -12,7 +12,7 @@ import { useSPFxProvisioningEngine } from '../../hooks/useSPFxProvisioningEngine
 import { buildComplianceActivityEntriesFromReport, buildComplianceActivityEntriesFromTrace } from '../../utils/compliance-to-activity';
 import { normalizeUrl } from '../../utils/url';
 import type { ComplianceActivityEntry } from '../../models';
-import { ConfirmDialog } from '../ConfirmDialog/ConfirmDialog';
+import { ConfirmationDialog } from '../shared/ConfirmationDialog/ConfirmationDialog';
 import { useProvisioningDialogStyles } from './ProvisioningDialog.styles';
 import { buildInitialDialogState, dialogReducer, getComplianceFooterModel } from './ProvisioningDialog.state';
 import type {
@@ -463,7 +463,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
                 </DialogSurface>
             </Dialog>
 
-            <ConfirmDialog
+            <ConfirmationDialog
                 open={state.confirmOpen}
                 title={s.confirmRunTitle}
                 message={s.confirmRunMessage}

@@ -1,16 +1,16 @@
-export type ConfirmDialogStrings = Readonly<{
+export type ConfirmationDialogStrings = Readonly<{
   confirmLabel: string;
   cancelLabel: string;
 }>;
 
-export interface ConfirmDialogProps {
+export interface ConfirmationDialogProps {
   open: boolean;
   title: string;
   message: string;
   confirmAppearance?: 'primary' | 'secondary' | 'subtle';
 
   /** Optional localized strings overrides. */
-  strings?: Partial<ConfirmDialogStrings>;
+  strings?: Partial<ConfirmationDialogStrings>;
 
   onConfirm: () => void;
   onCancel: () => void;
