@@ -6,7 +6,7 @@ import type { ProvisioningDialogMode } from './ProvisioningDialog.types';
  * Represents a user-facing error message with title and message content.
  * Used for both provisioning and compliance error states.
  */
-export type DialogUiError = Readonly<{ title: string; message: string }>;
+export type ProvisioningDialogUiError = Readonly<{ title: string; message: string }>;
 
 /**
  * Complete state shape for the ProvisioningDialog component.
@@ -18,10 +18,10 @@ export type DialogUiError = Readonly<{ title: string; message: string }>;
  * - Compliance check state (checking flag, results, errors)
  * - Close animation state (isClosing flag)
  *
- * All state changes flow through the dialogReducer via dispatch.
+ * All state changes flow through the provisioningDialogSessionReducer via dispatch.
  * Ref-based bookkeeping (completion signals, timer tokens) lives outside this state.
  */
-export type DialogState = Readonly<{
+export type ProvisioningDialogSessionState = Readonly<{
     /** Current active mode: 'provisioning' or 'compliance' */
     activeMode: ProvisioningDialogMode;
     /** Whether user can navigate back to provisioning mode (entered via Check button) */
@@ -30,7 +30,7 @@ export type DialogState = Readonly<{
     /** Whether a provisioning run is currently in progress */
     runInFlight: boolean;
     /** User-facing error for provisioning mode (e.g., missing target site) */
-    uiError: DialogUiError | undefined;
+    uiError: ProvisioningDialogUiError | undefined;
 
     /** Currently expanded accordion items in provisioning mode logs */
     openLogItems: ReadonlyArray<string>;
@@ -44,14 +44,14 @@ export type DialogState = Readonly<{
     /** Whether a compliance check is currently running */
     complianceIsChecking: boolean;
     /** User-facing error for compliance mode */
-    complianceError: DialogUiError | undefined;
+    complianceError: ProvisioningDialogUiError | undefined;
 
     /** Whether the dialog close animation is in progress (suppresses badge display) */
     isClosing: boolean;
 }>;
 
 /**
- * Discriminated union of all actions that can modify DialogState.
+ * Discriminated union of all actions that can modify ProvisioningDialogSessionState.
  *
  * Action categories:
  * - Lifecycle: OPEN_ALIGN, CLOSE_HARD_RESET, SET_CLOSING
@@ -60,7 +60,7 @@ export type DialogState = Readonly<{
  * - UI preferences: SET_OPEN_LOG_ITEMS, SET_CONFIRM_OPEN, SET_COMPLIANCE_OPEN_LOG_ITEMS
  * - Compliance: COMPLIANCE_RESET_UI, COMPLIANCE_START, COMPLIANCE_SET_RESULT, COMPLIANCE_SET_ERROR, COMPLIANCE_SET_CHECKING
  */
-export type DialogAction =
+export type ProvisioningDialogSessionAction =
     /** Aligns dialog state when opening - sets mode and resets navigation flag */
     | Readonly<{ type: 'OPEN_ALIGN'; initialMode: ProvisioningDialogMode }>
     /** Complete state reset when dialog closes - returns to initial state */
@@ -74,7 +74,7 @@ export type DialogAction =
     /** Marks provisioning run as started/completed */
     | Readonly<{ type: 'SET_RUN_IN_FLIGHT'; value: boolean }>
     /** Sets or clears provisioning mode UI error */
-    | Readonly<{ type: 'SET_UI_ERROR'; error: DialogUiError | undefined }>
+    | Readonly<{ type: 'SET_UI_ERROR'; error: ProvisioningDialogUiError | undefined }>
     /** Updates which log accordion items are expanded (provisioning mode) */
     | Readonly<{ type: 'SET_OPEN_LOG_ITEMS'; items: ReadonlyArray<string> }>
     /** Opens/closes the run confirmation dialog */
@@ -86,20 +86,20 @@ export type DialogAction =
     /** Marks compliance check as started, clears previous results */
     | Readonly<{ type: 'COMPLIANCE_START' }>
     /** Sets compliance check result and optional error */
-    | Readonly<{ type: 'COMPLIANCE_SET_RESULT'; report: ComplianceReport; error: DialogUiError | undefined }>
+    | Readonly<{ type: 'COMPLIANCE_SET_RESULT'; report: ComplianceReport; error: ProvisioningDialogUiError | undefined }>
     /** Sets compliance error and clears report */
-    | Readonly<{ type: 'COMPLIANCE_SET_ERROR'; error: DialogUiError }>
+    | Readonly<{ type: 'COMPLIANCE_SET_ERROR'; error: ProvisioningDialogUiError }>
     /** Explicitly sets compliance checking flag */
     | Readonly<{ type: 'COMPLIANCE_SET_CHECKING'; value: boolean }>;
 
 /**
- * Creates the initial state for DialogState.
+ * Creates the initial state for ProvisioningDialogSessionState.
  *
  * @param args.initialMode - Starting mode ('provisioning' or 'compliance')
  * @param args.defaultOpenLogItems - Default accordion items to expand
- * @returns Fresh DialogState with all values at their defaults
+ * @returns Fresh ProvisioningDialogSessionState with all values at their defaults
  */
-export const buildInitialDialogState = (args: Readonly<{ initialMode: ProvisioningDialogMode; defaultOpenLogItems: ReadonlyArray<string> }>): DialogState => {
+export const buildInitialProvisioningDialogSessionState = (args: Readonly<{ initialMode: ProvisioningDialogMode; defaultOpenLogItems: ReadonlyArray<string> }>): ProvisioningDialogSessionState => {
     return {
         activeMode: args.initialMode,
         canGoBackFromCompliance: false,
@@ -120,7 +120,7 @@ export const buildInitialDialogState = (args: Readonly<{ initialMode: Provisioni
 };
 
 /**
- * Reducer function for DialogState management.
+ * Reducer function for ProvisioningDialogSessionState management.
  *
  * All state transitions are handled here. The reducer is pure and returns
  * a new state object for any recognized action. Unrecognized actions return
@@ -138,7 +138,7 @@ export const buildInitialDialogState = (args: Readonly<{ initialMode: Provisioni
  * // Start a compliance check
  * dispatch({ type: 'COMPLIANCE_START' });
  */
-export const dialogReducer = (state: DialogState, action: DialogAction): DialogState => {
+export const provisioningDialogSessionReducer = (state: ProvisioningDialogSessionState, action: ProvisioningDialogSessionAction): ProvisioningDialogSessionState => {
     switch (action.type) {
         /**
          * OPEN_ALIGN: Called when dialog opens.
@@ -160,12 +160,12 @@ export const dialogReducer = (state: DialogState, action: DialogAction): DialogS
          * - Ensures next open starts clean
          */
         case 'CLOSE_HARD_RESET':
-            return buildInitialDialogState({ initialMode: action.initialMode, defaultOpenLogItems: action.defaultOpenLogItems });
+            return buildInitialProvisioningDialogSessionState({ initialMode: action.initialMode, defaultOpenLogItems: action.defaultOpenLogItems });
 
         /**
          * SET_CLOSING: Marks dialog as entering close animation.
          * - Set true at start of handleClose to suppress badge display
-         * - Automatically reset to false by CLOSE_HARD_RESET (via buildInitialDialogState)
+         * - Automatically reset to false by CLOSE_HARD_RESET (via buildInitialProvisioningDialogSessionState)
          */
         case 'SET_CLOSING':
             return { ...state, isClosing: action.value };

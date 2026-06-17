@@ -13,8 +13,13 @@ import { buildComplianceActivityEntriesFromReport, buildComplianceActivityEntrie
 import { normalizeUrl } from '../../utils/url';
 import type { ComplianceActivityEntry } from '../../models';
 import { ConfirmationDialog } from '../shared/ConfirmationDialog/ConfirmationDialog';
+import { useProvisioningDialogActions } from './hooks/useProvisioningDialogActions';
 import { useProvisioningDialogStyles } from './ProvisioningDialog.styles';
-import { buildInitialDialogState, dialogReducer, getComplianceFooterModel } from './ProvisioningDialog.state';
+import {
+    buildInitialProvisioningDialogSessionState,
+    getComplianceFooterModel,
+    provisioningDialogSessionReducer,
+} from './ProvisioningDialogSession.state';
 import type {
     ProvisioningDialogMode,
     ProvisioningDialogProps,
@@ -28,7 +33,6 @@ import { ComplianceCheckView } from './views/ComplianceCheckView';
 import type { ComplianceCheckViewStrings } from './views/ComplianceCheckView.types';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
-import { useDialogOrchestration } from '../../hooks/useDialogOrchestration/useDialogOrchestration';
 
 // Re-export public types
 export type {
@@ -103,11 +107,11 @@ const DEFAULT_STRINGS: ProvisioningDialogStrings = {
  * ProvisioningDialog is the main dialog component for provisioning operations.
  *
  * This component orchestrates the UI for both provisioning and compliance modes,
- * delegating orchestration logic to useDialogOrchestration and rendering to
+ * delegating action orchestration logic to useProvisioningDialogActions and rendering to
  * presentational components (ProvisioningDialogShell, ProvisioningRunView, ComplianceCheckView).
  *
  * Architecture:
- * - useDialogOrchestration: Manages refs, lifecycle effects, action handlers
+ * - useProvisioningDialogActions: Manages refs, lifecycle effects, action handlers
  * - useSPFxProvisioningEngine: Manages engine state and operations
  * - useProvisioningDerivedState: Computes derived UI state from snapshot
  * - ProvisioningDialogShell: Provides consistent dialog chrome
@@ -155,9 +159,10 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
 
     // Dialog state (reducer pattern)
     const [state, dispatch] = React.useReducer(
-        dialogReducer,
+        provisioningDialogSessionReducer,
         { initialMode, defaultOpenLogItems } as const,
-        ({ initialMode, defaultOpenLogItems }) => buildInitialDialogState({ initialMode, defaultOpenLogItems })
+        ({ initialMode, defaultOpenLogItems }) =>
+            buildInitialProvisioningDialogSessionState({ initialMode, defaultOpenLogItems })
     );
 
     // Engine (uses reset key from orchestration hook)
@@ -188,7 +193,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
         switchToCompliance: baseSwitchToCompliance,
         switchToProvisioning,
         canOpenCompliance: baseCanOpenCompliance,
-    } = useDialogOrchestration({
+    } = useProvisioningDialogActions({
         open,
         initialMode,
         normalizedTargetSiteUrl,

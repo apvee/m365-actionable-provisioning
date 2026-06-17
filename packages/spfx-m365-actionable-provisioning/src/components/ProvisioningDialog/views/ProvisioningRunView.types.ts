@@ -3,7 +3,7 @@ import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisionin
 import type { ProvisioningActivityEntry } from '../../../models';
 import type { ProvisioningUiSummary } from '../../../utils/trace-to-activity';
 import type { LogPanelStrings, ProvisioningActivityEntryStrings } from '../../LogPanel/LogPanel.types';
-import type { DialogUiError } from '../ProvisioningDialog.state';
+import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
 
 /**
  * Localized strings for the ProvisioningRunView component.
@@ -51,7 +51,7 @@ export type ProvisioningRunViewProps = Readonly<{
     /** Whether dialog is in pristine state (no operations started) */
     isPristine: boolean;
     /** UI-level error to display */
-    uiError: DialogUiError | undefined;
+    uiError: ProvisioningDialogUiError | undefined;
     /** Currently open log items (controlled) */
     openLogItems: ReadonlyArray<string>;
     /** Called when log accordion open state changes */

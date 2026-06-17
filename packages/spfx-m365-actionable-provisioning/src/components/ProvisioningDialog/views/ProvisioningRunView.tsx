@@ -14,7 +14,7 @@ import { Stack } from '@apvee/react-layout-kit';
 import type { ProvisioningRunOutcome } from '../ProvisioningDialog.types';
 import type { KpiBadgeSpec } from '../shared/KpiSummaryBar.types';
 import type { ProvisioningRunViewProps, ProvisioningRunViewStrings } from './ProvisioningRunView.types';
-import type { DialogUiError } from '../ProvisioningDialog.state';
+import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
 import { KpiSummaryBar } from '../shared/KpiSummaryBar';
 import { DialogLogSection } from '../shared/DialogLogSection';
 
@@ -144,7 +144,7 @@ export const ProvisioningRunView: React.FC<ProvisioningRunViewProps> = ({
     const showProgress = !isPristine && progressRatio !== undefined;
 
     // Engine error
-    const engineError = React.useMemo<DialogUiError | undefined>(() => {
+    const engineError = React.useMemo<ProvisioningDialogUiError | undefined>(() => {
         if (!snapshot?.error) return undefined;
         return {
             title: snapshot.error.code ?? strings.errorFallbackCode,
@@ -161,7 +161,7 @@ export const ProvisioningRunView: React.FC<ProvisioningRunViewProps> = ({
     );
 
     // Render helpers
-    const renderErrorBox = (err: DialogUiError | undefined): React.ReactNode => {
+    const renderErrorBox = (err: ProvisioningDialogUiError | undefined): React.ReactNode => {
         if (!err) return null;
         return (
             <MessageBar intent="error">

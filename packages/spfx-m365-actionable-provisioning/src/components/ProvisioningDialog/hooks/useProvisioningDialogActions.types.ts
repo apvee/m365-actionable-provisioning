@@ -3,13 +3,13 @@ import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { CompliancePolicy, ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
 import type { Logger } from '@apvee/m365-actionable-provisioning';
-import type { DialogAction, DialogState } from '../../components/ProvisioningDialog/ProvisioningDialog.state';
-import type { ProvisioningCompletedEvent, ProvisioningDialogMode } from '../../components/ProvisioningDialog/ProvisioningDialog.types';
+import type { ProvisioningDialogSessionAction, ProvisioningDialogSessionState } from '../ProvisioningDialogSession.state';
+import type { ProvisioningCompletedEvent, ProvisioningDialogMode } from '../ProvisioningDialog.types';
 
 /**
- * Options for the useDialogOrchestration hook.
+ * Options for the useProvisioningDialogActions hook.
  */
-export type DialogOrchestrationOptions = Readonly<{
+export type ProvisioningDialogActionsOptions = Readonly<{
     /** Whether the dialog is currently open */
     open: boolean;
     /** Initial mode (provisioning or compliance) */
@@ -36,14 +36,14 @@ export type DialogOrchestrationOptions = Readonly<{
     onClose: () => void;
 
     /** State dispatch function */
-    dispatch: React.Dispatch<DialogAction>;
+    dispatch: React.Dispatch<ProvisioningDialogSessionAction>;
 
     /** Current engine snapshot */
     snapshot: EngineSnapshotTyped<ProvisioningResultLight> | undefined;
     /** Whether engine is currently running */
     isRunning: boolean;
     /** Current dialog state */
-    state: DialogState;
+    state: ProvisioningDialogSessionState;
 
     /** Localized strings for error messages */
     strings: {
@@ -62,9 +62,9 @@ export type DialogOrchestrationOptions = Readonly<{
 }>;
 
 /**
- * Return value from the useDialogOrchestration hook.
+ * Return value from the useProvisioningDialogActions hook.
  */
-export type DialogOrchestrationReturn = Readonly<{
+export type ProvisioningDialogActionsReturn = Readonly<{
     /** Key to reset engine (increment to recreate) */
     engineResetKey: number;
 

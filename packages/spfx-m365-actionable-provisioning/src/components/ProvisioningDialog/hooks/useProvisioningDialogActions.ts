@@ -2,14 +2,14 @@ import * as React from 'react';
 
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
-import type { ProvisioningRunOutcome } from '../../components/ProvisioningDialog/ProvisioningDialog.types';
-import type { DialogOrchestrationOptions, DialogOrchestrationReturn } from './useDialogOrchestration.types';
+import type { ProvisioningRunOutcome } from '../ProvisioningDialog.types';
+import type { ProvisioningDialogActionsOptions, ProvisioningDialogActionsReturn } from './useProvisioningDialogActions.types';
 
 // Re-export types
-export type { DialogOrchestrationOptions, DialogOrchestrationReturn };
+export type { ProvisioningDialogActionsOptions, ProvisioningDialogActionsReturn };
 
 /**
- * Custom hook that encapsulates all dialog orchestration logic.
+ * Custom hook that encapsulates all provisioning dialog action logic.
  *
  * @remarks
  * This hook manages:
@@ -17,13 +17,8 @@ export type { DialogOrchestrationOptions, DialogOrchestrationReturn };
  * - Lifecycle effects (open/close alignment, delayed reset)
  * - Action handlers (run, cancel, compliance check, mode switching)
  * - Auto-run compliance logic
- *
- * By extracting this logic, ProvisioningDialog.tsx becomes a pure UI composition layer.
- * The hook can be unit tested independently of React rendering.
- * 
- * @public
  */
-export const useDialogOrchestration = (options: DialogOrchestrationOptions): DialogOrchestrationReturn => {
+export const useProvisioningDialogActions = (options: ProvisioningDialogActionsOptions): ProvisioningDialogActionsReturn => {
     const {
         open,
         initialMode,

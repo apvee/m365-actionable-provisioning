@@ -2,7 +2,7 @@ import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceActivityEntry } from '../../../models';
-import type { DialogUiError } from '../ProvisioningDialog.state';
+import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
 import type { ComplianceLogPanelStrings, ComplianceActivityEntryStrings } from '../../LogPanel/LogPanel.types';
 
 /**
@@ -57,7 +57,7 @@ export type ComplianceCheckViewProps = Readonly<{
     /** Whether the dialog close animation is in progress (suppresses badge display) */
     isClosing: boolean;
     /** UI-level error to display */
-    uiError: DialogUiError | undefined;
+    uiError: ProvisioningDialogUiError | undefined;
     /** Currently open log items (controlled) */
     openLogItems: ReadonlyArray<string>;
     /** Called when log accordion open state changes */

@@ -12,7 +12,7 @@ import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import { computeComplianceOverall } from '@apvee/m365-actionable-provisioning';
 import type { KpiBadgeSpec } from '../shared/KpiSummaryBar.types';
 import type { ComplianceCheckViewProps, ComplianceCheckViewStrings } from './ComplianceCheckView.types';
-import type { DialogUiError } from '../ProvisioningDialog.state';
+import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
 import { KpiSummaryBar } from '../shared/KpiSummaryBar';
 import { DialogLogSection } from '../shared/DialogLogSection';
 
@@ -224,7 +224,7 @@ export const ComplianceCheckView: React.FC<ComplianceCheckViewProps> = ({
     );
 
     // Render error box helper
-    const renderErrorBox = (err: DialogUiError | undefined): React.ReactNode => {
+    const renderErrorBox = (err: ProvisioningDialogUiError | undefined): React.ReactNode => {
         if (!err) return null;
         return (
             <MessageBar intent="error">
