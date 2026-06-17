@@ -19,6 +19,11 @@ import { modifySPListActionModule } from "./lists/modify-sp-list";
 import { createSPSiteActionModule } from "./sites/create-sp-site";
 import { deleteSPSiteActionModule } from "./sites/delete-sp-site";
 import { modifySPSiteActionModule } from "./sites/modify-sp-site";
+import {
+  createSPListViewActionModule,
+  deleteSPListViewActionModule,
+  modifySPListViewActionModule,
+} from "./views";
 
 export const sharePointActionModules = [
   createSPSiteActionModule,
@@ -28,6 +33,9 @@ export const sharePointActionModules = [
   modifySPListActionModule,
   deleteSPListActionModule,
   enableSPListRatingActionModule,
+  createSPListViewActionModule,
+  modifySPListViewActionModule,
+  deleteSPListViewActionModule,
   createSPContentTypeActionModule,
   modifySPContentTypeActionModule,
   deleteSPContentTypeActionModule,

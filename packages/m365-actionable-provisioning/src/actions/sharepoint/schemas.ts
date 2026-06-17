@@ -69,6 +69,21 @@ export {
   type EnableSPListRatingPayload,
 } from "./lists/enable-sp-list-rating";
 
+export {
+  createSPListViewSchema,
+  type CreateSPListViewPayload,
+} from "./views/create-sp-list-view";
+
+export {
+  modifySPListViewSchema,
+  type ModifySPListViewPayload,
+} from "./views/modify-sp-list-view";
+
+export {
+  deleteSPListViewSchema,
+  type DeleteSPListViewPayload,
+} from "./views/delete-sp-list-view";
+
 export { listSubactionSchema } from "./_composition/list-subactions-schema";
 export { contentTypeSubactionSchema } from "./_composition/content-type-subactions-schema";
 

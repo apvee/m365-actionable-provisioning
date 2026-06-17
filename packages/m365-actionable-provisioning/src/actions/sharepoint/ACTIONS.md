@@ -33,6 +33,12 @@ actions/sharepoint/
       action.ts
       schema.ts
       index.ts
+  views/
+    <action>/
+      action.ts
+      schema.ts
+      index.ts
+    _shared/
 ```
 
 ## Architecture
@@ -68,6 +74,72 @@ import {
 ## Adding Actions
 
 See `ADDING_ACTIONS.md`.
+
+## List Views
+
+SharePoint list view V1 actions provision public standard list views as list
+subactions. They are valid under `createSPList` or `modifySPList`; they are not
+root-level SharePoint actions in V1.
+
+Supported verbs:
+
+- `createSPListView` ensures a public standard list view exists and applies the
+  declared mutable V1 state.
+- `modifySPListView` enforces mutable state on an existing public standard list
+  view.
+- `deleteSPListView` ensures a public standard list view is absent.
+
+Example:
+
+```ts
+{
+  verb: "createSPList",
+  listName: "documents",
+  title: "Documents",
+  template: 101,
+  subactions: [
+    {
+      verb: "createSPListView",
+      title: "Active documents",
+      fields: ["DocIcon", "LinkFilename", "Modified"],
+      viewQuery: "<Where><Eq><FieldRef Name=\"Status\" /><Value Type=\"Text\">Active</Value></Eq></Where>",
+      rowLimit: 100,
+      paged: true,
+      defaultView: true,
+      tabularView: true,
+      scope: "recursiveAll"
+    },
+    {
+      verb: "modifySPListView",
+      title: "Active documents",
+      newTitle: "Recently changed documents",
+      fields: ["DocIcon", "LinkFilename", "Editor", "Modified"],
+      viewQuery: "<OrderBy><FieldRef Name=\"Modified\" Ascending=\"FALSE\" /></OrderBy>",
+      rowLimit: 50
+    },
+    {
+      verb: "deleteSPListView",
+      title: "Old documents"
+    }
+  ]
+}
+```
+
+V1 supports ordered visible field membership, CAML view query fragments, row
+limit, paging, default view promotion, tabular view, and standard SharePoint
+view scopes: `default`, `recursive`, `recursiveAll`, and `filesOnly`.
+
+`defaultView: false` is compliance-only drift information. Runtime changes the
+default view by setting `defaultView: true` on another view; it does not send a
+false default-view update to SharePoint.
+
+Deleting the current default view is blocked in V1. `deleteSPListView` returns a
+skipped unsupported result with warning code
+`LIST_VIEW_DEFAULT_DELETE_BLOCKED`; set another view as default first, then
+delete the old view.
+
+V1 intentionally excludes personal views, Gallery/Tiles/Calendar views, and
+modern JSON formatting.
 
 ## Shared Utilities
 

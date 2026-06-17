@@ -14,6 +14,18 @@ import { CreateSPSiteColumnAction } from "../src/actions/sharepoint/fields/creat
 import { resolveFieldReferenceFromScope } from "../src/actions/sharepoint/domains/content-types";
 import { checkFieldStructuralCompatibility } from "../src/actions/sharepoint/domains/fields/field-structural-compatibility";
 import { checkListStructuralCompatibility } from "../src/actions/sharepoint/domains/lists/list-structural-compatibility";
+import {
+  areViewFieldsEqual,
+  buildListViewUpdateProps,
+  compareListViewState,
+  mapListViewScope,
+  normalizeViewQuery,
+} from "../src/actions/sharepoint/domains/views";
+import {
+  createSPListViewSchema,
+  deleteSPListViewSchema,
+  modifySPListViewSchema,
+} from "../src/actions/sharepoint/views";
 import type { M365Clients, M365Scope, ProvisioningResultLight } from "../src/runtime";
 
 type SmokeScope = {
@@ -333,6 +345,119 @@ function assertSharePointCatalogComposition(): void {
   assert(!listCreatesList.success, "SharePoint list subaction schema should reject nested list creation");
 }
 
+function assertSharePointListViewV1Contract(): void {
+  const createView = createSPListViewSchema.safeParse({
+    verb: "createSPListView",
+    title: "Active documents",
+    fields: ["DocIcon", "LinkFilename", "Modified"],
+    viewQuery: " <OrderBy><FieldRef Name=\"Modified\" Ascending=\"FALSE\" /></OrderBy> ",
+    rowLimit: 100,
+    paged: true,
+    defaultView: true,
+    tabularView: true,
+    scope: "recursiveAll",
+  });
+  assert(createView.success, "createSPListView schema should accept the V1 standard view shape");
+
+  const invalidCreateView = createSPListViewSchema.safeParse({
+    verb: "createSPListView",
+    title: "",
+    fields: [],
+    scope: "calendar",
+  });
+  assert(!invalidCreateView.success, "createSPListView schema should reject empty title, empty fields, and unsupported scopes");
+
+  const modifyView = modifySPListViewSchema.safeParse({
+    verb: "modifySPListView",
+    title: "Active documents",
+    newTitle: "Recently changed documents",
+    fields: ["LinkFilename", "Editor", "Modified"],
+    defaultView: false,
+  });
+  assert(modifyView.success, "modifySPListView schema should accept rename and explicitly supplied mutable properties");
+
+  const deleteView = deleteSPListViewSchema.safeParse({
+    verb: "deleteSPListView",
+    title: "Old documents",
+  });
+  assert(deleteView.success, "deleteSPListView schema should accept a title-only payload");
+
+  const listCreateView = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Active documents",
+    fields: ["LinkFilename", "Modified"],
+  });
+  assert(listCreateView.success, "SharePoint list subaction schema should accept createSPListView");
+
+  const rootCreateView = sharePointActionsSchema.safeParse([
+    {
+      verb: "createSPListView",
+      title: "Invalid root view",
+    },
+  ]);
+  assert(!rootCreateView.success, "SharePoint root schema should reject list view actions in V1");
+
+  const updateProps = buildListViewUpdateProps({
+    newTitle: "Recently changed documents",
+    viewQuery: " <Where><IsNotNull><FieldRef Name=\"Modified\" /></IsNotNull></Where> ",
+    rowLimit: 50,
+    paged: false,
+    defaultView: true,
+    tabularView: false,
+    scope: "filesOnly",
+  });
+  assert(updateProps.Title === "Recently changed documents", "List view update props should map newTitle to Title");
+  assert(
+    updateProps.ViewQuery === "<Where><IsNotNull><FieldRef Name=\"Modified\" /></IsNotNull></Where>",
+    "List view update props should trim ViewQuery"
+  );
+  assert(updateProps.RowLimit === 50, "List view update props should map rowLimit to RowLimit");
+  assert(updateProps.Paged === false, "List view update props should preserve false Paged");
+  assert(updateProps.DefaultView === true, "List view update props should map defaultView true to DefaultView");
+  assert(updateProps.TabularView === false, "List view update props should preserve false TabularView");
+  assert(updateProps.Scope === 3, "List view update props should map filesOnly to ViewScope.FilesOnly");
+
+  const falseDefaultUpdateProps = buildListViewUpdateProps({ defaultView: false });
+  assert(
+    falseDefaultUpdateProps.DefaultView === undefined,
+    "List view update props should not send DefaultView false because SharePoint default status is changed by setting another view as default"
+  );
+
+  assert(mapListViewScope("default") === 0, "default scope should map to ViewScope.DefaultValue");
+  assert(mapListViewScope("recursive") === 1, "recursive scope should map to ViewScope.Recursive");
+  assert(mapListViewScope("recursiveAll") === 2, "recursiveAll scope should map to ViewScope.RecursiveAll");
+  assert(mapListViewScope("filesOnly") === 3, "filesOnly scope should map to ViewScope.FilesOnly");
+  assert(normalizeViewQuery("  <View />\n") === "<View />", "View query normalization should trim only outer whitespace");
+  assert(areViewFieldsEqual(["Title", "Modified"], ["Title", "Modified"]), "Field comparison should accept exact ordered matches");
+  assert(!areViewFieldsEqual(["Title", "Modified"], ["Modified", "Title"]), "Field comparison should reject order drift");
+
+  const mismatches = compareListViewState(
+    {
+      viewQuery: "<Where />",
+      rowLimit: 30,
+      fields: ["Title", "Modified"],
+      defaultView: true,
+    },
+    {
+      ViewQuery: " <Where /> ",
+      RowLimit: 30,
+      Paged: true,
+      DefaultView: false,
+      TabularView: true,
+      Scope: 0,
+    },
+    ["Title", "Editor"]
+  );
+  assert(
+    mismatches.some((mismatch) => mismatch.key === "DefaultView"),
+    "List view state comparison should report default view drift"
+  );
+  assert(
+    mismatches.some((mismatch) => mismatch.key === "fields"),
+    "List view state comparison should report ordered field drift"
+  );
+}
+
 function assertContentTypeFieldReferenceScopeResolution(): void {
   const resolved = resolveFieldReferenceFromScope(
     { siteColumnIdsByFieldName: { SmokeText: "5f5b251f-4b80-47f3-a847-0f2f8f9d6b01" } },
@@ -650,6 +775,7 @@ async function assertCreateSPSiteColumnIgnoresStaleListScope(): Promise<void> {
 
 async function main(): Promise<void> {
   assertSharePointCatalogComposition();
+  assertSharePointListViewV1Contract();
   assertContentTypeFieldReferenceScopeResolution();
   assertFieldStructuralCompatibility();
   assertListStructuralCompatibility();
