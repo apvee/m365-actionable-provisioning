@@ -70,7 +70,7 @@ define([], function () {
       // KPIs
       TotalLabel: 'Total',
       SuccessLabel: 'Success',
-      FailLabel: 'Fail',
+      FailLabel: 'Failed',
       SkippedLabel: 'Skipped',
       PendingLabel: 'Pending',
       CompletedLabel: 'Completed',

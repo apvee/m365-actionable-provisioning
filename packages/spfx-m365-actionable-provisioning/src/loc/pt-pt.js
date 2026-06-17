@@ -57,7 +57,7 @@ define([], function () {
 
       TotalLabel: 'Total',
       SuccessLabel: 'Sucesso',
-      FailLabel: 'Falha',
+      FailLabel: 'Falhados',
       SkippedLabel: 'Ignorado',
       PendingLabel: 'Pendente',
       CompletedLabel: 'Concluído',

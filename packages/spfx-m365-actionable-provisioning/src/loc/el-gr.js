@@ -57,7 +57,7 @@ define([], function () {
 
       TotalLabel: 'Σύνολο',
       SuccessLabel: 'Επιτυχία',
-      FailLabel: 'Αποτυχία',
+      FailLabel: 'Απέτυχε',
       SkippedLabel: 'Παραλείφθηκε',
       PendingLabel: 'Σε αναμονή',
       CompletedLabel: 'Ολοκληρώθηκε',
