@@ -21,11 +21,11 @@ import type {
     ProvisioningDialogStrings,
     ProvisioningRunOutcome,
 } from './ProvisioningDialog.types';
-import { DialogShell } from './DialogShell';
-import { ProvisioningView } from './ProvisioningView';
-import type { ProvisioningViewStrings } from './ProvisioningView.types';
-import { ComplianceView } from './ComplianceView';
-import type { ComplianceViewStrings } from './ComplianceView.types';
+import { ProvisioningDialogShell } from './shared/ProvisioningDialogShell';
+import { ProvisioningRunView } from './views/ProvisioningRunView';
+import type { ProvisioningRunViewStrings } from './views/ProvisioningRunView.types';
+import { ComplianceCheckView } from './views/ComplianceCheckView';
+import type { ComplianceCheckViewStrings } from './views/ComplianceCheckView.types';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
 import { useDialogOrchestration } from '../../hooks/useDialogOrchestration/useDialogOrchestration';
@@ -104,14 +104,14 @@ const DEFAULT_STRINGS: ProvisioningDialogStrings = {
  *
  * This component orchestrates the UI for both provisioning and compliance modes,
  * delegating orchestration logic to useDialogOrchestration and rendering to
- * presentational components (DialogShell, ProvisioningView, ComplianceView).
+ * presentational components (ProvisioningDialogShell, ProvisioningRunView, ComplianceCheckView).
  *
  * Architecture:
  * - useDialogOrchestration: Manages refs, lifecycle effects, action handlers
  * - useSPFxProvisioningEngine: Manages engine state and operations
  * - useProvisioningDerivedState: Computes derived UI state from snapshot
- * - DialogShell: Provides consistent dialog chrome
- * - ProvisioningView/ComplianceView: Render mode-specific content
+ * - ProvisioningDialogShell: Provides consistent dialog chrome
+ * - ProvisioningRunView/ComplianceCheckView: Render mode-specific content
  */
 export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
     open,
@@ -294,7 +294,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
     );
 
     // Build strings for view components
-    const provisioningViewStrings = React.useMemo<ProvisioningViewStrings>(() => ({
+    const provisioningViewStrings = React.useMemo<ProvisioningRunViewStrings>(() => ({
         initialHelpProvisioningText: s.initialHelpProvisioningText,
         initialHelpComplianceText: s.initialHelpComplianceText,
         viewLogsLabel: s.viewLogsLabel,
@@ -311,7 +311,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
         activityEntryStrings: s.activityEntryStrings,
     }), [s]);
 
-    const complianceViewStrings = React.useMemo<ComplianceViewStrings>(() => ({
+    const complianceViewStrings = React.useMemo<ComplianceCheckViewStrings>(() => ({
         viewLogsLabel: s.complianceHeaderLabel,
         checkedLabel: s.checkedLabel,
         blockedLabel: s.blockedLabel,
@@ -406,7 +406,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
     const renderContent = (): React.ReactNode => {
         if (isComplianceMode) {
             return (
-                <ComplianceView
+                <ComplianceCheckView
                     snapshot={snapshot}
                     complianceReport={state.complianceReport}
                     isPristine={complianceIsPristine}
@@ -422,7 +422,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
         }
 
         return (
-            <ProvisioningView
+                <ProvisioningRunView
                 snapshot={snapshot}
                 summary={summary}
                 activityEntries={activityEntries}
@@ -446,7 +446,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
                 }}
             >
                 <DialogSurface className={styles.surface}>
-                    <DialogShell
+                    <ProvisioningDialogShell
                         title={shellTitle}
                         description={shellDescription}
                         headerIcon={shellHeaderIcon}
@@ -459,7 +459,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
                         footer={isComplianceMode ? renderComplianceFooter() : renderProvisioningFooter()}
                     >
                         {renderContent()}
-                    </DialogShell>
+                    </ProvisioningDialogShell>
                 </DialogSurface>
             </Dialog>
 

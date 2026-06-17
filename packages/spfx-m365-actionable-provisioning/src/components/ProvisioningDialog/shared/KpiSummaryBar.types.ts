@@ -1,7 +1,7 @@
 /**
  * Specification for a single KPI badge.
  */
-export type KPIBadgeSpec = Readonly<{
+export type KpiBadgeSpec = Readonly<{
     /** Unique key for React rendering */
     key: string;
     /** Badge display text */
@@ -13,14 +13,14 @@ export type KPIBadgeSpec = Readonly<{
 }>;
 
 /**
- * Props for the KPIDisplay component.
+ * Props for the KpiSummaryBar component.
  * Renders status badge and metric badges in a horizontal card layout.
  */
-export type KPIDisplayProps = Readonly<{
+export type KpiSummaryBarProps = Readonly<{
     /** Primary status badge (e.g., "Running", "Succeeded", "Failed") */
-    statusBadge?: KPIBadgeSpec;
+    statusBadge?: KpiBadgeSpec;
     /** Array of metric badges (e.g., success/fail counts) */
-    metricBadges?: ReadonlyArray<KPIBadgeSpec>;
+    metricBadges?: ReadonlyArray<KpiBadgeSpec>;
     /** Optional additional CSS class */
     className?: string;
 }>;

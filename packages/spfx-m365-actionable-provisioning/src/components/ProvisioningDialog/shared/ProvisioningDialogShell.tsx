@@ -13,8 +13,8 @@ import {
 import { DismissRegular } from '@fluentui/react-icons';
 import { Flex, Stack } from '@apvee/react-layout-kit';
 
-import { ErrorBoundary } from './ErrorBoundary';
-import type { DialogShellProps } from './DialogShell.types';
+import { ProvisioningDialogErrorBoundary } from './ProvisioningDialogErrorBoundary';
+import type { ProvisioningDialogShellProps } from './ProvisioningDialogShell.types';
 
 const useStyles = makeStyles({
     // Layout styles removed - now using @apvee/react-layout-kit components
@@ -27,14 +27,14 @@ const useStyles = makeStyles({
 });
 
 /**
- * DialogShell is a presentational component providing consistent dialog chrome.
+ * ProvisioningDialogShell is a presentational component providing consistent dialog chrome.
  *
- * It renders the header (title, icon, close button), content area with ErrorBoundary,
+ * It renders the header (title, icon, close button), content area with ProvisioningDialogErrorBoundary,
  * and footer slot. The parent component owns the Dialog instance and open/close state.
  *
  * This component does not contain any business logic.
  */
-export const DialogShell: React.FC<DialogShellProps> = ({
+export const ProvisioningDialogShell: React.FC<ProvisioningDialogShellProps> = ({
     title,
     description,
     headerIcon,
@@ -82,9 +82,9 @@ export const DialogShell: React.FC<DialogShellProps> = ({
 
             <DialogContent className={contentClassName}>
                 <Stack gap={{ xs: 'md', lg: 'lg' }} py={{ xs: 'sm', md: 'md' }}>
-                    <ErrorBoundary fallbackTitle={errorFallbackTitle} logger={logger}>
+                    <ProvisioningDialogErrorBoundary fallbackTitle={errorFallbackTitle} logger={logger}>
                         {children}
-                    </ErrorBoundary>
+                    </ProvisioningDialogErrorBoundary>
                 </Stack>
             </DialogContent>
 
@@ -97,4 +97,4 @@ export const DialogShell: React.FC<DialogShellProps> = ({
     );
 };
 
-DialogShell.displayName = 'DialogShell';
+ProvisioningDialogShell.displayName = 'ProvisioningDialogShell';

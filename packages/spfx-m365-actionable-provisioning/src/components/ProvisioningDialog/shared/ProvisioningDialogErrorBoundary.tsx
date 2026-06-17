@@ -1,14 +1,14 @@
 import * as React from 'react';
 import type { Logger } from '@apvee/m365-actionable-provisioning';
 
-type ErrorBoundaryProps = Readonly<{
+type ProvisioningDialogErrorBoundaryProps = Readonly<{
     children: React.ReactNode;
     fallback?: React.ReactNode;
     fallbackTitle: string;
     logger?: Logger;
 }>;
 
-type ErrorBoundaryState = Readonly<{
+type ProvisioningDialogErrorBoundaryState = Readonly<{
     hasError: boolean;
     error: Error | undefined;
 }>;
@@ -20,13 +20,13 @@ type ErrorBoundaryState = Readonly<{
  * Note: Error boundaries must be class components per React requirements.
  * This is the only class component in the refactored architecture.
  */
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-    constructor(props: ErrorBoundaryProps) {
+export class ProvisioningDialogErrorBoundary extends React.Component<ProvisioningDialogErrorBoundaryProps, ProvisioningDialogErrorBoundaryState> {
+    constructor(props: ProvisioningDialogErrorBoundaryProps) {
         super(props);
         this.state = { hasError: false, error: undefined };
     }
 
-    static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    static getDerivedStateFromError(error: Error): ProvisioningDialogErrorBoundaryState {
         return { hasError: true, error };
     }
 

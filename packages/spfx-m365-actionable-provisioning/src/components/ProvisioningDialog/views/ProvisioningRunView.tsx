@@ -11,15 +11,14 @@ import {
 } from '@fluentui/react-components';
 import { Stack } from '@apvee/react-layout-kit';
 
-import type { ProvisioningRunOutcome } from './ProvisioningDialog.types';
-import type { KPIBadgeSpec } from './KPIDisplay.types';
-import type { ProvisioningViewProps, ProvisioningViewStrings } from './ProvisioningView.types';
-import type { DialogUiError } from './ProvisioningDialog.state';
-import { KPIDisplay } from './KPIDisplay';
-import { LogSection } from './LogSection';
+import type { ProvisioningRunOutcome } from '../ProvisioningDialog.types';
+import type { KpiBadgeSpec } from '../shared/KpiSummaryBar.types';
+import type { ProvisioningRunViewProps, ProvisioningRunViewStrings } from './ProvisioningRunView.types';
+import type { DialogUiError } from '../ProvisioningDialog.state';
+import { KpiSummaryBar } from '../shared/KpiSummaryBar';
+import { DialogLogSection } from '../shared/DialogLogSection';
 
-// Re-export types for external consumers
-export type { ProvisioningViewProps, ProvisioningViewStrings };
+export type { ProvisioningRunViewProps, ProvisioningRunViewStrings };
 
 const useStyles = makeStyles({
     // Layout styles removed - now using @apvee/react-layout-kit components
@@ -29,7 +28,7 @@ const useStyles = makeStyles({
 });
 
 /**
- * ProvisioningView renders the provisioning mode content.
+ * ProvisioningRunView renders the provisioning mode content.
  *
  * Displays:
  * - Initial help text when pristine
@@ -40,7 +39,7 @@ const useStyles = makeStyles({
  *
  * This component is purely presentational - all state is passed via props.
  */
-export const ProvisioningView: React.FC<ProvisioningViewProps> = ({
+export const ProvisioningRunView: React.FC<ProvisioningRunViewProps> = ({
     snapshot,
     summary,
     activityEntries,
@@ -68,7 +67,7 @@ export const ProvisioningView: React.FC<ProvisioningViewProps> = ({
     const isRunning = summary?.isRunning === true;
 
     // Status badge (memoized for performance)
-    const statusBadge = React.useMemo<KPIBadgeSpec | undefined>(() => {
+    const statusBadge = React.useMemo<KpiBadgeSpec | undefined>(() => {
         if (isRunning) {
             return { key: 'status', text: strings.finalOutcomeRunningLabel, color: 'brand', appearance: 'filled' };
         }
@@ -98,9 +97,9 @@ export const ProvisioningView: React.FC<ProvisioningViewProps> = ({
         [ratioDenominator]
     );
 
-    const metricBadges = React.useMemo<ReadonlyArray<KPIBadgeSpec>>(() => {
+    const metricBadges = React.useMemo<ReadonlyArray<KpiBadgeSpec>>(() => {
         const hasDenominator = ratioDenominator !== undefined;
-        const badges: KPIBadgeSpec[] = [];
+        const badges: KpiBadgeSpec[] = [];
 
         if (hasDenominator && (counts?.success ?? 0) > 0) {
             badges.push({
@@ -192,9 +191,9 @@ export const ProvisioningView: React.FC<ProvisioningViewProps> = ({
                 </Field>
             )}
 
-            <KPIDisplay statusBadge={statusBadge} metricBadges={metricBadges} />
+            <KpiSummaryBar statusBadge={statusBadge} metricBadges={metricBadges} />
 
-            <LogSection
+            <DialogLogSection
                 label={strings.viewLogsLabel}
                 openItems={openLogItems}
                 onOpenItemsChange={handleOpenLogItemsChange}
@@ -207,4 +206,4 @@ export const ProvisioningView: React.FC<ProvisioningViewProps> = ({
     );
 };
 
-ProvisioningView.displayName = 'ProvisioningView';
+ProvisioningRunView.displayName = 'ProvisioningRunView';

@@ -3,15 +3,15 @@ import type {
     ProvisioningActivityEntryStrings,
     ComplianceLogPanelStrings,
     ComplianceActivityEntryStrings,
-} from '../LogPanel/LogPanel.types';
-import type { ProvisioningActivityEntry } from '../../models';
-import type { ComplianceActivityEntry } from '../../models';
+} from '../../LogPanel/LogPanel.types';
+import type { ProvisioningActivityEntry } from '../../../models';
+import type { ComplianceActivityEntry } from '../../../models';
 
 /**
- * Props for the LogSection component.
+ * Props for the DialogLogSection component.
  * Wraps LogPanel in an Accordion with expand/collapse behavior.
  */
-export type LogSectionProps = Readonly<{
+export type DialogLogSectionProps = Readonly<{
     /** Accordion header label */
     label: string;
     /** Currently open accordion items (controlled) */

@@ -9,17 +9,16 @@ import {
 } from '@fluentui/react-components';
 import { Flex } from '@apvee/react-layout-kit';
 
-import { LogPanel } from '../LogPanel/LogPanel';
-import type { LogSectionProps } from './LogSection.types';
+import { LogPanel } from '../../LogPanel/LogPanel';
+import type { DialogLogSectionProps } from './DialogLogSection.types';
 import type {
     LogPanelStrings,
     ProvisioningActivityEntryStrings,
     ComplianceLogPanelStrings,
     ComplianceActivityEntryStrings,
-} from '../LogPanel/LogPanel.types';
+} from '../../LogPanel/LogPanel.types';
 
-// Re-export types for external consumers
-export type { LogSectionProps };
+export type { DialogLogSectionProps };
 
 const useStyles = makeStyles({
     accordionCard: {
@@ -49,11 +48,11 @@ const useStyles = makeStyles({
 });
 
 /**
- * LogSection component wraps LogPanel in an Accordion with expand/collapse behavior.
+ * DialogLogSection component wraps LogPanel in an Accordion with expand/collapse behavior.
  *
  * Returns null if no entries to display.
  */
-export const LogSection: React.FC<LogSectionProps> = ({
+export const DialogLogSection: React.FC<DialogLogSectionProps> = ({
     label,
     openItems,
     onOpenItemsChange,
@@ -124,4 +123,4 @@ export const LogSection: React.FC<LogSectionProps> = ({
     );
 };
 
-LogSection.displayName = 'LogSection';
+DialogLogSection.displayName = 'DialogLogSection';

@@ -10,14 +10,13 @@ import { Stack } from '@apvee/react-layout-kit';
 
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import { computeComplianceOverall } from '@apvee/m365-actionable-provisioning';
-import type { KPIBadgeSpec } from './KPIDisplay.types';
-import type { ComplianceViewProps, ComplianceViewStrings } from './ComplianceView.types';
-import type { DialogUiError } from './ProvisioningDialog.state';
-import { KPIDisplay } from './KPIDisplay';
-import { LogSection } from './LogSection';
+import type { KpiBadgeSpec } from '../shared/KpiSummaryBar.types';
+import type { ComplianceCheckViewProps, ComplianceCheckViewStrings } from './ComplianceCheckView.types';
+import type { DialogUiError } from '../ProvisioningDialog.state';
+import { KpiSummaryBar } from '../shared/KpiSummaryBar';
+import { DialogLogSection } from '../shared/DialogLogSection';
 
-// Re-export types for external consumers
-export type { ComplianceViewProps, ComplianceViewStrings };
+export type { ComplianceCheckViewProps, ComplianceCheckViewStrings };
 
 type ComplianceOverallBadge = Readonly<{
     text: string;
@@ -30,7 +29,7 @@ type ComplianceOverallBadge = Readonly<{
  */
 const buildOverallBadgeFromOverall = (
     overall: ComplianceReport['overall'],
-    s: ComplianceViewStrings
+    s: ComplianceCheckViewStrings
 ): ComplianceOverallBadge => {
     switch (overall) {
         case 'non_compliant':
@@ -44,7 +43,7 @@ const buildOverallBadgeFromOverall = (
 };
 
 /**
- * ComplianceView renders the compliance check mode content.
+ * ComplianceCheckView renders the compliance check mode content.
  *
  * Displays:
  * - Error messages (UI error)
@@ -54,7 +53,7 @@ const buildOverallBadgeFromOverall = (
  *
  * This component is purely presentational - all state is passed via props.
  */
-export const ComplianceView: React.FC<ComplianceViewProps> = ({
+export const ComplianceCheckView: React.FC<ComplianceCheckViewProps> = ({
     snapshot,
     complianceReport,
     isPristine,
@@ -127,7 +126,7 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({
     }, [complianceReport, compliance, isChecking, isClosing, strings]);
 
     // Status badge (memoized)
-    const statusBadge = React.useMemo<KPIBadgeSpec | undefined>(() => {
+    const statusBadge = React.useMemo<KpiBadgeSpec | undefined>(() => {
         if (!displayedKpis?.badge) return undefined;
         return {
             key: 'overall-status',
@@ -138,10 +137,10 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({
     }, [displayedKpis?.badge]);
 
     // Metric badges (memoized)
-    const metricBadges = React.useMemo<ReadonlyArray<KPIBadgeSpec>>(() => {
+    const metricBadges = React.useMemo<ReadonlyArray<KpiBadgeSpec>>(() => {
         if (!displayedKpis) return [];
 
-        const badges: KPIBadgeSpec[] = [];
+        const badges: KpiBadgeSpec[] = [];
 
         if (displayedKpis.checked > 0) {
             badges.push({
@@ -247,9 +246,9 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({
                 </Field>
             )}
 
-            <KPIDisplay statusBadge={statusBadge} metricBadges={metricBadges} />
+            <KpiSummaryBar statusBadge={statusBadge} metricBadges={metricBadges} />
 
-            <LogSection
+            <DialogLogSection
                 label={strings.viewLogsLabel}
                 openItems={openLogItems}
                 onOpenItemsChange={handleOpenLogItemsChange}
@@ -262,4 +261,4 @@ export const ComplianceView: React.FC<ComplianceViewProps> = ({
     );
 };
 
-ComplianceView.displayName = 'ComplianceView';
+ComplianceCheckView.displayName = 'ComplianceCheckView';

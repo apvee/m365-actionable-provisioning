@@ -1,14 +1,14 @@
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
-import type { ComplianceActivityEntry } from '../../models';
-import type { DialogUiError } from './ProvisioningDialog.state';
-import type { ComplianceLogPanelStrings, ComplianceActivityEntryStrings } from '../LogPanel/LogPanel.types';
+import type { ComplianceActivityEntry } from '../../../models';
+import type { DialogUiError } from '../ProvisioningDialog.state';
+import type { ComplianceLogPanelStrings, ComplianceActivityEntryStrings } from '../../LogPanel/LogPanel.types';
 
 /**
- * Localized strings for the ComplianceView component.
+ * Localized strings for the ComplianceCheckView component.
  */
-export type ComplianceViewStrings = Readonly<{
+export type ComplianceCheckViewStrings = Readonly<{
     /** Label for logs accordion header */
     viewLogsLabel: string;
     /** Label for checked count */
@@ -41,10 +41,10 @@ export type ComplianceViewStrings = Readonly<{
 }>;
 
 /**
- * Props for the ComplianceView component.
+ * Props for the ComplianceCheckView component.
  * Renders compliance mode content including check progress, results, and logs.
  */
-export type ComplianceViewProps = Readonly<{
+export type ComplianceCheckViewProps = Readonly<{
     /** Engine snapshot for current state */
     snapshot: EngineSnapshotTyped<ProvisioningResultLight> | undefined;
     /** Final compliance report (when check completes) */
@@ -67,5 +67,5 @@ export type ComplianceViewProps = Readonly<{
     activityEntries: ReadonlyArray<ComplianceActivityEntry>;
 
     /** Localized strings */
-    strings: ComplianceViewStrings;
+    strings: ComplianceCheckViewStrings;
 }>;

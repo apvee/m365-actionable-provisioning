@@ -1,14 +1,14 @@
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
-import type { ProvisioningActivityEntry } from '../../models';
-import type { ProvisioningUiSummary } from '../../utils/trace-to-activity';
-import type { LogPanelStrings, ProvisioningActivityEntryStrings } from '../LogPanel/LogPanel.types';
-import type { DialogUiError } from './ProvisioningDialog.state';
+import type { ProvisioningActivityEntry } from '../../../models';
+import type { ProvisioningUiSummary } from '../../../utils/trace-to-activity';
+import type { LogPanelStrings, ProvisioningActivityEntryStrings } from '../../LogPanel/LogPanel.types';
+import type { DialogUiError } from '../ProvisioningDialog.state';
 
 /**
- * Localized strings for the ProvisioningView component.
+ * Localized strings for the ProvisioningRunView component.
  */
-export type ProvisioningViewStrings = Readonly<{
+export type ProvisioningRunViewStrings = Readonly<{
     /** Help text shown when dialog opens and no run has started */
     initialHelpProvisioningText: string;
     /** Help text shown only when compliance check button is enabled */
@@ -37,10 +37,10 @@ export type ProvisioningViewStrings = Readonly<{
 }>;
 
 /**
- * Props for the ProvisioningView component.
+ * Props for the ProvisioningRunView component.
  * Renders provisioning mode content including progress, KPIs, and logs.
  */
-export type ProvisioningViewProps = Readonly<{
+export type ProvisioningRunViewProps = Readonly<{
     /** Engine snapshot for current state */
     snapshot: EngineSnapshotTyped<ProvisioningResultLight> | undefined;
     /** Derived UI summary from snapshot */
@@ -61,5 +61,5 @@ export type ProvisioningViewProps = Readonly<{
     canOpenCompliance: boolean;
 
     /** Localized strings */
-    strings: ProvisioningViewStrings;
+    strings: ProvisioningRunViewStrings;
 }>;

@@ -2,11 +2,11 @@ import type * as React from 'react';
 import type { Logger } from '@apvee/m365-actionable-provisioning';
 
 /**
- * Props for the DialogShell presentational component.
- * DialogShell provides consistent dialog chrome (title, content area, footer)
+ * Props for the ProvisioningDialogShell presentational component.
+ * ProvisioningDialogShell provides consistent dialog chrome (title, content area, footer)
  * without owning any business logic.
  */
-export type DialogShellProps = Readonly<{
+export type ProvisioningDialogShellProps = Readonly<{
     /** Dialog title text */
     title: string;
     /** Optional description text below title */

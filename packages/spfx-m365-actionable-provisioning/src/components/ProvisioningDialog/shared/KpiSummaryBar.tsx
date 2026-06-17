@@ -2,12 +2,12 @@ import * as React from 'react';
 import { Badge, Card } from '@fluentui/react-components';
 import { Flex, Group } from '@apvee/react-layout-kit';
 
-import type { KPIBadgeSpec, KPIDisplayProps } from './KPIDisplay.types';
+import type { KpiBadgeSpec, KpiSummaryBarProps } from './KpiSummaryBar.types';
 
 /**
- * Renders a single badge from a KPIBadgeSpec.
+ * Renders a single badge from a KpiBadgeSpec.
  */
-const renderBadge = (spec: KPIBadgeSpec): React.ReactElement => (
+const renderBadge = (spec: KpiBadgeSpec): React.ReactElement => (
     <Badge
         key={spec.key}
         appearance={spec.appearance}
@@ -20,7 +20,7 @@ const renderBadge = (spec: KPIBadgeSpec): React.ReactElement => (
 );
 
 /**
- * KPIDisplay component renders status and metric badges in a horizontal card layout.
+ * KpiSummaryBar component renders status and metric badges in a horizontal card layout.
  *
  * Returns null if neither statusBadge nor metricBadges are provided.
  *
@@ -32,7 +32,7 @@ const renderBadge = (spec: KPIBadgeSpec): React.ReactElement => (
  *
  * See [LAYOUT_GUIDELINES.md](../../LAYOUT_GUIDELINES.md) for complete guidelines.
  */
-export const KPIDisplay: React.FC<KPIDisplayProps> = ({
+export const KpiSummaryBar: React.FC<KpiSummaryBarProps> = ({
     statusBadge,
     metricBadges,
     className,
@@ -55,4 +55,4 @@ export const KPIDisplay: React.FC<KPIDisplayProps> = ({
     );
 };
 
-KPIDisplay.displayName = 'KPIDisplay';
+KpiSummaryBar.displayName = 'KpiSummaryBar';
