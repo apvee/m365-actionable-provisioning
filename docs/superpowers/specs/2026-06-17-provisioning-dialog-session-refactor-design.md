@@ -111,6 +111,8 @@ When the user requests close:
 
 No delayed hard reset is required.
 
+If a parent externally changes `open` to `false` while an operation is active, the session is still disposed by unmount. That path should preserve today's effective behavior: the engine cleanup cancels active work, stale async results are ignored, and no extra completion event is emitted after the session has been abandoned.
+
 ### Explicit Fluent Contract
 
 Set `unmountOnClose={true}` explicitly even though the installed package defaults to true. This is not relied on as the only fix; it documents the component contract and protects against future default changes.
@@ -184,16 +186,22 @@ These refs reset naturally when the session unmounts.
 The wrapper should:
 
 - Compute strings that are pure public API defaults if needed by the shell.
-- Render `ConfirmDialog` only if it must live outside the session. Prefer keeping confirmation inside session unless nested dialog behavior proves problematic.
+- Keep `ConfirmDialog` session-owned so confirmation state is disposed with the rest of the opened dialog session.
 - Pass all public props to `ProvisioningDialogSession`.
 - Handle `onOpenChange` by routing close requests into the session close handler.
 
-Because close permission depends on session state, the wrapper needs a stable bridge from session to dialog close. Two acceptable designs:
+Because close permission depends on session state, the wrapper needs a stable bridge from session to dialog close. Use one design:
 
-1. Keep `<Dialog>` in the wrapper and let `DialogShell` close button call a session-owned `handleClose`. For Escape/backdrop, pass `onOpenChange` down through a session-owned callback exposed via a ref.
-2. Move `<Dialog>` itself into an internal mounted branch while preserving exported `ProvisioningDialog`. The exported component conditionally renders the internal dialog only when `open` is true or when Fluent needs to animate close.
+- Keep `<Dialog>` in the wrapper.
+- Store the active session close handler in a wrapper ref.
+- Let `ProvisioningDialogSession` register its `handleClose` on mount and clear it on unmount.
+- Let `DialogShell` close button call the same session-owned `handleClose`.
+- Let `<Dialog onOpenChange>` call the registered session close handler when `data.open === false`.
+- If no session close handler is registered, do nothing except for already-closed cleanup paths.
 
-Recommended choice: keep `<Dialog>` in the wrapper and use a small close-request ref only if needed. First try the simpler version where `onOpenChange` calls the session close handler through a local callback prop; TypeScript and runtime behavior will reveal if a ref bridge is necessary.
+The current dialog uses `modalType="alert"`. Fluent's installed implementation sends `onOpenChange` for Escape, but backdrop clicks only request close for `modalType="modal"`. Keep `modalType="alert"` unless there is a separate product decision to change dismissal semantics. The ref bridge must therefore preserve Escape and close-button behavior; backdrop dismissal is not part of the current contract.
+
+`ConfirmDialog` can remain implemented with Fluent `Dialog`, but it should be rendered from the session so `confirmOpen` does not need to move to the wrapper. Because this makes it a nested dialog in React context, confirm/cancel focus behavior must be included in manual verification.
 
 ## UI Component Rationalization
 
@@ -276,6 +284,7 @@ Using the test SPFx app:
 - Open provisioning dialog, run, close, reopen: previous result/log state is gone.
 - Open compliance dialog directly: auto-run starts once.
 - Open provisioning dialog, switch to compliance: check starts once and Back returns to provisioning.
+- Open deprovisioning with confirmation enabled: confirm runs once, cancel returns to the main dialog, and focus remains usable.
 - Cancel provisioning/compliance and verify close behavior is unchanged.
 - Property pane provisioning/deprovisioning still buffers effective-state updates until close.
 
@@ -292,9 +301,11 @@ Using the test SPFx app:
 ## Risks
 
 - Fluent close animation timing may affect when the session unmounts. Explicit `unmountOnClose={true}` should keep this aligned with Fluent's supported motion lifecycle.
-- Escape/backdrop close needs careful routing so it respects the same close rules as the close button.
+- Escape close needs careful routing so it respects the same close rules as the close button.
+- The active dialog uses `modalType="alert"`, so backdrop close should not accidentally become enabled while refactoring close handling.
 - Removing `isClosing` could briefly show terminal badges during close animation. If this is visually observable, prefer solving it with session unmount timing or a local visual-only flag, not by restoring hard reset.
 - Completion callbacks must not be lost if `run()` resolves and the parent closes immediately after success. The action handler should emit from the returned final snapshot before close.
+- Moving `ConfirmDialog` under the session changes it from sibling-owned state to session-owned nested dialog state. Confirm/cancel and focus restoration need manual verification.
 
 ## Implementation Slices
 
@@ -305,12 +316,13 @@ Using the test SPFx app:
 5. Remove obsolete reducer actions and state fields.
 6. Simplify `useDialogOrchestration` around session actions.
 7. Add `getDialogConfigForMode` for the property pane.
-8. Run `npm run build:spfx` and perform manual demo checks.
+8. Verify Escape, close button, confirm/cancel, and external parent-close behavior.
+9. Run `npm run build:spfx` and perform manual demo checks.
 
 ## Self-Review
 
-- No placeholders remain.
+- No unresolved drafting markers remain.
 - Scope is limited to the SPFx UI package dialog/property pane lifecycle and control rationalization.
 - The design preserves the public API and current behavior.
 - The primary simplification mechanism is explicit: move runtime state into a mounted session instead of resetting it manually.
-- Risks call out the two critical behavioral points: close routing and completion callback emission.
+- Risks call out the critical behavioral points: close routing, alert dismissal semantics, completion callback emission, and nested confirmation behavior.
