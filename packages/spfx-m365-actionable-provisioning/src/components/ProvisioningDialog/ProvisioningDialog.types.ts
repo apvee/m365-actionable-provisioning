@@ -166,6 +166,14 @@ export type ProvisioningDialogProps = Readonly<{
 }>;
 
 /** @internal */
+export type ProvisioningDialogSessionProps = Omit<ProvisioningDialogProps, 'open' | 'onClose'> & Readonly<{
+    open: boolean;
+    onClose: () => void;
+    defaultStrings: ProvisioningDialogStrings;
+    registerCloseHandler: (handler: (() => void) | undefined) => void;
+}>;
+
+/** @internal */
 export type ExecutionDialogShellError = Readonly<{
     title: string;
     message: string;
