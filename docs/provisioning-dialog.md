@@ -462,7 +462,7 @@ type ProvisioningDialogStrings = Readonly<{
   complianceErrorFallbackTitle: string;
   
   // Nested component strings (optional)
-  confirmDialogStrings?: Partial<ConfirmDialogStrings>;
+  confirmDialogStrings?: Partial<ConfirmationDialogStrings>;
   logPanelStrings?: Partial<LogPanelStrings>;
   activityEntryStrings?: Partial<ProvisioningActivityEntryStrings>;
 }>;
@@ -653,8 +653,8 @@ export default MyWebPart;
 
 ### Performance
 
-1. **Lazy loading**: Only render dialog when `open` is true
-2. **Reset on close**: Engine state resets when dialog reopens
+1. **Session lifecycle**: Dialog content unmounts on close, so every open starts with fresh session state
+2. **Reset on close**: Engine state resets when the dialog reopens
 3. **Appropriate logging**: Use `'info'` level in production
 
 ### Accessibility

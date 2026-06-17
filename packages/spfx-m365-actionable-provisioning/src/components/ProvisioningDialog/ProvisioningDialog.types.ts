@@ -12,7 +12,7 @@ import type { Logger } from '@apvee/m365-actionable-provisioning';
 import type { CompliancePolicy } from '@apvee/m365-actionable-provisioning';
 
 import type { ConfirmationDialogStrings } from '../shared/ConfirmationDialog/ConfirmationDialog.types';
-import type { LogPanelProps, LogPanelStrings, ProvisioningActivityEntryStrings } from '../LogPanel/LogPanel.types';
+import type { LogPanelStrings, ProvisioningActivityEntryStrings } from '../LogPanel/LogPanel.types';
 
 /**
  * Localized strings for the provisioning dialog.
@@ -171,24 +171,4 @@ export type ProvisioningDialogSessionProps = Omit<ProvisioningDialogProps, 'open
     disposeRequested: boolean;
     defaultStrings: ProvisioningDialogStrings;
     registerCloseHandler: (handler: (() => void) | undefined) => void;
-}>;
-
-/** @internal */
-export type ExecutionDialogShellError = Readonly<{
-    title: string;
-    message: string;
-}>;
-
-/** @internal */
-export type ExecutionDialogShellProgress = Readonly<{
-    label?: string;
-    value: number;
-}>;
-
-/** @internal */
-export type ExecutionDialogShellLogSection = Readonly<{
-    label: string;
-    openItems: ReadonlyArray<string>;
-    onOpenItemsChange: (nextOpenItems: ReadonlyArray<string>) => void;
-    logPanelProps: Omit<LogPanelProps, 'className'>;
 }>;
