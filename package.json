@@ -14,7 +14,7 @@
     "build": "npm run build:m365 && npm run build:spfx && npm run build:test-spfx",
     "build:m365": "npm run build -w @apvee/m365-actionable-provisioning",
     "build:spfx": "npm run build -w @apvee/spfx-m365-actionable-provisioning",
-    "build:test-spfx": "npm run build -w test-spfx",
+    "build:test-spfx": "npm run bundle -w test-spfx",
     "clean": "npm run clean --workspaces --if-present",
     "serve:test-spfx": "npm run serve -w test-spfx"
   },

@@ -1,11 +1,10 @@
 import * as React from 'react';
 import {
-    Avatar,
     Button,
     Dialog,
     DialogSurface,
 } from '@fluentui/react-components';
-import { ShieldCheckmarkColor, WrenchScrewdriverColor } from '@fluentui/react-icons';
+import { AppsColor, ShieldCheckmarkColor } from '@fluentui/react-icons';
 
 import { useProvisioningDerivedState } from '../../hooks/useProvisioningDerivedState/useProvisioningDerivedState';
 import { useNavigationGuard } from '../../hooks/useNavigationGuard/useNavigationGuard';
@@ -279,7 +278,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
     const shellDescription = isComplianceMode
         ? (description !== undefined ? description : s.initialHelpComplianceText)
         : effectiveDescription;
-    const shellHeaderIcon = isComplianceMode ? <ShieldCheckmarkColor fontSize={28} /> : <WrenchScrewdriverColor fontSize={28} />;
+    const shellHeaderIcon = isComplianceMode ? <ShieldCheckmarkColor fontSize={48} /> : <AppsColor fontSize={48} />;
     const shellIsPristine = isComplianceMode ? complianceIsPristine : isPristine;
     const shellCloseDisabled = isComplianceMode ? state.complianceIsChecking : isRunning;
 
@@ -450,9 +449,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
                     <DialogShell
                         title={shellTitle}
                         description={shellDescription}
-                        headerIcon={
-                            <Avatar icon={shellHeaderIcon} shape="square" size={48} />
-                        }
+                        headerIcon={shellHeaderIcon}
                         isPristine={shellIsPristine}
                         closeDisabled={shellCloseDisabled}
                         closeButtonAriaLabel={s.closeButtonAriaLabel}

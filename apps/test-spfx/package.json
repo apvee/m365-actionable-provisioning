@@ -4,9 +4,11 @@
   "private": true,
   "description": "SPFx demo app for Apvee M365 actionable provisioning.",
   "scripts": {
-    "build": "gulp bundle",
+    "build": "npm run build:deps && gulp bundle",
+    "build:deps": "npm run build -w @apvee/m365-actionable-provisioning --workspace-root && npm run build -w @apvee/spfx-m365-actionable-provisioning --workspace-root",
+    "bundle": "gulp bundle",
     "clean": "gulp clean",
-    "serve": "gulp serve",
+    "serve": "npm run build:deps && gulp serve",
     "test": "gulp test"
   },
   "dependencies": {
