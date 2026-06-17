@@ -91,7 +91,7 @@ import type {
 | `enableComplianceCheck` | `boolean` | `false` | Show compliance check button |
 | `complianceAutoRunOnOpen` | `boolean` | Varies | Auto-run compliance when entering mode |
 | `compliancePolicy` | `CompliancePolicy` | `undefined` | Policy for compliance evaluation |
-| `mode` | `ProvisioningDialogMode` | `'provisioning'` | Initial dialog mode |
+| `initialMode` | `ProvisioningDialogMode` | `'provisioning'` | Initial dialog mode |
 | `strings` | `Partial<ProvisioningDialogStrings>` | Defaults | Localization overrides |
 | `confirmRun` | `boolean` | `false` | Require confirmation before running |
 | `onProvisioningCompleted` | `(ev) => void` | `undefined` | Callback when run completes |
@@ -192,8 +192,8 @@ export default MyWebPart;
   complianceAutoRunOnOpen={false}
   compliancePolicy={{ treatUnverifiableAs: 'warning' }}
   
-  // Mode
-  mode="provisioning"
+  // Initial mode
+  initialMode="provisioning"
   
   // Confirmation
   confirmRun={true}
@@ -216,7 +216,7 @@ export default MyWebPart;
 
 ### Provisioning Mode
 
-The default mode for executing provisioning plans:
+The default mode for executing provisioning plans. `initialMode` selects the mode used when the dialog opens and is not treated as a controlled prop while the dialog remains open:
 
 ```tsx
 <ProvisioningDialog
@@ -225,7 +225,7 @@ The default mode for executing provisioning plans:
   context={context}
   planTemplate={myPlan}
   logger={logger}
-  mode="provisioning"
+  initialMode="provisioning"
 />
 ```
 
@@ -246,7 +246,7 @@ For drift detection without making changes:
   context={context}
   planTemplate={myPlan}
   logger={logger}
-  mode="compliance"
+  initialMode="compliance"
   complianceAutoRunOnOpen={true}
 />
 ```
@@ -268,7 +268,7 @@ When `enableComplianceCheck` is true, users can switch from provisioning to comp
   context={context}
   planTemplate={myPlan}
   logger={logger}
-  mode="provisioning"
+  initialMode="provisioning"
   enableComplianceCheck={true}
 />
 ```
@@ -620,7 +620,7 @@ const MyWebPart: React.FC<IMyWebPartProps> = (props) => {
             context={props.context}
             planTemplate={provisioningPlan}
             logger={logger}
-            mode="compliance"
+            initialMode="compliance"
             complianceAutoRunOnOpen={true}
             targetSiteUrl={props.targetSiteUrl}
           />

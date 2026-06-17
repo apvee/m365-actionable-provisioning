@@ -60,7 +60,7 @@ export type ProvisioningDialogStrings = Readonly<{
     confirmRunTitle: string;
     confirmRunMessage: string;
 
-    // Compliance mode strings (when the dialog is switched to mode="compliance")
+    // Compliance mode strings (when the dialog opens with initialMode="compliance" or is switched via the UI)
     complianceDefaultTitle: string;
     complianceHeaderLabel: string;
     runCheckLabel: string;
@@ -144,19 +144,19 @@ export type ProvisioningDialogProps = Readonly<{
 
     /**
      * If true, compliance checks run automatically when entering compliance mode.
-        * Defaults to true when the dialog opens in provisioning mode, and false when opened directly with mode="compliance".
-        * Note: entering compliance via the provisioning "Check" action may still force a run regardless of this default.
+     * Defaults to true when the dialog opens in provisioning mode, and false when opened directly with initialMode="compliance".
+     * Note: entering compliance via the provisioning "Check" action may still force a run regardless of this default.
      */
     complianceAutoRunOnOpen?: boolean;
 
-    /** Optional compliance policy used when running checks in mode="compliance". */
+    /** Optional compliance policy used when running checks in compliance mode. */
     compliancePolicy?: CompliancePolicy;
 
     /**
-     * Initial dialog mode (applied when the dialog opens); internally switchable via the UI.
+     * Initial dialog mode applied when the dialog opens.
      * This is not treated as a controlled prop while the dialog is already open.
      */
-    mode?: ProvisioningDialogMode;
+    initialMode?: ProvisioningDialogMode;
 
     /** Optional localized strings overrides. */
     strings?: Partial<ProvisioningDialogStrings>;

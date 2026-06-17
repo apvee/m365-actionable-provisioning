@@ -302,7 +302,7 @@ export const PropertyPaneProvisioningFieldView: React.FC<PropertyPaneProvisionin
         title={dialogTitle}
         description={dialogDescription}
         targetSiteUrl={targetSiteUrl}
-        mode={mode === 'compliance' ? 'compliance' : 'provisioning'}
+        initialMode={mode === 'compliance' ? 'compliance' : 'provisioning'}
         enableComplianceCheck={false}
         complianceAutoRunOnOpen={mode === 'compliance' ? true : (mode !== 'deprovision' && props.complianceAutoRunOnOpen)}
         confirmRun={mode === 'deprovision' && props.confirmDeprovisionRun}

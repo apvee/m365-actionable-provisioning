@@ -80,7 +80,7 @@ const TestProvisioning: React.FC<ITestProvisioningProps> = (props) => {
             context={props.context}
             planTemplate={examplePlan}
             logger={logger}
-            mode="compliance"
+            initialMode="compliance"
             complianceAutoRunOnOpen={true}
             targetSiteUrl={props.provisioningSiteUrl}
           />

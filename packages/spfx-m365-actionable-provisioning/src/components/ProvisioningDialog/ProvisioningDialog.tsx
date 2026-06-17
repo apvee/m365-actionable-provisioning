@@ -126,7 +126,7 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
     enableComplianceCheck,
     complianceAutoRunOnOpen,
     compliancePolicy,
-    mode,
+    initialMode: initialModeProp,
     strings,
     confirmRun,
 }) => {
@@ -139,19 +139,19 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = ({
         ...DEFAULT_STRINGS,
         ...(strings ?? {}),
     } satisfies ProvisioningDialogStrings), [strings]);
-    const initialMode: ProvisioningDialogMode = mode ?? 'provisioning';
+    const initialMode: ProvisioningDialogMode = initialModeProp ?? 'provisioning';
 
     // Mode-aware default title: use explicit prop, or fall back to mode-based default
     const effectiveTitle = React.useMemo(() => {
         if (title !== undefined) return title;
-        return (mode ?? 'provisioning') === 'compliance' ? s.complianceDefaultTitle : s.defaultTitle;
-    }, [title, mode, s.complianceDefaultTitle, s.defaultTitle]);
+        return initialMode === 'compliance' ? s.complianceDefaultTitle : s.defaultTitle;
+    }, [title, initialMode, s.complianceDefaultTitle, s.defaultTitle]);
 
     // Mode-aware default description: use explicit prop, or fall back to mode-based default
     const effectiveDescription = React.useMemo(() => {
         if (description !== undefined) return description;
-        return (mode ?? 'provisioning') === 'compliance' ? s.complianceDefaultDescription : s.provisioningDefaultDescription;
-    }, [description, mode, s.complianceDefaultDescription, s.provisioningDefaultDescription]);
+        return initialMode === 'compliance' ? s.complianceDefaultDescription : s.provisioningDefaultDescription;
+    }, [description, initialMode, s.complianceDefaultDescription, s.provisioningDefaultDescription]);
 
     // Dialog state (reducer pattern)
     const [state, dispatch] = React.useReducer(
