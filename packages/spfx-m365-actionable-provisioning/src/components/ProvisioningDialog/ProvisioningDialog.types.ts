@@ -167,8 +167,8 @@ export type ProvisioningDialogProps = Readonly<{
 
 /** @internal */
 export type ProvisioningDialogSessionProps = Omit<ProvisioningDialogProps, 'open' | 'onClose'> & Readonly<{
-    open: boolean;
     onClose: () => void;
+    disposeRequested: boolean;
     defaultStrings: ProvisioningDialogStrings;
     registerCloseHandler: (handler: (() => void) | undefined) => void;
 }>;

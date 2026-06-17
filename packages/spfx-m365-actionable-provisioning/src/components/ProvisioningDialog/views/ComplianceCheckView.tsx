@@ -58,7 +58,6 @@ export const ComplianceCheckView: React.FC<ComplianceCheckViewProps> = ({
     complianceReport,
     isPristine,
     isChecking,
-    isClosing,
     uiError,
     openLogItems,
     onOpenLogItemsChange,
@@ -69,9 +68,6 @@ export const ComplianceCheckView: React.FC<ComplianceCheckViewProps> = ({
 
     // Build KPIs from either the final report or the live snapshot
     const displayedKpis = React.useMemo(() => {
-        // Suppress badge display during close animation
-        if (isClosing) return undefined;
-
         // If we have a completed report and snapshot shows completed, use report data
         if (complianceReport && compliance?.status === 'completed') {
             return {
@@ -123,7 +119,7 @@ export const ComplianceCheckView: React.FC<ComplianceCheckViewProps> = ({
         }
 
         return undefined;
-    }, [complianceReport, compliance, isChecking, isClosing, strings]);
+    }, [complianceReport, compliance, isChecking, strings]);
 
     // Status badge (memoized)
     const statusBadge = React.useMemo<KpiBadgeSpec | undefined>(() => {

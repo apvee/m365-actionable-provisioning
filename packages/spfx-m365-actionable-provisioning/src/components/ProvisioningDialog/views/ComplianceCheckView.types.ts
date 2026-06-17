@@ -54,8 +54,6 @@ export type ComplianceCheckViewProps = Readonly<{
     isPristine: boolean;
     /** Whether compliance check is currently running */
     isChecking: boolean;
-    /** Whether the dialog close animation is in progress (suppresses badge display) */
-    isClosing: boolean;
     /** UI-level error to display */
     uiError: ProvisioningDialogUiError | undefined;
     /** Currently open log items (controlled) */

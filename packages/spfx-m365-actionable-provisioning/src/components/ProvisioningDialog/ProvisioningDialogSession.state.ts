@@ -16,10 +16,9 @@ export type ProvisioningDialogUiError = Readonly<{ title: string; message: strin
  * - Provisioning run state (in-flight flag, UI errors)
  * - UI preferences (log accordion state, confirmation dialog)
  * - Compliance check state (checking flag, results, errors)
- * - Close animation state (isClosing flag)
  *
  * All state changes flow through the provisioningDialogSessionReducer via dispatch.
- * Ref-based bookkeeping (completion signals, timer tokens) lives outside this state.
+ * Ref-based bookkeeping (completion signals) lives outside this state.
  */
 export type ProvisioningDialogSessionState = Readonly<{
     /** Current active mode: 'provisioning' or 'compliance' */
@@ -45,30 +44,20 @@ export type ProvisioningDialogSessionState = Readonly<{
     complianceIsChecking: boolean;
     /** User-facing error for compliance mode */
     complianceError: ProvisioningDialogUiError | undefined;
-
-    /** Whether the dialog close animation is in progress (suppresses badge display) */
-    isClosing: boolean;
 }>;
 
 /**
  * Discriminated union of all actions that can modify ProvisioningDialogSessionState.
  *
  * Action categories:
- * - Lifecycle: OPEN_ALIGN, CLOSE_HARD_RESET, SET_CLOSING
  * - Mode switching: SET_ACTIVE_MODE, SET_CAN_GO_BACK
  * - Provisioning: SET_RUN_IN_FLIGHT, SET_UI_ERROR
  * - UI preferences: SET_OPEN_LOG_ITEMS, SET_CONFIRM_OPEN, SET_COMPLIANCE_OPEN_LOG_ITEMS
  * - Compliance: COMPLIANCE_RESET_UI, COMPLIANCE_START, COMPLIANCE_SET_RESULT, COMPLIANCE_SET_ERROR, COMPLIANCE_SET_CHECKING
  */
 export type ProvisioningDialogSessionAction =
-    /** Aligns dialog state when opening - sets mode and resets navigation flag */
-    | Readonly<{ type: 'OPEN_ALIGN'; initialMode: ProvisioningDialogMode }>
-    /** Complete state reset when dialog closes - returns to initial state */
-    | Readonly<{ type: 'CLOSE_HARD_RESET'; initialMode: ProvisioningDialogMode; defaultOpenLogItems: ReadonlyArray<string> }>
-    /** Marks dialog as closing (suppresses badge display during close animation) */
-    | Readonly<{ type: 'SET_CLOSING'; value: boolean }>
     /** Switches between provisioning and compliance modes */
-    | Readonly<{ type: 'SET_ACTIVE_MODE'; mode: ProvisioningDialogMode }>
+    Readonly<{ type: 'SET_ACTIVE_MODE'; mode: ProvisioningDialogMode }>
     /** Enables/disables back navigation from compliance to provisioning */
     | Readonly<{ type: 'SET_CAN_GO_BACK'; value: boolean }>
     /** Marks provisioning run as started/completed */
@@ -114,8 +103,6 @@ export const buildInitialProvisioningDialogSessionState = (args: Readonly<{ init
         complianceReport: undefined,
         complianceIsChecking: false,
         complianceError: undefined,
-
-        isClosing: false,
     };
 };
 
@@ -140,36 +127,6 @@ export const buildInitialProvisioningDialogSessionState = (args: Readonly<{ init
  */
 export const provisioningDialogSessionReducer = (state: ProvisioningDialogSessionState, action: ProvisioningDialogSessionAction): ProvisioningDialogSessionState => {
     switch (action.type) {
-        /**
-         * OPEN_ALIGN: Called when dialog opens.
-         * - Sets activeMode to match incoming prop
-         * - Resets navigation flag (can't go back yet)
-         * - Does NOT reset other state (preserves any cached data)
-         */
-        case 'OPEN_ALIGN':
-            return {
-                ...state,
-                activeMode: action.initialMode,
-                canGoBackFromCompliance: false,
-            };
-
-        /**
-         * CLOSE_HARD_RESET: Called after dialog close animation completes.
-         * - Returns to completely fresh initial state
-         * - Clears all cached results, errors, and preferences
-         * - Ensures next open starts clean
-         */
-        case 'CLOSE_HARD_RESET':
-            return buildInitialProvisioningDialogSessionState({ initialMode: action.initialMode, defaultOpenLogItems: action.defaultOpenLogItems });
-
-        /**
-         * SET_CLOSING: Marks dialog as entering close animation.
-         * - Set true at start of handleClose to suppress badge display
-         * - Automatically reset to false by CLOSE_HARD_RESET (via buildInitialProvisioningDialogSessionState)
-         */
-        case 'SET_CLOSING':
-            return { ...state, isClosing: action.value };
-
         /**
          * SET_ACTIVE_MODE: Switches between provisioning and compliance modes.
          * - Only changes the activeMode field

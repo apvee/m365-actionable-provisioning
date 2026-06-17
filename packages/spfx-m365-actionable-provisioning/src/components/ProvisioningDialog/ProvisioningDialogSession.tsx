@@ -29,8 +29,8 @@ import { useProvisioningDialogActions } from './hooks/useProvisioningDialogActio
 
 export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps> = (props) => {
     const {
-        open,
         onClose,
+        disposeRequested,
         registerCloseHandler,
         onProvisioningCompleted,
         context,
@@ -76,14 +76,12 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
             buildInitialProvisioningDialogSessionState({ initialMode, defaultOpenLogItems })
     );
 
-    // Engine (uses reset key from orchestration hook)
-    const [localEngineResetKey, setLocalEngineResetKey] = React.useState(0);
+    // Engine state is reset by remounting this session when the dialog closes.
     const { snapshot, run, cancel, checkCompliance } = useSPFxProvisioningEngine({
         context,
         targetSiteUrl: normalizedTargetSiteUrl,
         planTemplate,
         logger,
-        resetKey: localEngineResetKey,
     });
 
     const { summary, activityEntries } = useProvisioningDerivedState(snapshot);
@@ -95,7 +93,6 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
 
     // Orchestration hook (manages refs, lifecycle, action handlers)
     const {
-        engineResetKey,
         handleClose,
         handleRun,
         handleRunClick,
@@ -105,8 +102,7 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
         switchToProvisioning,
         canOpenCompliance: baseCanOpenCompliance,
     } = useProvisioningDialogActions({
-        open,
-        initialMode,
+        disposeRequested,
         normalizedTargetSiteUrl,
         defaultOpenLogItems,
         complianceAutoRunOnOpen,
@@ -135,11 +131,6 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
         return () => registerCloseHandler(undefined);
     }, [handleClose, registerCloseHandler]);
 
-    // Sync engine reset key from orchestration hook
-    React.useEffect(() => {
-        setLocalEngineResetKey(engineResetKey);
-    }, [engineResetKey]);
-
     // Compliance mode can only be opened if enableComplianceCheck is true
     const canOpenCompliance = Boolean(enableComplianceCheck) && baseCanOpenCompliance;
     const switchToCompliance = React.useCallback(() => {
@@ -149,8 +140,6 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
 
     // Derived UI state: final outcome for provisioning mode
     const finalOutcome = React.useMemo<ProvisioningRunOutcome | undefined>(() => {
-        // Suppress badge display during close animation
-        if (state.isClosing) return undefined;
         if (!snapshot) return undefined;
         if (snapshot.status === 'cancelled') return 'cancelled';
         if (snapshot.status === 'failed') return 'failed';
@@ -159,7 +148,7 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
             return failCount > 0 ? 'failed' : 'succeeded';
         }
         return undefined;
-    }, [snapshot, state.isClosing]);
+    }, [snapshot]);
 
     // Pristine state for provisioning mode
     const isPristine = !isRunning && !state.runInFlight && !finalOutcome && activityEntries.length === 0 && !state.uiError && !snapshot?.error;
@@ -332,7 +321,6 @@ export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps>
                     complianceReport={state.complianceReport}
                     isPristine={complianceIsPristine}
                     isChecking={state.complianceIsChecking}
-                    isClosing={state.isClosing}
                     uiError={state.complianceError}
                     openLogItems={state.complianceOpenLogItems}
                     onOpenLogItemsChange={handleComplianceOpenLogItemsChange}

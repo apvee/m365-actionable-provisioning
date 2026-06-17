@@ -4,16 +4,14 @@ import type { CompliancePolicy, ComplianceReport } from '@apvee/m365-actionable-
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
 import type { Logger } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningDialogSessionAction, ProvisioningDialogSessionState } from '../ProvisioningDialogSession.state';
-import type { ProvisioningCompletedEvent, ProvisioningDialogMode } from '../ProvisioningDialog.types';
+import type { ProvisioningCompletedEvent } from '../ProvisioningDialog.types';
 
 /**
  * Options for the useProvisioningDialogActions hook.
  */
 export type ProvisioningDialogActionsOptions = Readonly<{
-    /** Whether the dialog is currently open */
-    open: boolean;
-    /** Initial mode (provisioning or compliance) */
-    initialMode: ProvisioningDialogMode;
+    /** One-way signal that the mounted session is being disposed */
+    disposeRequested: boolean;
     /** Normalized target site URL */
     normalizedTargetSiteUrl: string | undefined;
     /** Default accordion open items */
@@ -65,9 +63,6 @@ export type ProvisioningDialogActionsOptions = Readonly<{
  * Return value from the useProvisioningDialogActions hook.
  */
 export type ProvisioningDialogActionsReturn = Readonly<{
-    /** Key to reset engine (increment to recreate) */
-    engineResetKey: number;
-
     /** Close dialog handler */
     handleClose: () => void;
     /** Run provisioning handler */

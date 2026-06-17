@@ -13,15 +13,14 @@ export type { ProvisioningDialogActionsOptions, ProvisioningDialogActionsReturn 
  *
  * @remarks
  * This hook manages:
- * - Ref-based bookkeeping (run tracking, completion signals, timer tokens)
- * - Lifecycle effects (open/close alignment, delayed reset)
+ * - Ref-based bookkeeping (run tracking, completion signals)
+ * - Lifecycle effects (unmount cleanup, completion handling)
  * - Action handlers (run, cancel, compliance check, mode switching)
  * - Auto-run compliance logic
  */
 export const useProvisioningDialogActions = (options: ProvisioningDialogActionsOptions): ProvisioningDialogActionsReturn => {
     const {
-        open,
-        initialMode,
+        disposeRequested,
         normalizedTargetSiteUrl,
         defaultOpenLogItems,
         complianceAutoRunOnOpen,
@@ -39,27 +38,30 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
         confirmRun,
     } = options;
 
-    // Engine reset key (increment to recreate engine)
-    const [engineResetKey, setEngineResetKey] = React.useState(0);
-
     // Refs for run/completion bookkeeping
     const runSiteUrlRef = React.useRef<string | undefined>(undefined);
     const awaitingCompletionRef = React.useRef(false);
     const completionEmittedRef = React.useRef(false);
+    const disposedRef = React.useRef(false);
+    const provisioningRunIdRef = React.useRef(0);
 
     // Refs for compliance auto-run
     const complianceAutoRunDoneRef = React.useRef(false);
     const complianceAutoRunRequestedRef = React.useRef(false);
 
-    // Ref for tracking previous open state
-    const prevOpenRef = React.useRef(open);
-
     // Ref for compliance run ID (invalidate stale runs)
     const checkRunIdRef = React.useRef(0);
 
-    // Refs for close reset delay
-    const closeResetTimerRef = React.useRef<number | undefined>(undefined);
-    const closeResetTokenRef = React.useRef(0);
+    const disposeSession = React.useCallback(() => {
+        if (disposedRef.current) return;
+
+        disposedRef.current = true;
+        provisioningRunIdRef.current += 1;
+        checkRunIdRef.current += 1;
+        awaitingCompletionRef.current = false;
+        completionEmittedRef.current = true;
+        cancel();
+    }, [cancel]);
 
     // Helper: resolve effective site URL
     const resolveEffectiveRunSiteUrl = React.useCallback((): string => {
@@ -69,6 +71,7 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
     // Helper: emit completion event if terminal state reached
     const emitCompletedIfTerminal = React.useCallback(
         (snap: EngineSnapshotTyped<ProvisioningResultLight>) => {
+            if (disposedRef.current) return;
             if (!awaitingCompletionRef.current) return;
 
             const status = snap.status;
@@ -102,72 +105,18 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
 
     // === LIFECYCLE EFFECTS ===
 
-    // Open/close alignment effect
-    React.useEffect(() => {
-        const wasOpen = prevOpenRef.current;
-        prevOpenRef.current = open;
-
-        if (!wasOpen && open) {
-            // Dialog is opening
-            closeResetTokenRef.current += 1;
-            if (closeResetTimerRef.current !== undefined) {
-                window.clearTimeout(closeResetTimerRef.current);
-                closeResetTimerRef.current = undefined;
-            }
-            complianceAutoRunDoneRef.current = false;
-            dispatch({ type: 'OPEN_ALIGN', initialMode });
-            return;
-        }
-
-        if (wasOpen && !open) {
-            // Dialog is closing
-            cancel();
-            closeResetTokenRef.current += 1;
-            const token = closeResetTokenRef.current;
-
-            if (closeResetTimerRef.current !== undefined) {
-                window.clearTimeout(closeResetTimerRef.current);
-                closeResetTimerRef.current = undefined;
-            }
-
-            // Delay reset to allow close animation to complete
-            closeResetTimerRef.current = window.setTimeout(() => {
-                if (token !== closeResetTokenRef.current) return;
-                if (prevOpenRef.current) return;
-
-                // Invalidate any in-flight compliance run
-                checkRunIdRef.current += 1;
-
-                // Reset completion bookkeeping
-                runSiteUrlRef.current = undefined;
-                awaitingCompletionRef.current = false;
-                completionEmittedRef.current = false;
-
-                // Reset compliance auto-run flags
-                complianceAutoRunDoneRef.current = false;
-                complianceAutoRunRequestedRef.current = false;
-
-                // Dispatch hard reset
-                dispatch({ type: 'CLOSE_HARD_RESET', initialMode, defaultOpenLogItems });
-
-                // Recreate engine
-                setEngineResetKey((k) => k + 1);
-
-                closeResetTimerRef.current = undefined;
-            }, 300);
-        }
-    }, [cancel, defaultOpenLogItems, dispatch, initialMode, open]);
-
-    // Cleanup timer on unmount
+    // Invalidate async work when the mounted dialog session is disposed.
     React.useEffect(() => {
         return () => {
-            closeResetTokenRef.current += 1;
-            if (closeResetTimerRef.current !== undefined) {
-                window.clearTimeout(closeResetTimerRef.current);
-                closeResetTimerRef.current = undefined;
-            }
+            disposeSession();
         };
-    }, []);
+    }, [disposeSession]);
+
+    // Parent-controlled close can leave the session mounted during exit animation.
+    React.useEffect(() => {
+        if (!disposeRequested) return;
+        disposeSession();
+    }, [disposeRequested, disposeSession]);
 
     // Completion signal effect
     React.useEffect(() => {
@@ -181,22 +130,17 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
     const handleClose = React.useCallback(() => {
         if (state.activeMode === 'provisioning') {
             if (isRunning || state.runInFlight) return;
-            // Mark as closing to suppress badge display during close animation
-            dispatch({ type: 'SET_CLOSING', value: true });
             onClose();
             return;
         }
 
-        // Mark as closing to suppress badge display during close animation
-        dispatch({ type: 'SET_CLOSING', value: true });
-
-        // Compliance mode
         if (state.complianceIsChecking) cancel();
         onClose();
-    }, [cancel, dispatch, isRunning, onClose, state.activeMode, state.complianceIsChecking, state.runInFlight]);
+    }, [cancel, isRunning, onClose, state.activeMode, state.complianceIsChecking, state.runInFlight]);
 
     // Run provisioning
     const handleRun = React.useCallback(async () => {
+        if (disposedRef.current) return;
         if (state.runInFlight) return;
 
         if (!normalizedTargetSiteUrl) {
@@ -208,6 +152,7 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
         }
 
         dispatch({ type: 'SET_UI_ERROR', error: undefined });
+        const runId = ++provisioningRunIdRef.current;
         runSiteUrlRef.current = resolveEffectiveRunSiteUrl();
         awaitingCompletionRef.current = true;
         completionEmittedRef.current = false;
@@ -215,14 +160,18 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
         dispatch({ type: 'SET_RUN_IN_FLIGHT', value: true });
         try {
             const finalSnapshot = await run();
+            if (disposedRef.current || runId !== provisioningRunIdRef.current) return;
             emitCompletedIfTerminal(finalSnapshot);
         } finally {
-            dispatch({ type: 'SET_RUN_IN_FLIGHT', value: false });
+            if (!disposedRef.current && runId === provisioningRunIdRef.current) {
+                dispatch({ type: 'SET_RUN_IN_FLIGHT', value: false });
+            }
         }
     }, [dispatch, emitCompletedIfTerminal, normalizedTargetSiteUrl, resolveEffectiveRunSiteUrl, run, strings.targetSiteMissingMessage, strings.targetSiteMissingTitle, state.runInFlight]);
 
     // Run click handler (may open confirm dialog)
     const handleRunClick = React.useCallback(() => {
+        if (disposedRef.current) return;
         if (state.runInFlight) return;
 
         if (!normalizedTargetSiteUrl) {
@@ -248,6 +197,7 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
 
     // Run compliance check
     const handleRunCompliance = React.useCallback(async () => {
+        if (disposedRef.current) return;
         if (state.complianceIsChecking) return;
 
         const runId = ++checkRunIdRef.current;
@@ -280,6 +230,7 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
 
     // Switch to compliance mode
     const switchToCompliance = React.useCallback(() => {
+        if (disposedRef.current) return;
         if (!canOpenCompliance) return;
         dispatch({ type: 'COMPLIANCE_RESET_UI', defaultOpenLogItems });
         complianceAutoRunRequestedRef.current = true;
@@ -290,6 +241,7 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
 
     // Switch to provisioning mode
     const switchToProvisioning = React.useCallback(() => {
+        if (disposedRef.current) return;
         if (state.complianceIsChecking) cancel();
         dispatch({ type: 'SET_CAN_GO_BACK', value: false });
         dispatch({ type: 'SET_ACTIVE_MODE', mode: 'provisioning' });
@@ -299,17 +251,15 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
 
     // Auto-run compliance when entering via Check button
     React.useEffect(() => {
-        if (!open) return;
         if (state.activeMode !== 'compliance') return;
         if (!complianceAutoRunRequestedRef.current) return;
 
         complianceAutoRunRequestedRef.current = false;
         handleRunCompliance().catch(() => undefined);
-    }, [handleRunCompliance, open, state.activeMode]);
+    }, [handleRunCompliance, state.activeMode]);
 
     // Auto-run compliance when opening directly in compliance mode
     React.useEffect(() => {
-        if (!open) return;
         if (state.activeMode !== 'compliance') return;
         if (complianceAutoRunOnOpen !== true) return;
         if (complianceAutoRunDoneRef.current) return;
@@ -319,10 +269,9 @@ export const useProvisioningDialogActions = (options: ProvisioningDialogActionsO
 
         complianceAutoRunDoneRef.current = true;
         handleRunCompliance().catch(() => undefined);
-    }, [complianceAutoRunOnOpen, handleRunCompliance, normalizedTargetSiteUrl, open, state.activeMode, state.complianceIsChecking]);
+    }, [complianceAutoRunOnOpen, handleRunCompliance, normalizedTargetSiteUrl, state.activeMode, state.complianceIsChecking]);
 
     return {
-        engineResetKey,
         handleClose,
         handleRun,
         handleRunClick,

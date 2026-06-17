@@ -92,6 +92,15 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = (props) => 
     const styles = useProvisioningDialogStyles();
     const closeHandlerRef = React.useRef<(() => void) | undefined>(undefined);
     const { open, ...sessionProps } = props;
+    const lastOpenValueRef = React.useRef(open);
+    const sessionGenerationRef = React.useRef(open ? 1 : 0);
+
+    if (lastOpenValueRef.current !== open) {
+        if (!lastOpenValueRef.current && open) {
+            sessionGenerationRef.current += 1;
+        }
+        lastOpenValueRef.current = open;
+    }
 
     const registerCloseHandler = React.useCallback((handler: (() => void) | undefined) => {
         closeHandlerRef.current = handler;
@@ -112,8 +121,9 @@ export const ProvisioningDialog: React.FC<ProvisioningDialogProps> = (props) => 
         >
             <DialogSurface className={styles.surface}>
                 <ProvisioningDialogSession
+                    key={sessionGenerationRef.current}
                     {...sessionProps}
-                    open={open}
+                    disposeRequested={!open}
                     defaultStrings={DEFAULT_STRINGS}
                     registerCloseHandler={registerCloseHandler}
                 />
