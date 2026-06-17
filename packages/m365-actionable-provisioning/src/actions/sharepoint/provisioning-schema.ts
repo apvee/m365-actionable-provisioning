@@ -15,6 +15,11 @@ import { z } from "zod";
 import type { ActionNode } from "../../core/action";
 
 import {
+  createSPContentTypeActionModule,
+  deleteSPContentTypeActionModule,
+  modifySPContentTypeActionModule,
+} from "./content-types";
+import {
   createSPListActionModule,
   deleteSPListActionModule,
   modifySPListActionModule,
@@ -48,6 +53,9 @@ export const sharePointRootActionSchemas = [
   createSPListActionModule.schema,
   modifySPListActionModule.schema,
   deleteSPListActionModule.schema,
+  createSPContentTypeActionModule.schema,
+  modifySPContentTypeActionModule.schema,
+  deleteSPContentTypeActionModule.schema,
 ] as const;
 
 /**

@@ -159,7 +159,7 @@ export class CreateSPListAction extends ActionDefinition<
       const list = web.lists.getById(found.Id);
       return compliant({
         resource: listName,
-        scopeDelta: { web, list },
+        scopeDelta: { web, list, webUrl: await resolveWebUrlString(web, "(scope)"), listName },
       });
     } catch (e) {
       return unverifiableError(listName, e);
@@ -229,6 +229,8 @@ export class CreateSPListAction extends ActionDefinition<
         {
           web,
           list: web.lists.getById(existing.Id),
+          webUrl: resolvedWebUrl,
+          listName,
         },
         structuralWarning ? [structuralWarning] : undefined
       );
@@ -288,6 +290,8 @@ export class CreateSPListAction extends ActionDefinition<
       {
         web,
         list: web.lists.getById(listId),
+        webUrl: resolvedWebUrl,
+        listName,
       }
     );
   }

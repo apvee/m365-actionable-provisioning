@@ -48,7 +48,7 @@ export const baseFieldTextSchema = z.object({
     validationFormula: z.string().optional(),
     validationMessage: z.string().optional(),
 
-    // Advanced: allow a fixed GUID when needed (optional)
+    // Advanced: field id hint. SharePoint may still return a different actual id.
     id: z.string().optional(),
 
     // View / form visibility (list-only, will be omitted for site columns)

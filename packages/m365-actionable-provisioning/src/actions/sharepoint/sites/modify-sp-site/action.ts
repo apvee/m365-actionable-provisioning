@@ -176,6 +176,8 @@ export class ModifySPSiteAction extends ActionDefinition<
                 scopeDelta: {
                     site: Site([spfi.site, siteUrl]),
                     web: rootWeb,
+                    siteUrl,
+                    webUrl: siteUrl,
                 },
             };
         }
@@ -190,6 +192,8 @@ export class ModifySPSiteAction extends ActionDefinition<
             scopeDelta: {
                 site: Site([spfi.site, siteUrl]),
                 web: rootWeb,
+                siteUrl,
+                webUrl: siteUrl,
             },
         };
     }

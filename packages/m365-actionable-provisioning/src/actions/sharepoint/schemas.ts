@@ -1,5 +1,24 @@
 // Public schema exports; ownership lives with each action module.
 export {
+  addSPContentTypeToListSchema,
+  addSPFieldToContentTypeSchema,
+  createSPContentTypeSchema,
+  deleteSPContentTypeSchema,
+  modifySPContentTypeFieldSchema,
+  modifySPContentTypeSchema,
+  removeSPContentTypeFromListSchema,
+  removeSPFieldFromContentTypeSchema,
+  type AddSPContentTypeToListPayload,
+  type AddSPFieldToContentTypePayload,
+  type CreateSPContentTypePayload,
+  type DeleteSPContentTypePayload,
+  type ModifySPContentTypeFieldPayload,
+  type ModifySPContentTypePayload,
+  type RemoveSPContentTypeFromListPayload,
+  type RemoveSPFieldFromContentTypePayload,
+} from "./content-types";
+
+export {
   addSPFieldSchema,
   type AddSPFieldPayload,
 } from "./fields/add-sp-field";
@@ -51,6 +70,7 @@ export {
 } from "./lists/enable-sp-list-rating";
 
 export { listSubactionSchema } from "./_composition/list-subactions-schema";
+export { contentTypeSubactionSchema } from "./_composition/content-type-subactions-schema";
 
 export {
   createSPSiteSchema,

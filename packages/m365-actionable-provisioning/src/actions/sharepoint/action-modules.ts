@@ -1,3 +1,13 @@
+import {
+  addSPContentTypeToListActionModule,
+  addSPFieldToContentTypeActionModule,
+  createSPContentTypeActionModule,
+  deleteSPContentTypeActionModule,
+  modifySPContentTypeActionModule,
+  modifySPContentTypeFieldActionModule,
+  removeSPContentTypeFromListActionModule,
+  removeSPFieldFromContentTypeActionModule,
+} from "./content-types";
 import { addSPFieldActionModule } from "./fields/add-sp-field";
 import { createSPSiteColumnActionModule } from "./fields/create-sp-site-column";
 import { deleteSPFieldActionModule } from "./fields/delete-sp-field";
@@ -18,9 +28,16 @@ export const sharePointActionModules = [
   modifySPListActionModule,
   deleteSPListActionModule,
   enableSPListRatingActionModule,
+  createSPContentTypeActionModule,
+  modifySPContentTypeActionModule,
+  deleteSPContentTypeActionModule,
+  addSPContentTypeToListActionModule,
+  removeSPContentTypeFromListActionModule,
+  addSPFieldToContentTypeActionModule,
+  modifySPContentTypeFieldActionModule,
+  removeSPFieldFromContentTypeActionModule,
   addSPFieldActionModule,
   createSPSiteColumnActionModule,
   modifySPFieldActionModule,
   deleteSPFieldActionModule,
 ] as const;
-

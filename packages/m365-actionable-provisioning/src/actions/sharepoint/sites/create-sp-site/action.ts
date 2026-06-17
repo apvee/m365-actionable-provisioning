@@ -118,7 +118,7 @@ export class CreateSPSiteAction extends ActionDefinition<
             const web = Web([spfi.web, siteUrl]);
             const site = Site([spfi.site, siteUrl]);
 
-            return { outcome: "compliant", resource: siteUrl, scopeDelta: { site, web } };
+            return { outcome: "compliant", resource: siteUrl, scopeDelta: { site, web, siteUrl, webUrl: siteUrl } };
         } catch (e) {
             return {
                 outcome: "unverifiable",
@@ -185,6 +185,8 @@ export class CreateSPSiteAction extends ActionDefinition<
                     scopeDelta: {
                         site: Site([spfi.site, targetUrl]),
                         web: Web([spfi.web, targetUrl]),
+                        siteUrl: targetUrl,
+                        webUrl: targetUrl,
                     }
                 };
             }
@@ -292,6 +294,8 @@ export class CreateSPSiteAction extends ActionDefinition<
                 scopeDelta: {
                     site: Site([spfi.site, response.SiteUrl]),
                     web: Web([spfi.web, response.SiteUrl]),
+                    siteUrl: response.SiteUrl,
+                    webUrl: response.SiteUrl,
                 }
             };
 

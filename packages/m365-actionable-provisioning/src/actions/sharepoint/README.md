@@ -14,11 +14,23 @@ This module provides a declarative approach to SharePoint provisioning through:
 
 SharePoint actions follow a deliberate create/modify/delete split:
 
-- `createSPSite`, `createSPList`, `addSPField`, and `createSPSiteColumn` ensure that the target resource exists.
-- `modifySPSite`, `modifySPList`, and `modifySPField` enforce mutable configuration on existing resources.
-- `deleteSPSite`, `deleteSPList`, and `deleteSPField` ensure absence.
+- `createSPSite`, `createSPList`, `addSPField`, `createSPSiteColumn`, and `createSPContentType` ensure that the target resource exists.
+- `modifySPSite`, `modifySPList`, `modifySPField`, `modifySPContentType`, and `modifySPContentTypeField` enforce mutable configuration on existing resources.
+- `deleteSPSite`, `deleteSPList`, `deleteSPField`, `deleteSPContentType`, and `removeSPFieldFromContentType` ensure absence.
 
 Create actions do not reconcile mutable properties on already-existing resources. For example, an existing list with the requested `listName` but a different `Title` still satisfies the create action. Add a `modifySPList` action when the title must be enforced.
+
+`listName` identifies lists by stable root/name (`RootFolder/Name` in SharePoint REST and `name` in Microsoft Graph). Do not use mutable `Title` or Graph `displayName` as list identity.
+
+## Content Types
+
+Content type actions are Graph-first and require `graphClient`.
+
+- Required Graph permission: `Sites.Manage.All`, or a higher permission such as `Sites.FullControl.All`.
+- `createSPContentType` accepts `name` and `parentId`; Microsoft Graph returns the content type id.
+- `contentTypeId` wins over `contentTypeName` when both are supplied.
+- Field-to-content-type actions require existing site columns; they do not create fields inline.
+- `setSPListDefaultContentType` is not registered in V1.
 
 Compliance for create actions checks existence and structural compatibility. It does not fail because mutable properties differ. Structural collisions, such as an existing field with a different SharePoint field type, can return `non_compliant` because descendant actions may otherwise operate against the wrong shape.
 
@@ -29,11 +41,12 @@ packages/m365-actionable-provisioning/src/actions/sharepoint/
 ├── index.ts          # Public API barrel export
 ├── utils/            # General utilities (error handling, web resolution)
 ├── domains/          # SharePoint domain helpers
-├── _composition/     # Site/list subaction schema composition
+├── _composition/     # Site/list/content-type subaction schema composition
 ├── _shared/          # Cross-action runtime/schema utilities
 ├── sites/            # Site action modules
 ├── lists/            # List action modules
-└── fields/           # Field action modules
+├── fields/           # Field action modules
+└── content-types/    # Graph-backed content type action modules
 ```
 
 ## Files
@@ -48,7 +61,7 @@ packages/m365-actionable-provisioning/src/actions/sharepoint/
 |--------|-------------|
 | utils/ | General utilities (error handling, web resolution) |
 | domains/ | SharePoint domain helpers used by action handlers |
-| sites/, lists/, fields/ | Co-located action modules, definitions and schema |
+| sites/, lists/, fields/, content-types/ | Co-located action modules, definitions and schema |
 | _composition/ | Parent/child action schema composition |
 | _shared/ | Cross-action runtime/schema utilities |
 

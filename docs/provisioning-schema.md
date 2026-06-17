@@ -9,6 +9,7 @@ This document provides a complete reference for the `@apvee/m365-actionable-prov
 - [Site Actions](#site-actions)
 - [List Actions](#list-actions)
 - [Field Actions](#field-actions)
+- [Content Type Actions](#content-type-actions)
 - [Schema Exports](#schema-exports)
 - [Complete Examples](#complete-examples)
 - [Best Practices](#best-practices)
@@ -44,6 +45,8 @@ Create action payload properties are used when creating a missing resource. If t
 ```
 
 Create compliance still detects structural collisions when possible. For example, an existing field with the same `fieldName` but an incompatible SharePoint field type is not treated as a clean create match.
+
+List identity uses `listName`, the stable list root/name. Mutable list display values such as SharePoint `Title` or Microsoft Graph `displayName` are not used to identify lists.
 
 A provisioning plan is a JSON object validated by Zod schemas. The root structure includes metadata and an array of actions.
 
@@ -137,6 +140,59 @@ Reference parameters in any string field using `{parameter:KeyName}`:
 | Reuse | Extract repeated URLs and names into parameters |
 | Environment | Use parameters for tenant-specific values |
 | Lists | Parameterize list internal names for consistency |
+
+---
+
+## Content Type Actions
+
+Content type actions use Microsoft Graph. Runtime clients must include `graphClient`, and Microsoft Graph must grant `Sites.Manage.All` or a higher permission such as `Sites.FullControl.All`.
+
+`createSPContentType` does not accept a custom content type id. Provide `name` and `parentId`; Microsoft Graph returns the generated id. Reference actions accept `contentTypeId` or `contentTypeName`; `contentTypeId` wins when both are supplied.
+
+Field-to-content-type actions require existing site columns. Create the site column first, then attach it to the content type:
+
+```typescript
+{
+  verb: "createSPSiteColumn",
+  fieldType: "Text",
+  fieldName: "CustomerCode",
+  displayName: "Customer Code"
+},
+{
+  verb: "createSPContentType",
+  name: "Customer Document",
+  parentId: "0x0101",
+  subactions: [
+    {
+      verb: "addSPFieldToContentType",
+      fieldName: "CustomerCode",
+      required: true
+    }
+  ]
+}
+```
+
+When a site column is created in the same provisioning run, reference it by `fieldName` from content type field actions. The engine propagates the actual SharePoint field id created or found by `createSPSiteColumn` and uses that id internally, avoiding Graph name lookup timing differences without relying on caller-supplied GUIDs.
+
+Bind a site content type to a list or document library through a list subaction:
+
+```typescript
+{
+  verb: "createSPList",
+  listName: "documents",
+  title: "Documents",
+  template: 101,
+  enableContentTypes: true,
+  subactions: [
+    {
+      verb: "addSPContentTypeToList",
+      contentTypeName: "Customer Document"
+    }
+  ]
+}
+```
+
+`setSPListDefaultContentType` is not registered in V1. Default content type ordering remains spike-gated until a reliable implementation path is proven.
 
 ---
 
@@ -607,7 +663,7 @@ Creates a site column (field at the web level). Use this within `modifySPSite` s
   required?: boolean,      // Whether field is required
   description?: string,    // Field description
   hidden?: boolean,        // Hide from site column gallery
-  id?: string,             // Fixed GUID (for stable reference)
+  id?: string,             // Advanced field id hint; do not use as a content type reference
   
   // Validation
   validationFormula?: string,    // Validation formula
@@ -625,7 +681,7 @@ Creates a site column (field at the web level). Use this within `modifySPSite` s
 | `fieldName` | `string` | ✓ | Internal name (no spaces, no special chars) |
 | `displayName` | `string` | ✓ | Display name shown in UI |
 | `group` | `string` | - | Site column group for organization |
-| `id` | `string` | - | Fixed GUID for stable reference across environments |
+| `id` | `string` | - | Advanced SharePoint field id hint. Do not use it as the content type column reference; use `fieldName` in same-run content type actions so the engine can use the actual created/found id. |
 
 **Example:**
 
@@ -691,7 +747,7 @@ All field types share these base properties:
   required?: boolean,      // Required field
   description?: string,    // Field description
   hidden?: boolean,        // Hidden field
-  id?: string,             // Fixed GUID (advanced)
+  id?: string,             // Advanced field id hint
   
   // List-only properties (ignored for site columns)
   addToDefaultView?: boolean,

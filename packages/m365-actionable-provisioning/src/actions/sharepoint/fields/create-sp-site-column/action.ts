@@ -42,9 +42,10 @@ export class CreateSPSiteColumnAction extends ActionDefinition<
     readonly requiredClients = ["spfi"] as const;
 
     async handler(ctx: M365RuntimeContext<CreateSPSiteColumnPayload>): Promise<M365ActionResult> {
+        const { list: _list, ...siteScope } = ctx.scopeIn;
         return handleFieldCreation({
             def: ctx.action.payload,
-            scopeIn: ctx.scopeIn,
+            scopeIn: siteScope,
             logger: ctx.logger,
         });
     }
@@ -52,6 +53,7 @@ export class CreateSPSiteColumnAction extends ActionDefinition<
     async checkCompliance(
         ctx: ComplianceRuntimeContext<M365Scope, CreateSPSiteColumnPayload, M365Clients>
     ): Promise<ComplianceActionCheckResult<M365Scope>> {
-        return checkFieldCompliance(ctx);
+        const { list: _list, ...siteScope } = ctx.scopeIn;
+        return checkFieldCompliance({ ...ctx, scopeIn: siteScope });
     }
 }

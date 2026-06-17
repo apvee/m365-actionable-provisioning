@@ -7,10 +7,14 @@ import { createProvisioningPlanSchema, type BaseProvisioningPlan } from "../src/
 import type { PermissionCheckResult } from "../src/core/permissions";
 import { sharePointActionDefinitions, sharePointActionsSchema } from "../src/actions/sharepoint";
 import { sharePointActionModules } from "../src/actions/sharepoint/action-modules";
+import { contentTypeSubactionSchema } from "../src/actions/sharepoint/_composition/content-type-subactions-schema";
 import { listSubactionSchema } from "../src/actions/sharepoint/_composition/list-subactions-schema";
 import { siteSubactionSchema } from "../src/actions/sharepoint/_composition/site-subactions-schema";
+import { CreateSPSiteColumnAction } from "../src/actions/sharepoint/fields/create-sp-site-column";
+import { resolveFieldReferenceFromScope } from "../src/actions/sharepoint/domains/content-types";
 import { checkFieldStructuralCompatibility } from "../src/actions/sharepoint/domains/fields/field-structural-compatibility";
 import { checkListStructuralCompatibility } from "../src/actions/sharepoint/domains/lists/list-structural-compatibility";
+import type { M365Clients, M365Scope, ProvisioningResultLight } from "../src/runtime";
 
 type SmokeScope = {
   parentReady?: boolean;
@@ -232,6 +236,27 @@ function assertSharePointCatalogComposition(): void {
   ]);
   assert(!rootField.success, "SharePoint root schema should reject list-only field actions");
 
+  const rootContentType = sharePointActionsSchema.safeParse([
+    {
+      verb: "createSPContentType",
+      name: "Smoke Document",
+      parentId: "0x0101",
+    },
+  ]);
+  assert(rootContentType.success, "SharePoint root schema should accept createSPContentType");
+
+  const contentTypeField = contentTypeSubactionSchema.safeParse({
+    verb: "addSPFieldToContentType",
+    fieldName: "SmokeText",
+  });
+  assert(contentTypeField.success, "Content type subaction schema should accept addSPFieldToContentType");
+
+  const contentTypeFieldById = contentTypeSubactionSchema.safeParse({
+    verb: "addSPFieldToContentType",
+    fieldId: "5f5b251f-4b80-47f3-a847-0f2f8f9d6b01",
+  });
+  assert(contentTypeFieldById.success, "Content type subaction schema should accept addSPFieldToContentType by fieldId");
+
   const listField = listSubactionSchema.safeParse({
     verb: "addSPField",
     fieldType: "Text",
@@ -275,12 +300,49 @@ function assertSharePointCatalogComposition(): void {
   });
   assert(nestedList.success, "SharePoint site subaction schema should accept list actions with field subactions");
 
+  const nestedContentType = siteSubactionSchema.safeParse({
+    verb: "createSPContentType",
+    name: "Smoke Nested Document",
+    parentId: "0x0101",
+    subactions: [
+      {
+        verb: "addSPFieldToContentType",
+        fieldId: "5f5b251f-4b80-47f3-a847-0f2f8f9d6b01",
+      },
+    ],
+  });
+  assert(nestedContentType.success, "SharePoint site subaction schema should accept content type actions with field subactions");
+
+  const listContentTypeBinding = listSubactionSchema.safeParse({
+    verb: "addSPContentTypeToList",
+    contentTypeName: "Smoke Document",
+  });
+  assert(listContentTypeBinding.success, "SharePoint list subaction schema should accept content type binding");
+
+  const defaultContentType = listSubactionSchema.safeParse({
+    verb: "setSPListDefaultContentType",
+    contentTypeName: "Smoke Document",
+  });
+  assert(!defaultContentType.success, "SharePoint list subaction schema should not expose setSPListDefaultContentType until its spike passes");
+
   const listCreatesList = listSubactionSchema.safeParse({
     verb: "createSPList",
     listName: "InvalidNestedList",
     title: "Invalid Nested List",
   });
   assert(!listCreatesList.success, "SharePoint list subaction schema should reject nested list creation");
+}
+
+function assertContentTypeFieldReferenceScopeResolution(): void {
+  const resolved = resolveFieldReferenceFromScope(
+    { siteColumnIdsByFieldName: { SmokeText: "5f5b251f-4b80-47f3-a847-0f2f8f9d6b01" } },
+    { fieldName: "SmokeText" }
+  );
+
+  assert(
+    resolved.fieldId === "5f5b251f-4b80-47f3-a847-0f2f8f9d6b01",
+    "Content type field references should use propagated site column ids when available"
+  );
 }
 
 function assertFieldStructuralCompatibility(): void {
@@ -506,13 +568,96 @@ async function assertComplianceCancelContract(): Promise<void> {
   );
 }
 
+async function assertSharePointGraphClientPreflight(): Promise<void> {
+  const engine = new ProvisioningEngine<M365Scope, ProvisioningResultLight, M365Clients>({
+    clients: {},
+    initialScope: { siteUrl: "https://contoso.sharepoint.com/sites/smoke" },
+    planTemplate: {
+      actions: [
+        {
+          verb: "createSPContentType",
+          name: "Smoke Document",
+          parentId: "0x0101",
+        },
+      ],
+    },
+    logger,
+    definitions: sharePointActionDefinitions,
+    provisioningSchema: createProvisioningPlanSchema(sharePointActionsSchema),
+  });
+
+  const snapshot = await engine.run();
+  assert(snapshot.status === "failed", "Missing graphClient should fail content type actions during preflight");
+  assert(
+    snapshot.out.trace.byPath["1"]?.error?.code === "MISSING_CLIENT",
+    "Missing graphClient for content type action should be reported as MISSING_CLIENT"
+  );
+}
+
+async function assertCreateSPSiteColumnIgnoresStaleListScope(): Promise<void> {
+  const fieldId = "5f5b251f-4b80-47f3-a847-0f2f8f9d6b01";
+  let webAddTextCalled = false;
+
+  const missingFieldAccessor = {
+    select: () => async () => {
+      throw new Error("not found");
+    },
+  };
+
+  const web = {
+    fields: {
+      getByInternalNameOrTitle: () => missingFieldAccessor,
+      addText: async () => {
+        webAddTextCalled = true;
+        return { Id: fieldId };
+      },
+    },
+  };
+
+  const list = {
+    fields: {
+      getByInternalNameOrTitle: () => missingFieldAccessor,
+      addText: async () => {
+        throw new Error("createSPSiteColumn should not target list.fields when web is available");
+      },
+    },
+  };
+
+  const action = new CreateSPSiteColumnAction();
+  const result = await action.handler({
+    scopeIn: { web, list } as unknown as M365Scope,
+    clients: {},
+    out: { byAction: {}, trace: { status: "idle", byPath: {}, order: [] } },
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPSiteColumn",
+      payload: {
+        verb: "createSPSiteColumn",
+        fieldType: "Text",
+        fieldName: "SmokeSiteColumn",
+        displayName: "SmokeSiteColumn",
+      },
+    },
+  });
+
+  assert(webAddTextCalled, "createSPSiteColumn should target web.fields even when stale list scope exists");
+  assert(
+    result.scopeDelta?.siteColumnIdsByFieldName?.SmokeSiteColumn === fieldId,
+    "createSPSiteColumn should propagate the created site column id"
+  );
+}
+
 async function main(): Promise<void> {
   assertSharePointCatalogComposition();
+  assertContentTypeFieldReferenceScopeResolution();
   assertFieldStructuralCompatibility();
   assertListStructuralCompatibility();
   assertJsonResultContract();
   assertLoggerContract();
   await assertComplianceCancelContract();
+  await assertCreateSPSiteColumnIgnoresStaleListScope();
+  await assertSharePointGraphClientPreflight();
 
   const spOnly = await runSmoke({
     clients: { spfi: { marker: "spfi" } },

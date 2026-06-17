@@ -233,15 +233,6 @@ const createProvisioningActivityRenderers = (s: ProvisioningActivityEntryStrings
         </>
       );
     },
-
-    renderExtra: (e, styles: LogItemStyles) => {
-      if (e.status !== 'failed' || !e.errorMessage) return null;
-      return (
-        <div className={styles.error}>
-          <Text size={200}>{e.errorMessage}</Text>
-        </div>
-      );
-    },
   };
 };
 

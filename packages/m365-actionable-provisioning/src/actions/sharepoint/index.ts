@@ -57,6 +57,31 @@ export { deleteSPListSchema, type DeleteSPListPayload } from "./lists/delete-sp-
 export { EnableSPListRatingAction } from "./lists";
 export { enableSPListRatingSchema, type EnableSPListRatingPayload } from "./lists/enable-sp-list-rating";
 
+// Content type actions - using direct imports
+export { CreateSPContentTypeAction } from "./content-types";
+export { createSPContentTypeSchema, type CreateSPContentTypePayload } from "./content-types/create-sp-content-type";
+
+export { ModifySPContentTypeAction } from "./content-types";
+export { modifySPContentTypeSchema, type ModifySPContentTypePayload } from "./content-types/modify-sp-content-type";
+
+export { DeleteSPContentTypeAction } from "./content-types";
+export { deleteSPContentTypeSchema, type DeleteSPContentTypePayload } from "./content-types/delete-sp-content-type";
+
+export { AddSPFieldToContentTypeAction } from "./content-types";
+export { addSPFieldToContentTypeSchema, type AddSPFieldToContentTypePayload } from "./content-types/add-sp-field-to-content-type";
+
+export { ModifySPContentTypeFieldAction } from "./content-types";
+export { modifySPContentTypeFieldSchema, type ModifySPContentTypeFieldPayload } from "./content-types/modify-sp-content-type-field";
+
+export { RemoveSPFieldFromContentTypeAction } from "./content-types";
+export { removeSPFieldFromContentTypeSchema, type RemoveSPFieldFromContentTypePayload } from "./content-types/remove-sp-field-from-content-type";
+
+export { AddSPContentTypeToListAction } from "./content-types";
+export { addSPContentTypeToListSchema, type AddSPContentTypeToListPayload } from "./content-types/add-sp-content-type-to-list";
+
+export { RemoveSPContentTypeFromListAction } from "./content-types";
+export { removeSPContentTypeFromListSchema, type RemoveSPContentTypeFromListPayload } from "./content-types/remove-sp-content-type-from-list";
+
 // Field actions - using direct imports
 export { AddSPFieldAction } from "./fields";
 export { addSPFieldSchema, type AddSPFieldPayload } from "./fields/add-sp-field";

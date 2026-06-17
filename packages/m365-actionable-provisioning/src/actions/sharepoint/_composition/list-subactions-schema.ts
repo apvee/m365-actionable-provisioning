@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+import {
+  addSPContentTypeToListActionModule,
+  removeSPContentTypeFromListActionModule,
+} from "../content-types";
 import { addSPFieldActionModule } from "../fields/add-sp-field";
 import { deleteSPFieldActionModule } from "../fields/delete-sp-field";
 import { modifySPFieldActionModule } from "../fields/modify-sp-field";
@@ -10,7 +14,8 @@ const listSubactionSchemas = [
   modifySPFieldActionModule.schemasByPlacement.listSubaction,
   deleteSPFieldActionModule.schemasByPlacement.listSubaction,
   enableSPListRatingActionModule.schema,
+  addSPContentTypeToListActionModule.schema,
+  removeSPContentTypeFromListActionModule.schema,
 ] as const;
 
 export const listSubactionSchema = z.discriminatedUnion("verb", listSubactionSchemas);
-

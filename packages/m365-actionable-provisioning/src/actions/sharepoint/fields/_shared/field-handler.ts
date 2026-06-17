@@ -56,6 +56,22 @@ export interface FieldHandlerContext {
     logger: ActionRuntimeContext<M365Scope, BaseFieldPayload>["logger"];
 }
 
+function getSiteColumnScopeDelta(
+    scopeIn: M365Scope,
+    fieldName: string,
+    fieldId: string,
+    isListField: boolean
+): Partial<M365Scope> | undefined {
+    if (isListField) return undefined;
+
+    return {
+        siteColumnIdsByFieldName: {
+            ...(scopeIn.siteColumnIdsByFieldName ?? {}),
+            [fieldName]: fieldId,
+        },
+    };
+}
+
 /* ========================================
    SHARED FIELD CREATION HANDLER
    ======================================== */
@@ -145,6 +161,7 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
                 reason: "already_exists",
                 ...(structuralWarnings.length > 0 ? { warnings: structuralWarnings } : {}),
             },
+            scopeDelta: getSiteColumnScopeDelta(scopeIn, def.fieldName, existingField.Id, Boolean(list)),
         };
     }
 
@@ -329,7 +346,7 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
         }
 
         case "Lookup": {
-            // Resolve lookup list id (either provided or by title)
+            // Resolve lookup list id (either provided or by RootFolder/Name)
             let lookupListId: string;
             if (def.lookupListId) {
                 lookupListId = def.lookupListId;
@@ -627,6 +644,7 @@ export async function handleFieldCreation(ctx: FieldHandlerContext): Promise<M36
             resource,
             ...(warnings.length > 0 ? { warnings } : {}),
         },
+        scopeDelta: getSiteColumnScopeDelta(scopeIn, def.fieldName, fieldId, Boolean(list)),
     };
 }
 

@@ -5,7 +5,7 @@ import type { M365Clients, M365Scope, ProvisioningResultLight } from "../../runt
 
 export type SharePointActionDefinition = AnyActionDefinition<M365Scope, ProvisioningResultLight, M365Clients>;
 
-export type SharePointActionPlacement = "root" | "siteSubaction" | "listSubaction";
+export type SharePointActionPlacement = "root" | "siteSubaction" | "listSubaction" | "contentTypeSubaction";
 
 export type SharePointActionModule = Readonly<{
   verb: string;

@@ -37,3 +37,22 @@ Create actions may still report structural warnings or non-compliant compliance 
 ## Warnings
 
 Action results may include `warnings`. Warnings are non-blocking audit details. They are used when an action succeeds or skips but part of the operation needs operator attention, such as a best-effort SharePoint post-create setting that could not be applied.
+
+## Content Types
+
+Content type actions use Microsoft Graph through `graphClient`. Consumer applications must configure Microsoft Graph `Sites.Manage.All` or a higher permission such as `Sites.FullControl.All`.
+
+SPFx packages typically need:
+
+```json
+"webApiPermissionRequests": [
+  {
+    "resource": "Microsoft Graph",
+    "scope": "Sites.Manage.All"
+  }
+]
+```
+
+The engine does not inspect token claims. Missing Graph clients are caught during preflight; insufficient Graph permissions are reported when Graph returns `401` or `403`.
+
+`listName` always means the stable SharePoint list root/name, not the mutable list title. A list may already exist with the requested `listName` and a different display title; that is acceptable for create actions unless a follow-up `modifySPList` enforces the title.

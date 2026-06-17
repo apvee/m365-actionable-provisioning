@@ -451,6 +451,28 @@ export const examplePlan: M365ProvisioningPlan = {
                     ],
                 },
                 {
+                    verb: "createSPSiteColumn",
+                    fieldType: "Text",
+                    fieldName: "EngineeringDocumentCode",
+                    displayName: "Engineering Document Code",
+                    maxLength: 64,
+                    required: false,
+                },
+                {
+                    verb: "createSPContentType",
+                    name: "Engineering Document",
+                    parentId: "0x0101",
+                    description: "Document content type used by the engineering document library",
+                    group: "Apvee Provisioning Demo",
+                    subactions: [
+                        {
+                            verb: "addSPFieldToContentType",
+                            fieldName: "EngineeringDocumentCode",
+                            required: false,
+                        },
+                    ],
+                },
+                {
                     verb: "createSPList",
                     listName: "{parameter:EngineeringDocumentsListName}",
                     title: "Engineering Documents",
@@ -472,6 +494,12 @@ export const examplePlan: M365ProvisioningPlan = {
                     forceCheckout: false,
                     noCrawl: false,
                     enableModeration: false,
+                    subactions: [
+                        {
+                            verb: "addSPContentTypeToList",
+                            contentTypeName: "Engineering Document",
+                        },
+                    ],
                 },
                 {
                     verb: "createSPList",

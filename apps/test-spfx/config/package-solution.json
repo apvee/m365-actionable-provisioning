@@ -32,6 +32,12 @@
         "id": "af467ffc-b03c-451d-b0df-bed592040d03",
         "version": "1.0.0.0"
       }
+    ],
+    "webApiPermissionRequests": [
+      {
+        "resource": "Microsoft Graph",
+        "scope": "Sites.Manage.All"
+      }
     ]
   },
   "paths": {

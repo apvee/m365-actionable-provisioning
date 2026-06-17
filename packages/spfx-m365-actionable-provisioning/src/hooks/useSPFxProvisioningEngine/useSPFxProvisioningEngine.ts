@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { graphfi } from '@pnp/graph';
+import { SPFx as GraphSPFx } from '@pnp/graph/behaviors/spfx';
 import { Web } from '@pnp/sp/webs';
 import '@pnp/sp/webs';
 
@@ -34,6 +36,7 @@ export function useSPFxProvisioningEngine(
   options: UseSPFxProvisioningEngineOptions
 ): UseSPFxProvisioningEngineReturn {
   const sp = useSPInstance(options.context, options.targetSiteUrl);
+  const graph = useMemo(() => graphfi().using(GraphSPFx(options.context)), [options.context]);
 
   const normalizedTarget = useMemo(
     () => normalizeUrl(options.targetSiteUrl),
@@ -51,9 +54,10 @@ export function useSPFxProvisioningEngine(
     // Caller-provided scope always wins.
     return {
       ...(defaultTargetWeb ? { web: defaultTargetWeb } : {}),
+      ...(normalizedTarget ? { siteUrl: normalizedTarget, webUrl: normalizedTarget } : {}),
       ...(options.initialScope ?? {}),
     };
-  }, [defaultTargetWeb, options.initialScope]);
+  }, [defaultTargetWeb, normalizedTarget, options.initialScope]);
 
   const [snapshot, setSnapshot] = useState<EngineSnapshotTyped<ProvisioningResultLight>>();
 
@@ -99,14 +103,14 @@ export function useSPFxProvisioningEngine(
     setSnapshot(undefined);
 
     const engine = createM365ProvisioningEngine({
-      clients: { spfi: sp },
+      clients: { spfi: sp, graphClient: graph },
       initialScope: mergedInitialScope,
       planTemplate: options.planTemplate,
       logger: options.logger,
       options: options.engineOptions,
       validateEngineContext: ({ clients }) => {
-        if (!clients.spfi) {
-          throw new Error('SPFI instance not available in engine clients');
+        if (!clients.spfi || !clients.graphClient) {
+          throw new Error('SPFI and GraphFI instances must be available in engine clients');
         }
       },
       enrichCaughtError: async (err) => {
@@ -139,6 +143,7 @@ export function useSPFxProvisioningEngine(
     };
   }, [
     sp,
+    graph,
     options.planTemplate,
     options.logger,
     mergedInitialScope,
