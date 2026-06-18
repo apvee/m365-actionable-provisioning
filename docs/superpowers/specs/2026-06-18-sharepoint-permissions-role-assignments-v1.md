@@ -331,10 +331,10 @@ Do not use PnPjs `getByName` for `roleName` in V1. Local introspection showed th
 `grant*RoleAssignment`:
 
 1. Require target scope.
-2. Resolve principal.
-3. Resolve role.
-4. Read `HasUniqueRoleAssignments`.
-5. If target inherits and `breakRoleInheritance !== true`, skip with `missing_prerequisite`.
+2. Read `HasUniqueRoleAssignments`.
+3. If target inherits and `breakRoleInheritance !== true`, skip with `missing_prerequisite`.
+4. Resolve principal.
+5. Resolve role.
 6. If target inherits and `breakRoleInheritance === true`, call `breakRoleInheritance(copyRoleAssignments ?? true, clearSubscopes ?? false)`.
 7. Check whether the principal already has the role binding.
 8. If binding exists, skip `already_exists`.
