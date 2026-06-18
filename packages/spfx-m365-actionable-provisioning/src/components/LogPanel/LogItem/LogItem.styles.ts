@@ -29,7 +29,7 @@ export const useLogItemStyles = makeStyles({
     marginTop: tokens.spacingVerticalXS,
   },
   titleText: {
-    display: 'block',
+    display: 'inline',
     wordBreak: 'break-word',
   },
   titleVerb: {
