@@ -213,6 +213,38 @@ function roleAssignmentsFrom(bindingsByPrincipal: Record<number, readonly number
   };
 }
 
+function permissionTargetFrom(options: {
+  unique: boolean;
+  bindingsByPrincipal?: Record<number, readonly number[]>;
+  onBreak?: (copyRoleAssignments: boolean, clearSubscopes: boolean) => void;
+  onReset?: () => void;
+  onAdd?: (principalId: number, roleDefId: number) => void;
+  onRemove?: (principalId: number, roleDefId: number) => void;
+}) {
+  const bindingsByPrincipal = options.bindingsByPrincipal ?? {};
+  return {
+    select: (...fields: string[]) => async () => {
+      assertStringArrayEqual(fields, ["HasUniqueRoleAssignments"], "Permission action should read HasUniqueRoleAssignments");
+      return { HasUniqueRoleAssignments: options.unique };
+    },
+    breakRoleInheritance: async (copyRoleAssignments: boolean, clearSubscopes: boolean) => {
+      options.onBreak?.(copyRoleAssignments, clearSubscopes);
+    },
+    resetRoleInheritance: async () => {
+      options.onReset?.();
+    },
+    roleAssignments: {
+      ...roleAssignmentsFrom(bindingsByPrincipal),
+      add: async (principalId: number, roleDefId: number) => {
+        options.onAdd?.(principalId, roleDefId);
+      },
+      remove: async (principalId: number, roleDefId: number) => {
+        options.onRemove?.(principalId, roleDefId);
+      },
+    },
+  };
+}
+
 const graphSmokeSchema = z.object({
   verb: z.literal("graphSmoke"),
   resource: z.string(),
@@ -1299,6 +1331,314 @@ async function assertSharePointPermissionDomainHelpers(): Promise<void> {
   assert(hasBinding, "Role assignment binding check should detect existing binding");
   const missingBinding = await hasRoleAssignmentBinding(roleAssignmentsFrom({}) as never, 42, 1073741827);
   assert(!missingBinding, "Role assignment binding check should treat missing role assignment as absent");
+}
+
+async function assertSharePointPermissionActionRuntime(): Promise<void> {
+  const web = {
+    ...permissionTargetFrom({ unique: true }),
+    roleDefinitions: roleDefinitionsFrom([
+      { Id: 1073741827, Name: "Contribute", RoleTypeKind: 3 },
+    ]),
+    ensureUser: async () => ({ Id: 42 }),
+    siteUsers: {
+      getByLoginName: () => async () => ({ Id: 42 }),
+    },
+    siteGroups: {
+      getByName: () => async () => ({ Id: 77 }),
+    },
+  } as unknown as NonNullable<M365Scope["web"]>;
+
+  let breakArgs: readonly [boolean, boolean] | undefined;
+  const inheritedList = permissionTargetFrom({
+    unique: false,
+    onBreak: (copyRoleAssignments, clearSubscopes) => {
+      breakArgs = [copyRoleAssignments, clearSubscopes];
+    },
+    onAdd: (principalId, roleDefId) => {
+      assert(principalId === 77, "grantSPListRoleAssignment should add the resolved principal id");
+      assert(roleDefId === 1073741827, "grantSPListRoleAssignment should add the resolved role definition id");
+    },
+  }) as unknown as NonNullable<M365Scope["list"]>;
+
+  const grantWithBreak = await new GrantSPListRoleAssignmentAction().handler({
+    scopeIn: { web, list: inheritedList, listName: "documents" },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPListRoleAssignment",
+      payload: {
+        verb: "grantSPListRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+        breakRoleInheritance: true,
+      },
+    },
+  } as Parameters<GrantSPListRoleAssignmentAction["handler"]>[0]);
+
+  assert(grantWithBreak.result?.outcome === "executed", "grantSPListRoleAssignment should execute when it breaks inherited permissions explicitly");
+  assertStringArrayEqual(
+    (breakArgs ?? []).map(String),
+    ["true", "false"],
+    "grantSPListRoleAssignment should use safe breakRoleInheritance defaults"
+  );
+
+  const inheritedGrantSkip = await new GrantSPListRoleAssignmentAction().handler({
+    scopeIn: { web, list: permissionTargetFrom({ unique: false }) as unknown as NonNullable<M365Scope["list"]>, listName: "documents" },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPListRoleAssignment",
+      payload: {
+        verb: "grantSPListRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<GrantSPListRoleAssignmentAction["handler"]>[0]);
+  assert(inheritedGrantSkip.result?.outcome === "skipped", "grantSPListRoleAssignment should skip inherited targets without explicit break");
+  assert(inheritedGrantSkip.result?.reason === "missing_prerequisite", "grantSPListRoleAssignment should report missing_prerequisite for inherited targets without explicit break");
+
+  const removeMissing = await new RemoveSPListRoleAssignmentAction().handler({
+    scopeIn: { web, list: permissionTargetFrom({ unique: true }) as unknown as NonNullable<M365Scope["list"]>, listName: "documents" },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "removeSPListRoleAssignment",
+      payload: {
+        verb: "removeSPListRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<RemoveSPListRoleAssignmentAction["handler"]>[0]);
+  assert(removeMissing.result?.outcome === "skipped", "removeSPListRoleAssignment should skip missing bindings");
+  assert(removeMissing.result?.reason === "not_found", "removeSPListRoleAssignment should report not_found for missing bindings");
+  assert(removeMissing.result?.resource === "Project Members -> contribute", "removeSPListRoleAssignment should report assignment-specific resources");
+
+  const webWithoutContribute = {
+    ...web,
+    roleDefinitions: roleDefinitionsFrom([
+      { Id: 1073741826, Name: "Read", RoleTypeKind: 2 },
+    ]),
+  } as unknown as NonNullable<M365Scope["web"]>;
+  const removeMissingRole = await new RemoveSPListRoleAssignmentAction().handler({
+    scopeIn: {
+      web: webWithoutContribute,
+      list: permissionTargetFrom({ unique: true }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "removeSPListRoleAssignment",
+      payload: {
+        verb: "removeSPListRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<RemoveSPListRoleAssignmentAction["handler"]>[0]);
+  assert(removeMissingRole.result?.outcome === "skipped", "removeSPListRoleAssignment should stay idempotent when the role cannot be resolved");
+  assert(removeMissingRole.result?.reason === "not_found", "removeSPListRoleAssignment should treat missing role resolution as not_found");
+  assert(removeMissingRole.result?.resource === "Project Members -> contribute", "removeSPListRoleAssignment should preserve assignment-specific resources on resolution skips");
+
+  const removeLoginPrincipalCalls: string[] = [];
+  const removeUniqueLoginName = await new RemoveSPListRoleAssignmentAction().handler({
+    scopeIn: {
+      web: {
+        ...web,
+        ensureUser: async () => {
+          throw new Error("removeSPListRoleAssignment should not call ensureUser for loginName principals on unique targets");
+        },
+        siteUsers: {
+          getByLoginName: (loginName: string) => async () => {
+            removeLoginPrincipalCalls.push(loginName);
+            return { Id: 42, LoginName: loginName };
+          },
+        },
+      } as unknown as NonNullable<M365Scope["web"]>,
+      list: permissionTargetFrom({ unique: true }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "removeSPListRoleAssignment",
+      payload: {
+        verb: "removeSPListRoleAssignment",
+        principalType: "loginName",
+        principal: "i:0#.f|membership|existing@contoso.com",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<RemoveSPListRoleAssignmentAction["handler"]>[0]);
+  assert(removeUniqueLoginName.result?.outcome === "skipped", "removeSPListRoleAssignment should stay idempotent for absent loginName bindings");
+  assert(removeUniqueLoginName.result?.reason === "not_found", "removeSPListRoleAssignment should report not_found for absent loginName bindings");
+  assertStringArrayEqual(
+    removeLoginPrincipalCalls,
+    ["i:0#.f|membership|existing@contoso.com"],
+    "removeSPListRoleAssignment should resolve loginName principals via siteUsers.getByLoginName on unique targets"
+  );
+
+  const removeInheritedSkip = await new RemoveSPListRoleAssignmentAction().handler({
+    scopeIn: {
+      web: {
+        ...web,
+        roleDefinitions: {
+          getById: () => {
+            throw new Error("removeSPListRoleAssignment should not resolve roles before inherited skip");
+          },
+          getByType: () => {
+            throw new Error("removeSPListRoleAssignment should not resolve roles before inherited skip");
+          },
+          filter: () => {
+            throw new Error("removeSPListRoleAssignment should not resolve roles before inherited skip");
+          },
+        },
+        ensureUser: async () => {
+          throw new Error("removeSPListRoleAssignment should not call ensureUser before inherited skip");
+        },
+        siteUsers: {
+          getByLoginName: () => async () => {
+            throw new Error("removeSPListRoleAssignment should not resolve site users before inherited skip");
+          },
+        },
+        siteGroups: {
+          getByName: () => async () => {
+            throw new Error("removeSPListRoleAssignment should not resolve site groups before inherited skip");
+          },
+        },
+      } as unknown as NonNullable<M365Scope["web"]>,
+      list: permissionTargetFrom({ unique: false }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "removeSPListRoleAssignment",
+      payload: {
+        verb: "removeSPListRoleAssignment",
+        principalType: "loginName",
+        principal: "i:0#.f|membership|existing@contoso.com",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<RemoveSPListRoleAssignmentAction["handler"]>[0]);
+  assert(removeInheritedSkip.result?.outcome === "skipped", "removeSPListRoleAssignment should skip inherited targets before principal or role resolution");
+  assert(removeInheritedSkip.result?.reason === "missing_prerequisite", "removeSPListRoleAssignment should report missing_prerequisite for inherited targets");
+  assert(removeInheritedSkip.result?.resource === "i:0#.f|membership|existing@contoso.com -> contribute", "removeSPListRoleAssignment should preserve assignment-specific resources on inherited skips");
+
+  const grantInheritedCompliance = await new GrantSPListRoleAssignmentAction().checkCompliance({
+    scopeIn: {
+      web,
+      list: permissionTargetFrom({ unique: false }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPListRoleAssignment",
+      payload: {
+        verb: "grantSPListRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+        breakRoleInheritance: true,
+      },
+    },
+  } as Parameters<GrantSPListRoleAssignmentAction["checkCompliance"]>[0]);
+  assert(grantInheritedCompliance.outcome === "non_compliant", "grantSPListRoleAssignment compliance should flag inherited targets when breakRoleInheritance is required");
+  assert(grantInheritedCompliance.reason === "inherited_permissions", "grantSPListRoleAssignment compliance should use inherited_permissions for inherited targets");
+  assert(grantInheritedCompliance.resource === "Project Members -> contribute", "grantSPListRoleAssignment compliance should report assignment-specific resources");
+
+  const removeMissingRoleCompliance = await new RemoveSPListRoleAssignmentAction().checkCompliance({
+    scopeIn: {
+      web: webWithoutContribute,
+      list: permissionTargetFrom({ unique: true }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "removeSPListRoleAssignment",
+      payload: {
+        verb: "removeSPListRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<RemoveSPListRoleAssignmentAction["checkCompliance"]>[0]);
+  assert(removeMissingRoleCompliance.outcome === "compliant", "removeSPListRoleAssignment compliance should treat unresolved bindings as already absent");
+  assert(removeMissingRoleCompliance.resource === "Project Members -> contribute", "removeSPListRoleAssignment compliance should report assignment-specific resources");
+
+  const graphBackedPrincipalSkip = await new GrantSPListRoleAssignmentAction().handler({
+    scopeIn: {
+      web,
+      list: permissionTargetFrom({ unique: true }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPListRoleAssignment",
+      payload: {
+        verb: "grantSPListRoleAssignment",
+        principalType: "m365GroupName",
+        principal: "Project Team",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<GrantSPListRoleAssignmentAction["handler"]>[0]);
+  assert(graphBackedPrincipalSkip.result?.outcome === "skipped", "grantSPListRoleAssignment should skip Graph-backed principals when Graph is unavailable");
+  assert(graphBackedPrincipalSkip.result?.reason === "missing_prerequisite", "grantSPListRoleAssignment should report missing_prerequisite when Graph-backed principal resolution lacks Graph");
+  assert(graphBackedPrincipalSkip.result?.resource === "Project Team -> contribute", "grantSPListRoleAssignment should keep assignment-specific resources on Graph prerequisite skips");
+
+  let resetCalled = false;
+  const resetResult = await new ResetSPSiteRoleInheritanceAction().handler({
+    scopeIn: {
+      web: {
+        ...web,
+        ...permissionTargetFrom({
+          unique: true,
+          onReset: () => {
+            resetCalled = true;
+          },
+        }),
+      } as unknown as NonNullable<M365Scope["web"]>,
+      webUrl: "https://contoso.sharepoint.com/sites/project",
+    },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "resetSPSiteRoleInheritance",
+      payload: { verb: "resetSPSiteRoleInheritance" },
+    },
+  } as Parameters<ResetSPSiteRoleInheritanceAction["handler"]>[0]);
+  assert(resetResult.result?.outcome === "executed", "resetSPSiteRoleInheritance should execute for unique permissions");
+  assert(resetCalled, "resetSPSiteRoleInheritance should call resetRoleInheritance");
 }
 
 async function assertListViewFieldResolutionGuards(): Promise<void> {
@@ -3052,6 +3392,7 @@ async function main(): Promise<void> {
   await assertComplianceCancelContract();
   await assertCreateSPSiteColumnIgnoresStaleListScope();
   await assertSharePointGraphClientPreflight();
+  await assertSharePointPermissionActionRuntime();
 
   const spOnly = await runSmoke({
     clients: { spfi: { marker: "spfi" } },

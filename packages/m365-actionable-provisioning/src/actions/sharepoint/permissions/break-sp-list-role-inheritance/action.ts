@@ -1,36 +1,16 @@
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { PermissionCheckResult } from "../../../../core/permissions";
-import type { M365ActionResult, M365Clients, M365RuntimeContext, M365Scope, ProvisioningResultLight } from "../../../../runtime";
-import { actionSkipped, unverifiable } from "../../_shared/action-results";
+import { SharePointPermissionAction } from "../_shared/action-factory";
+import { breakSPListRoleInheritanceSchema } from "./schema";
 
-import { breakSPListRoleInheritanceSchema, type BreakSPListRoleInheritancePayload } from "./schema";
-
-export class BreakSPListRoleInheritanceAction extends ActionDefinition<
+export class BreakSPListRoleInheritanceAction extends SharePointPermissionAction<
   "breakSPListRoleInheritance",
-  typeof breakSPListRoleInheritanceSchema,
-  M365Scope,
-  ProvisioningResultLight,
-  M365Clients
+  typeof breakSPListRoleInheritanceSchema
 > {
-  readonly verb = "breakSPListRoleInheritance";
-  readonly actionSchema = breakSPListRoleInheritanceSchema;
-  readonly requiredClients = ["spfi"] as const;
-
-  async checkPermissions(): Promise<PermissionCheckResult> {
-    return { decision: "unknown", message: "SharePoint permission runtime is introduced in Task 4" };
-  }
-
-  async handler(ctx: M365RuntimeContext<BreakSPListRoleInheritancePayload>): Promise<M365ActionResult> {
-    return actionSkipped(ctx.action.verb, "unsupported");
-  }
-
-  async checkCompliance(
-    ctx: ComplianceRuntimeContext<M365Scope, BreakSPListRoleInheritancePayload, M365Clients>
-  ): Promise<ComplianceActionCheckResult<M365Scope>> {
-    return unverifiable({
-      resource: ctx.action.verb,
-      reason: "not_supported",
-      message: "SharePoint permission runtime is introduced in Task 4",
+  constructor() {
+    super({
+      verb: "breakSPListRoleInheritance",
+      schema: breakSPListRoleInheritanceSchema,
+      targetKind: "list",
+      operation: "break",
     });
   }
 }
