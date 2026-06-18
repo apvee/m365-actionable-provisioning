@@ -1641,6 +1641,122 @@ async function assertSharePointPermissionActionRuntime(): Promise<void> {
   assert(resetCalled, "resetSPSiteRoleInheritance should call resetRoleInheritance");
 }
 
+async function assertSharePointPermissionCompliance(): Promise<void> {
+  const web = {
+    ...permissionTargetFrom({ unique: true, bindingsByPrincipal: { 77: [1073741827] } }),
+    roleDefinitions: roleDefinitionsFrom([{ Id: 1073741827, Name: "Contribute", RoleTypeKind: 3 }]),
+    siteUsers: {
+      getByLoginName: () => async () => ({ Id: 77 }),
+    },
+    ensureUser: async () => {
+      throw new Error("Compliance should not call ensureUser");
+    },
+    siteGroups: {
+      getByName: () => async () => ({ Id: 77 }),
+    },
+  } as unknown as NonNullable<M365Scope["web"]>;
+
+  const grantCompliance = await new GrantSPSiteRoleAssignmentAction().checkCompliance({
+    scopeIn: { web, webUrl: "https://contoso.sharepoint.com/sites/project" },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPSiteRoleAssignment",
+      payload: {
+        verb: "grantSPSiteRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<GrantSPSiteRoleAssignmentAction["checkCompliance"]>[0]);
+  assert(grantCompliance.outcome === "compliant", "grantSPSiteRoleAssignment compliance should be compliant when binding exists");
+  assert(
+    grantCompliance.resource === "Project Members -> contribute",
+    "grantSPSiteRoleAssignment compliance should report assignment-specific resources"
+  );
+
+  const removeCompliance = await new RemoveSPSiteRoleAssignmentAction().checkCompliance({
+    scopeIn: { web, webUrl: "https://contoso.sharepoint.com/sites/project" },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "removeSPSiteRoleAssignment",
+      payload: {
+        verb: "removeSPSiteRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<RemoveSPSiteRoleAssignmentAction["checkCompliance"]>[0]);
+  assert(removeCompliance.outcome === "non_compliant", "removeSPSiteRoleAssignment compliance should be non-compliant when binding exists");
+  assert(removeCompliance.reason === "binding_present", "removeSPSiteRoleAssignment compliance should report binding_present");
+  assert(
+    removeCompliance.resource === "Project Members -> contribute",
+    "removeSPSiteRoleAssignment compliance should report assignment-specific resources"
+  );
+
+  const missingGraphCompliance = await new GrantSPSiteRoleAssignmentAction().checkCompliance({
+    scopeIn: { web, webUrl: "https://contoso.sharepoint.com/sites/project" },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPSiteRoleAssignment",
+      payload: {
+        verb: "grantSPSiteRoleAssignment",
+        principalType: "m365GroupMailNickname",
+        principal: "project-members",
+        roleType: "contribute",
+      },
+    },
+  } as Parameters<GrantSPSiteRoleAssignmentAction["checkCompliance"]>[0]);
+  assert(missingGraphCompliance.outcome === "unverifiable", "Graph-backed principal compliance should be unverifiable without graphClient");
+  assert(
+    missingGraphCompliance.reason === "missing_prerequisite",
+    "Graph-backed principal compliance should report missing_prerequisite without graphClient"
+  );
+  assert(
+    missingGraphCompliance.resource === "project-members -> contribute",
+    "Graph-backed principal compliance should report assignment-specific resources"
+  );
+
+  const breakCompliance = await new BreakSPListRoleInheritanceAction().checkCompliance({
+    scopeIn: {
+      web,
+      list: permissionTargetFrom({ unique: false }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "breakSPListRoleInheritance",
+      payload: { verb: "breakSPListRoleInheritance" },
+    },
+  } as Parameters<BreakSPListRoleInheritanceAction["checkCompliance"]>[0]);
+  assert(breakCompliance.outcome === "non_compliant", "breakSPListRoleInheritance compliance should be non-compliant when list inherits permissions");
+
+  const resetCompliance = await new ResetSPListRoleInheritanceAction().checkCompliance({
+    scopeIn: {
+      web,
+      list: permissionTargetFrom({ unique: false }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "resetSPListRoleInheritance",
+      payload: { verb: "resetSPListRoleInheritance" },
+    },
+  } as Parameters<ResetSPListRoleInheritanceAction["checkCompliance"]>[0]);
+  assert(resetCompliance.outcome === "compliant", "resetSPListRoleInheritance compliance should be compliant when list inherits permissions");
+}
+
 async function assertListViewFieldResolutionGuards(): Promise<void> {
   const fields: readonly SmokeFieldInfo[] = [
     { Id: "1", InternalName: "Title", Title: "Title" },
@@ -3393,6 +3509,7 @@ async function main(): Promise<void> {
   await assertCreateSPSiteColumnIgnoresStaleListScope();
   await assertSharePointGraphClientPreflight();
   await assertSharePointPermissionActionRuntime();
+  await assertSharePointPermissionCompliance();
 
   const spOnly = await runSmoke({
     clients: { spfi: { marker: "spfi" } },
