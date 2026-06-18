@@ -78,6 +78,25 @@ export {
   type DeleteSPListViewPayload,
 } from "./views";
 
+export {
+  breakSPListRoleInheritanceSchema,
+  breakSPSiteRoleInheritanceSchema,
+  grantSPListRoleAssignmentSchema,
+  grantSPSiteRoleAssignmentSchema,
+  removeSPListRoleAssignmentSchema,
+  removeSPSiteRoleAssignmentSchema,
+  resetSPListRoleInheritanceSchema,
+  resetSPSiteRoleInheritanceSchema,
+  type BreakSPListRoleInheritancePayload,
+  type BreakSPSiteRoleInheritancePayload,
+  type GrantSPListRoleAssignmentPayload,
+  type GrantSPSiteRoleAssignmentPayload,
+  type RemoveSPListRoleAssignmentPayload,
+  type RemoveSPSiteRoleAssignmentPayload,
+  type ResetSPListRoleInheritancePayload,
+  type ResetSPSiteRoleInheritancePayload,
+} from "./permissions";
+
 export { listSubactionSchema } from "./_composition/list-subactions-schema";
 export { contentTypeSubactionSchema } from "./_composition/content-type-subactions-schema";
 

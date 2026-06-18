@@ -16,6 +16,16 @@ import { createSPListActionModule } from "./lists/create-sp-list";
 import { deleteSPListActionModule } from "./lists/delete-sp-list";
 import { enableSPListRatingActionModule } from "./lists/enable-sp-list-rating";
 import { modifySPListActionModule } from "./lists/modify-sp-list";
+import {
+  breakSPListRoleInheritanceActionModule,
+  breakSPSiteRoleInheritanceActionModule,
+  grantSPListRoleAssignmentActionModule,
+  grantSPSiteRoleAssignmentActionModule,
+  removeSPListRoleAssignmentActionModule,
+  removeSPSiteRoleAssignmentActionModule,
+  resetSPListRoleInheritanceActionModule,
+  resetSPSiteRoleInheritanceActionModule,
+} from "./permissions";
 import { createSPSiteActionModule } from "./sites/create-sp-site";
 import { deleteSPSiteActionModule } from "./sites/delete-sp-site";
 import { modifySPSiteActionModule } from "./sites/modify-sp-site";
@@ -36,6 +46,14 @@ export const sharePointActionModules = [
   createSPListViewActionModule,
   modifySPListViewActionModule,
   deleteSPListViewActionModule,
+  breakSPSiteRoleInheritanceActionModule,
+  resetSPSiteRoleInheritanceActionModule,
+  grantSPSiteRoleAssignmentActionModule,
+  removeSPSiteRoleAssignmentActionModule,
+  breakSPListRoleInheritanceActionModule,
+  resetSPListRoleInheritanceActionModule,
+  grantSPListRoleAssignmentActionModule,
+  removeSPListRoleAssignmentActionModule,
   createSPContentTypeActionModule,
   modifySPContentTypeActionModule,
   deleteSPContentTypeActionModule,

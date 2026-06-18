@@ -9,6 +9,12 @@ import { deleteSPFieldActionModule } from "../fields/delete-sp-field";
 import { modifySPFieldActionModule } from "../fields/modify-sp-field";
 import { enableSPListRatingActionModule } from "../lists/enable-sp-list-rating";
 import {
+  breakSPListRoleInheritanceActionModule,
+  grantSPListRoleAssignmentActionModule,
+  removeSPListRoleAssignmentActionModule,
+  resetSPListRoleInheritanceActionModule,
+} from "../permissions";
+import {
   createSPListViewActionModule,
   modifySPListViewActionModule,
   deleteSPListViewActionModule,
@@ -22,6 +28,10 @@ const listSubactionSchemas = [
   createSPListViewActionModule.schema,
   modifySPListViewActionModule.schema,
   deleteSPListViewActionModule.schema,
+  breakSPListRoleInheritanceActionModule.schema,
+  resetSPListRoleInheritanceActionModule.schema,
+  grantSPListRoleAssignmentActionModule.schema,
+  removeSPListRoleAssignmentActionModule.schema,
   addSPContentTypeToListActionModule.schema,
   removeSPContentTypeFromListActionModule.schema,
 ] as const;

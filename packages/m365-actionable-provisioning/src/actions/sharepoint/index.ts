@@ -68,6 +68,34 @@ export {
   type DeleteSPListViewPayload,
 } from "./views";
 
+// Permission actions
+export {
+  BreakSPSiteRoleInheritanceAction,
+  ResetSPSiteRoleInheritanceAction,
+  GrantSPSiteRoleAssignmentAction,
+  RemoveSPSiteRoleAssignmentAction,
+  BreakSPListRoleInheritanceAction,
+  ResetSPListRoleInheritanceAction,
+  GrantSPListRoleAssignmentAction,
+  RemoveSPListRoleAssignmentAction,
+  breakSPSiteRoleInheritanceSchema,
+  type BreakSPSiteRoleInheritancePayload,
+  resetSPSiteRoleInheritanceSchema,
+  type ResetSPSiteRoleInheritancePayload,
+  grantSPSiteRoleAssignmentSchema,
+  type GrantSPSiteRoleAssignmentPayload,
+  removeSPSiteRoleAssignmentSchema,
+  type RemoveSPSiteRoleAssignmentPayload,
+  breakSPListRoleInheritanceSchema,
+  type BreakSPListRoleInheritancePayload,
+  resetSPListRoleInheritanceSchema,
+  type ResetSPListRoleInheritancePayload,
+  grantSPListRoleAssignmentSchema,
+  type GrantSPListRoleAssignmentPayload,
+  removeSPListRoleAssignmentSchema,
+  type RemoveSPListRoleAssignmentPayload,
+} from "./permissions";
+
 // Content type actions
 export { CreateSPContentTypeAction } from "./content-types";
 export { createSPContentTypeSchema, type CreateSPContentTypePayload } from "./content-types/create-sp-content-type";

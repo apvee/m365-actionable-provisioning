@@ -11,11 +11,21 @@ import { modifySPFieldActionModule } from "../fields/modify-sp-field";
 import { createSPListActionModule } from "../lists/create-sp-list";
 import { deleteSPListActionModule } from "../lists/delete-sp-list";
 import { modifySPListActionModule } from "../lists/modify-sp-list";
+import {
+  breakSPSiteRoleInheritanceActionModule,
+  grantSPSiteRoleAssignmentActionModule,
+  removeSPSiteRoleAssignmentActionModule,
+  resetSPSiteRoleInheritanceActionModule,
+} from "../permissions";
 
 const siteSubactionSchemas = [
   createSPListActionModule.schema,
   modifySPListActionModule.schema,
   deleteSPListActionModule.schema,
+  breakSPSiteRoleInheritanceActionModule.schema,
+  resetSPSiteRoleInheritanceActionModule.schema,
+  grantSPSiteRoleAssignmentActionModule.schema,
+  removeSPSiteRoleAssignmentActionModule.schema,
   createSPContentTypeActionModule.schema,
   modifySPContentTypeActionModule.schema,
   deleteSPContentTypeActionModule.schema,
