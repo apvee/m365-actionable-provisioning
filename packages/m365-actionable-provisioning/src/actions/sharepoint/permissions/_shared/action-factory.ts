@@ -209,9 +209,7 @@ export class SharePointPermissionAction<
         const resource = getRoleAssignmentResource(payload);
         const hasUniqueRoleAssignments = await getSecurableHasUniqueRoleAssignments(target.target);
         if (!hasUniqueRoleAssignments) {
-          if (this.operation === "grant" && payload.breakRoleInheritance === true) {
-            await runtimeTarget.breakRoleInheritance(payload.copyRoleAssignments ?? true, payload.clearSubscopes ?? false);
-          } else {
+          if (this.operation !== "grant" || payload.breakRoleInheritance !== true) {
             return actionSkipped(resource, "missing_prerequisite", target.scopeDelta);
           }
         }
@@ -231,6 +229,10 @@ export class SharePointPermissionAction<
             }
           }
           throw error;
+        }
+
+        if (!hasUniqueRoleAssignments && this.operation === "grant" && payload.breakRoleInheritance === true) {
+          await runtimeTarget.breakRoleInheritance(payload.copyRoleAssignments ?? true, payload.clearSubscopes ?? false);
         }
 
         const hasBinding = await hasRoleAssignmentBinding(runtimeTarget.roleAssignments, ids.principalId, ids.roleDefId);

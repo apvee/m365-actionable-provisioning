@@ -1385,6 +1385,35 @@ async function assertSharePointPermissionActionRuntime(): Promise<void> {
     "grantSPListRoleAssignment should use safe breakRoleInheritance defaults"
   );
 
+  let skippedBreakCalled = false;
+  const inheritedListForSkippedBreak = permissionTargetFrom({
+    unique: false,
+    onBreak: () => {
+      skippedBreakCalled = true;
+    },
+  }) as unknown as NonNullable<M365Scope["list"]>;
+
+  const grantWithBreakMissingGraph = await new GrantSPListRoleAssignmentAction().handler({
+    scopeIn: { web, list: inheritedListForSkippedBreak, listName: "documents" },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPListRoleAssignment",
+      payload: {
+        verb: "grantSPListRoleAssignment",
+        principalType: "m365GroupName",
+        principal: "Project Team",
+        roleType: "contribute",
+        breakRoleInheritance: true,
+      },
+    },
+  } as Parameters<GrantSPListRoleAssignmentAction["handler"]>[0]);
+  assert(grantWithBreakMissingGraph.result?.outcome === "skipped", "grantSPListRoleAssignment should skip missing Graph before breaking inheritance");
+  assert(grantWithBreakMissingGraph.result?.reason === "missing_prerequisite", "grantSPListRoleAssignment should report missing_prerequisite before break when Graph is unavailable");
+  assert(!skippedBreakCalled, "grantSPListRoleAssignment should not break inheritance when principal resolution fails");
+
   const inheritedGrantSkip = await new GrantSPListRoleAssignmentAction().handler({
     scopeIn: { web, list: permissionTargetFrom({ unique: false }) as unknown as NonNullable<M365Scope["list"]>, listName: "documents" },
     clients: { spfi: {} },

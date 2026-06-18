@@ -344,10 +344,10 @@ Do not use PnPjs `getByName` for `roleName` in V1. Local introspection showed th
 `remove*RoleAssignment`:
 
 1. Require target scope.
-2. Resolve principal.
-3. Resolve role.
-4. Read `HasUniqueRoleAssignments`.
-5. If target inherits, skip with `missing_prerequisite`.
+2. Read `HasUniqueRoleAssignments`.
+3. If target inherits, skip with `missing_prerequisite`.
+4. Resolve principal without materializing missing users.
+5. Resolve role.
 6. Check whether the principal has the role binding.
 7. If binding is absent, skip `not_found`.
 8. Otherwise call `roleAssignments.remove(principalId, roleDefId)`.
