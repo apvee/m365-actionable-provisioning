@@ -45,6 +45,18 @@ const permissionRoleReferenceFields = {
   roleType: permissionRoleTypeSchema.optional(),
 } as const;
 
+export function countRoleReferences(value: {
+  roleId?: number;
+  roleName?: string;
+  roleType?: PermissionRoleType;
+}): number {
+  return [
+    value.roleId !== undefined,
+    value.roleName !== undefined,
+    value.roleType !== undefined,
+  ].filter(Boolean).length;
+}
+
 function withExactlyOneRoleReference<TSchema extends z.ZodTypeAny>(schema: TSchema): TSchema {
   return schema.superRefine((value: unknown, ctx) => {
     const payload = value as {
@@ -52,11 +64,7 @@ function withExactlyOneRoleReference<TSchema extends z.ZodTypeAny>(schema: TSche
       roleName?: string;
       roleType?: PermissionRoleType;
     };
-    const roleReferenceCount = [
-      payload.roleId !== undefined,
-      payload.roleName !== undefined,
-      payload.roleType !== undefined,
-    ].filter(Boolean).length;
+    const roleReferenceCount = countRoleReferences(payload);
 
     if (roleReferenceCount === 1) {
       return;

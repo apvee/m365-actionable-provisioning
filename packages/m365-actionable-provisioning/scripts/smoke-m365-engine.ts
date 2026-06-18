@@ -60,6 +60,16 @@ import { CreateSPSiteColumnAction } from "../src/actions/sharepoint/fields/creat
 import { resolveFieldReferenceFromScope } from "../src/actions/sharepoint/domains/content-types";
 import { checkFieldStructuralCompatibility } from "../src/actions/sharepoint/domains/fields/field-structural-compatibility";
 import { checkListStructuralCompatibility } from "../src/actions/sharepoint/domains/lists/list-structural-compatibility";
+import {
+  buildEntraGroupClaim,
+  buildM365GroupClaim,
+  getRoleTypeKind,
+  getSecurableHasUniqueRoleAssignments,
+  hasRoleAssignmentBinding,
+  isPermissionResolutionError,
+  resolvePrincipalId,
+  resolveRoleDefinitionId,
+} from "../src/actions/sharepoint/domains/permissions";
 import { getPublicListViewInfoByTitle, resolveViewFieldInternalNames, type ListViewInfo } from "../src/actions/sharepoint/domains/views";
 import type { M365Clients, M365Scope, ProvisioningResultLight } from "../src/runtime";
 
@@ -129,6 +139,77 @@ function publicViewFilterFrom(
       },
     };
     return query;
+  };
+}
+
+function roleDefinitionsFrom(roles: readonly { Id: number; Name: string; RoleTypeKind: number }[]) {
+  return {
+    getById: (id: number) => async () => {
+      const role = roles.find((item) => item.Id === id);
+      if (!role) throw Object.assign(new Error("role not found"), { status: 404 });
+      return role;
+    },
+    getByType: (kind: number) => async () => {
+      const role = roles.find((item) => item.RoleTypeKind === kind);
+      if (!role) throw Object.assign(new Error("role not found"), { status: 404 });
+      return role;
+    },
+    filter: (filter: string) => ({
+      top: (top: number) => ({
+        select: (...fields: string[]) => async () => {
+          assert(top === 2, "Role name lookup should request top(2) to detect ambiguity");
+          assertStringArrayEqual(fields, ["Id", "Name", "RoleTypeKind"], "Role lookup should select stable role fields");
+          const match = filter.match(/^Name eq '(.+)'$/);
+          if (!match) throw new Error(`Unexpected role filter: ${filter}`);
+          const expectedName = match[1].replace(/''/g, "'");
+          return roles.filter((item) => item.Name === expectedName);
+        },
+      }),
+    }),
+  };
+}
+
+function graphGroupsFrom(groups: readonly {
+  id: string;
+  displayName?: string;
+  mailNickname?: string;
+  groupTypes?: readonly string[];
+  securityEnabled?: boolean;
+}[]) {
+  return {
+    groups: {
+      filter: (filter: string) => ({
+        top: (top: number) => ({
+          select: (...fields: string[]) => async () => {
+            assert(top === 2, "Graph group lookup should request top(2) to detect ambiguity");
+            assertStringArrayEqual(fields, ["id", "displayName", "mailNickname", "groupTypes", "securityEnabled"], "Graph group lookup should select stable fields");
+            const displayName = filter.match(/displayName eq '((?:''|[^'])*)'/)?.[1]?.replace(/''/g, "'");
+            const mailNickname = filter.match(/mailNickname eq '((?:''|[^'])*)'/)?.[1]?.replace(/''/g, "'");
+            const requireUnified = filter.includes("groupTypes/any");
+            const requireSecurityEnabled = filter.includes("securityEnabled eq true");
+            return groups.filter((group) => {
+              const nameMatches = displayName === undefined || group.displayName === displayName;
+              const nickMatches = mailNickname === undefined || group.mailNickname === mailNickname;
+              const unifiedMatches = !requireUnified || group.groupTypes?.includes("Unified");
+              const securityMatches = !requireSecurityEnabled || group.securityEnabled === true;
+              return nameMatches && nickMatches && unifiedMatches && securityMatches;
+            });
+          },
+        }),
+      }),
+    },
+  };
+}
+
+function roleAssignmentsFrom(bindingsByPrincipal: Record<number, readonly number[]>) {
+  return {
+    getById: (principalId: number) => ({
+      bindings: async () => {
+        const bindings = bindingsByPrincipal[principalId];
+        if (!bindings) throw Object.assign(new Error("role assignment not found"), { status: 404 });
+        return bindings.map((Id) => ({ Id }));
+      },
+    }),
   };
 }
 
@@ -328,6 +409,22 @@ async function assertRejectsWithMessage(
     rejection.message.includes(expectedMessagePart),
     `${message}. Expected rejection message to include "${expectedMessagePart}", got "${rejection.message}"`
   );
+}
+
+async function assertRejectsWithPermissionResolutionReason(
+  action: () => Promise<unknown>,
+  expectedReason: "not_found" | "ambiguous" | "missing_prerequisite",
+  message: string
+): Promise<void> {
+  let rejection: unknown;
+  try {
+    await action();
+  } catch (error) {
+    rejection = error;
+  }
+
+  assert(isPermissionResolutionError(rejection), `${message}. Expected a PermissionResolutionError rejection`);
+  assert(rejection.reason === expectedReason, `${message}. Expected reason '${expectedReason}', got '${rejection.reason}'`);
 }
 
 function assertSharePointCatalogComposition(): void {
@@ -1006,6 +1103,202 @@ function assertSharePointListViewPublicBarrelExports(): void {
     publicDeleteSPListViewSchema.safeParse({ verb: "deleteSPListView", title: "Public View" }).success,
     "Public SharePoint barrel should export deleteSPListViewSchema"
   );
+}
+
+async function assertSharePointPermissionDomainHelpers(): Promise<void> {
+  assert(getRoleTypeKind("read") === 2, "read roleType should map to RoleTypeKind.Reader");
+  assert(getRoleTypeKind("contribute") === 3, "contribute roleType should map to RoleTypeKind.Contributor");
+  assert(getRoleTypeKind("design") === 4, "design roleType should map to RoleTypeKind.WebDesigner");
+  assert(getRoleTypeKind("fullControl") === 5, "fullControl roleType should map to RoleTypeKind.Administrator");
+  assert(getRoleTypeKind("edit") === 6, "edit roleType should map to RoleTypeKind.Editor");
+
+  const claim = buildEntraGroupClaim("7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7");
+  assert(
+    claim === "c:0t.c|tenant|7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7",
+    "Entra group claim should use the SharePoint tenant security-group claim provider"
+  );
+  const m365Claim = buildM365GroupClaim("7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7");
+  assert(
+    m365Claim === "c:0o.c|federateddirectoryclaimprovider|7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7",
+    "M365 group claim should use the SharePoint federated directory claim provider"
+  );
+
+  const uniqueTarget = {
+    select: (...fields: string[]) => async () => {
+      assertStringArrayEqual(fields, ["HasUniqueRoleAssignments"], "Inheritance check should select HasUniqueRoleAssignments");
+      return { HasUniqueRoleAssignments: true };
+    },
+  };
+  assert(await getSecurableHasUniqueRoleAssignments(uniqueTarget as never), "Inheritance check should read unique role assignment state");
+
+  const ensureUserCalls: string[] = [];
+  const siteUserCalls: string[] = [];
+  const web = {
+    roleDefinitions: roleDefinitionsFrom([
+      { Id: 1073741826, Name: "Read", RoleTypeKind: 2 },
+      { Id: 1073741827, Name: "Contribute", RoleTypeKind: 3 },
+      { Id: 123, Name: "O'Brien Role", RoleTypeKind: 0 },
+    ]),
+    ensureUser: async (loginName: string) => {
+      ensureUserCalls.push(loginName);
+      return { Id: loginName.includes("missing") ? undefined : 42, LoginName: loginName };
+    },
+    siteUsers: {
+      getByLoginName: (loginName: string) => async () => {
+        siteUserCalls.push(loginName);
+        if (loginName.includes("missing")) throw Object.assign(new Error("user not found"), { status: 404 });
+        return { Id: loginName.includes("not-materialized") ? undefined : 84, LoginName: loginName };
+      },
+    },
+    siteGroups: {
+      getByName: (name: string) => async () => ({ Id: name === "Project Members" ? 77 : undefined, Title: name }),
+    },
+  };
+
+  const roleByName = await resolveRoleDefinitionId(web as never, { roleName: "O'Brien Role" });
+  assert(roleByName === 123, "Role name lookup should support apostrophes through escaped filter queries");
+  const roleByType = await resolveRoleDefinitionId(web as never, { roleType: "contribute" });
+  assert(roleByType === 1073741827, "Role type lookup should resolve to the SharePoint role definition id");
+
+  const loginPrincipal = await resolvePrincipalId({
+    web: web as never,
+    graphClient: undefined,
+    principalType: "loginName",
+    principal: "i:0#.f|membership|user@contoso.com",
+    allowEnsureUser: true,
+  });
+  assert(loginPrincipal === 42, "loginName principal resolution should use ensureUser");
+
+  const spGroupPrincipal = await resolvePrincipalId({
+    web: web as never,
+    graphClient: undefined,
+    principalType: "spGroupName",
+    principal: "Project Members",
+    allowEnsureUser: true,
+  });
+  assert(spGroupPrincipal === 77, "spGroupName principal resolution should use siteGroups.getByName");
+
+  const entraGroupPrincipal = await resolvePrincipalId({
+    web: web as never,
+    graphClient: undefined,
+    principalType: "entraGroupId",
+    principal: "7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7",
+    allowEnsureUser: true,
+  });
+  assert(entraGroupPrincipal === 42, "entraGroupId principal resolution should ensure the Entra security-group claim");
+
+  const m365GroupByIdPrincipal = await resolvePrincipalId({
+    web: web as never,
+    graphClient: undefined,
+    principalType: "m365GroupId",
+    principal: "7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7",
+    allowEnsureUser: true,
+  });
+  assert(m365GroupByIdPrincipal === 42, "m365GroupId principal resolution should ensure the Microsoft 365 group claim");
+  assert(
+    ensureUserCalls.includes("c:0t.c|tenant|7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7"),
+    "entraGroupId principal resolution should pass the Entra security-group claim to ensureUser"
+  );
+  assert(
+    ensureUserCalls.includes("c:0o.c|federateddirectoryclaimprovider|7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7"),
+    "m365GroupId principal resolution should pass the M365 group claim to ensureUser"
+  );
+
+  const graphPrincipal = await resolvePrincipalId({
+    web: web as never,
+    graphClient: graphGroupsFrom([
+      { id: "7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7", mailNickname: "project-members", groupTypes: ["Unified"] },
+    ]) as never,
+    principalType: "m365GroupMailNickname",
+    principal: "project-members",
+    allowEnsureUser: true,
+  });
+  assert(graphPrincipal === 42, "m365GroupMailNickname principal resolution should resolve Graph id then ensure the SharePoint claim");
+
+  const entraGroupByNamePrincipal = await resolvePrincipalId({
+    web: web as never,
+    graphClient: graphGroupsFrom([
+      { id: "security-group-id", displayName: "Project Security", securityEnabled: true },
+      { id: "unified-group-id", displayName: "Project Security", groupTypes: ["Unified"], securityEnabled: false },
+    ]) as never,
+    principalType: "entraGroupName",
+    principal: "Project Security",
+    allowEnsureUser: true,
+  });
+  assert(entraGroupByNamePrincipal === 42, "entraGroupName principal resolution should constrain Graph lookup to security-enabled groups");
+  assert(
+    ensureUserCalls.includes("c:0t.c|tenant|security-group-id"),
+    "entraGroupName principal resolution should materialize the Entra security-group claim"
+  );
+
+  const loginPrincipalWithoutEnsure = await resolvePrincipalId({
+    web: web as never,
+    graphClient: undefined,
+    principalType: "loginName",
+    principal: "i:0#.f|membership|existing@contoso.com",
+    allowEnsureUser: false,
+  });
+  assert(loginPrincipalWithoutEnsure === 84, "allowEnsureUser:false should resolve principals through siteUsers.getByLoginName");
+  assert(
+    siteUserCalls.includes("i:0#.f|membership|existing@contoso.com"),
+    "allowEnsureUser:false should use siteUsers.getByLoginName instead of ensureUser"
+  );
+
+  await assertRejectsWithPermissionResolutionReason(
+    () => resolvePrincipalId({
+      web: web as never,
+      graphClient: undefined,
+      principalType: "loginName",
+      principal: "i:0#.f|membership|missing@contoso.com",
+      allowEnsureUser: false,
+    }),
+    "not_found",
+    "allowEnsureUser:false should normalize missing siteUsers lookups to PermissionResolutionError(not_found)"
+  );
+
+  await assertRejectsWithPermissionResolutionReason(
+    () => resolvePrincipalId({
+      web: web as never,
+      graphClient: undefined,
+      principalType: "loginName",
+      principal: "i:0#.f|membership|not-materialized@contoso.com",
+      allowEnsureUser: false,
+    }),
+    "not_found",
+    "allowEnsureUser:false should treat non-materialized siteUsers lookups as PermissionResolutionError(not_found)"
+  );
+
+  await assertRejectsWithPermissionResolutionReason(
+    () => resolvePrincipalId({
+      web: web as never,
+      graphClient: graphGroupsFrom([
+        { id: "first", displayName: "Duplicate Security", securityEnabled: true },
+        { id: "second", displayName: "Duplicate Security", securityEnabled: true },
+      ]) as never,
+      principalType: "entraGroupName",
+      principal: "Duplicate Security",
+      allowEnsureUser: true,
+    }),
+    "ambiguous",
+    "entraGroupName principal resolution should surface ambiguous Graph matches"
+  );
+
+  await assertRejectsWithPermissionResolutionReason(
+    () => resolvePrincipalId({
+      web: web as never,
+      graphClient: undefined,
+      principalType: "m365GroupName",
+      principal: "Project Team",
+      allowEnsureUser: true,
+    }),
+    "missing_prerequisite",
+    "Graph-backed group resolution should require GraphFI"
+  );
+
+  const hasBinding = await hasRoleAssignmentBinding(roleAssignmentsFrom({ 42: [1073741827] }) as never, 42, 1073741827);
+  assert(hasBinding, "Role assignment binding check should detect existing binding");
+  const missingBinding = await hasRoleAssignmentBinding(roleAssignmentsFrom({}) as never, 42, 1073741827);
+  assert(!missingBinding, "Role assignment binding check should treat missing role assignment as absent");
 }
 
 async function assertListViewFieldResolutionGuards(): Promise<void> {
@@ -2733,6 +3026,7 @@ async function main(): Promise<void> {
   assertListStructuralCompatibility();
   assertJsonResultContract();
   assertLoggerContract();
+  await assertSharePointPermissionDomainHelpers();
   await assertListViewFieldResolutionGuards();
   await assertListViewLookupUsesFilteredTopOneQuery();
   await assertListViewPermissionChecks();
