@@ -274,15 +274,19 @@ Resolution rules:
 
 - `loginName`: call `web.ensureUser(principal)` and use the returned `Id`.
 - `spGroupName`: call `web.siteGroups.getByName(principal)()` and use the returned `Id`.
-- `entraGroupId`: build SharePoint group claim and resolve it through `web.ensureUser(claim)`.
-- `m365GroupId`: same as `entraGroupId`.
-- `entraGroupName`: require `graphClient`; look up group by `displayName`; require exactly one match; build claim from `id`; resolve through `web.ensureUser(claim)`.
-- `m365GroupName`: require `graphClient`; look up group by `displayName` and `groupTypes/any(c:c eq 'Unified')`; require exactly one match; build claim from `id`; resolve through `web.ensureUser(claim)`.
-- `m365GroupMailNickname`: require `graphClient`; look up group by `mailNickname` and `groupTypes/any(c:c eq 'Unified')`; require exactly one match; build claim from `id`; resolve through `web.ensureUser(claim)`.
+- `entraGroupId`: build the SharePoint Entra security-group claim and resolve it through `web.ensureUser(claim)`.
+- `m365GroupId`: build the SharePoint Microsoft 365 group claim and resolve it through `web.ensureUser(claim)`.
+- `entraGroupName`: require `graphClient`; look up group by `displayName` and `securityEnabled eq true`; require exactly one match; build the Entra security-group claim from `id`; resolve through `web.ensureUser(claim)`.
+- `m365GroupName`: require `graphClient`; look up group by `displayName` and `groupTypes/any(c:c eq 'Unified')`; require exactly one match; build the Microsoft 365 group claim from `id`; resolve through `web.ensureUser(claim)`.
+- `m365GroupMailNickname`: require `graphClient`; look up group by `mailNickname` and `groupTypes/any(c:c eq 'Unified')`; require exactly one match; build the Microsoft 365 group claim from `id`; resolve through `web.ensureUser(claim)`.
 
-SharePoint group claim format for Entra/Microsoft 365 groups:
+SharePoint group claim formats:
 
 ```ts
+// Entra security groups
+`c:0t.c|tenant|${groupId}`
+
+// Microsoft 365 groups
 `c:0o.c|federateddirectoryclaimprovider|${groupId}`
 ```
 
