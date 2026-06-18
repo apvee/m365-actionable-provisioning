@@ -30,6 +30,32 @@ import { siteSubactionSchema } from "../src/actions/sharepoint/_composition/site
 import { CreateSPListViewAction, createSPListViewActionModule } from "../src/actions/sharepoint/views/create-sp-list-view";
 import { DeleteSPListViewAction, deleteSPListViewActionModule } from "../src/actions/sharepoint/views/delete-sp-list-view";
 import { ModifySPListViewAction, modifySPListViewActionModule } from "../src/actions/sharepoint/views/modify-sp-list-view";
+import {
+  BreakSPListRoleInheritanceAction,
+  BreakSPSiteRoleInheritanceAction,
+  GrantSPListRoleAssignmentAction,
+  GrantSPSiteRoleAssignmentAction,
+  RemoveSPListRoleAssignmentAction,
+  RemoveSPSiteRoleAssignmentAction,
+  ResetSPListRoleInheritanceAction,
+  ResetSPSiteRoleInheritanceAction,
+  breakSPListRoleInheritanceActionModule,
+  breakSPListRoleInheritanceSchema,
+  breakSPSiteRoleInheritanceActionModule,
+  breakSPSiteRoleInheritanceSchema,
+  grantSPListRoleAssignmentActionModule,
+  grantSPListRoleAssignmentSchema,
+  grantSPSiteRoleAssignmentActionModule,
+  grantSPSiteRoleAssignmentSchema,
+  removeSPListRoleAssignmentActionModule,
+  removeSPListRoleAssignmentSchema,
+  removeSPSiteRoleAssignmentActionModule,
+  removeSPSiteRoleAssignmentSchema,
+  resetSPListRoleInheritanceActionModule,
+  resetSPListRoleInheritanceSchema,
+  resetSPSiteRoleInheritanceActionModule,
+  resetSPSiteRoleInheritanceSchema,
+} from "../src/actions/sharepoint/permissions";
 import { CreateSPSiteColumnAction } from "../src/actions/sharepoint/fields/create-sp-site-column";
 import { resolveFieldReferenceFromScope } from "../src/actions/sharepoint/domains/content-types";
 import { checkFieldStructuralCompatibility } from "../src/actions/sharepoint/domains/fields/field-structural-compatibility";
@@ -643,6 +669,308 @@ function assertSharePointCatalogComposition(): void {
     ],
   });
   assert(!listCreatesViewWithNestedSubaction.success, "SharePoint list view schema should reject nested subactions");
+}
+
+function assertSharePointPermissionsCatalogComposition(): void {
+  const siteGrant = siteSubactionSchema.safeParse({
+    verb: "grantSPSiteRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Owners",
+    roleName: "Full Control",
+    breakRoleInheritance: true,
+    copyRoleAssignments: true,
+    clearSubscopes: false,
+  });
+  assert(siteGrant.success, "SharePoint site subaction schema should accept grantSPSiteRoleAssignment");
+  if (siteGrant.success) {
+    assert(siteGrant.data.principal === "Project Owners", "Permission principal should be preserved after parsing");
+    assert(siteGrant.data.roleName === "Full Control", "Permission roleName should be preserved after parsing");
+  }
+
+  const listGrant = listSubactionSchema.safeParse({
+    verb: "grantSPListRoleAssignment",
+    principalType: "m365GroupMailNickname",
+    principal: " project-members ",
+    roleType: "contribute",
+  });
+  assert(listGrant.success, "SharePoint list subaction schema should accept grantSPListRoleAssignment");
+  if (listGrant.success) {
+    assert(listGrant.data.principal === "project-members", "Permission principal should be trimmed");
+  }
+
+  const listRemove = listSubactionSchema.safeParse({
+    verb: "removeSPListRoleAssignment",
+    principalType: "loginName",
+    principal: "i:0#.f|membership|user@contoso.com",
+    roleId: 1073741827,
+  });
+  assert(listRemove.success, "SharePoint list subaction schema should accept removeSPListRoleAssignment");
+
+  const siteBreak = siteSubactionSchema.safeParse({
+    verb: "breakSPSiteRoleInheritance",
+  });
+  assert(siteBreak.success, "SharePoint site subaction schema should accept breakSPSiteRoleInheritance with defaults");
+
+  const siteReset = siteSubactionSchema.safeParse({
+    verb: "resetSPSiteRoleInheritance",
+  });
+  assert(siteReset.success, "SharePoint site subaction schema should accept resetSPSiteRoleInheritance");
+
+  const siteRemove = siteSubactionSchema.safeParse({
+    verb: "removeSPSiteRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Owners",
+    roleName: "Read",
+  });
+  assert(siteRemove.success, "SharePoint site subaction schema should accept removeSPSiteRoleAssignment with role reference");
+
+  const listReset = listSubactionSchema.safeParse({
+    verb: "resetSPListRoleInheritance",
+  });
+  assert(listReset.success, "SharePoint list subaction schema should accept resetSPListRoleInheritance");
+
+  const listBreak = listSubactionSchema.safeParse({
+    verb: "breakSPListRoleInheritance",
+  });
+  assert(listBreak.success, "SharePoint list subaction schema should accept breakSPListRoleInheritance with defaults");
+
+  const rootBreakSite = sharePointActionsSchema.safeParse([
+    {
+      verb: "breakSPSiteRoleInheritance",
+    },
+  ]);
+  assert(!rootBreakSite.success, "SharePoint root schema should reject breakSPSiteRoleInheritance");
+
+  const rootResetSite = sharePointActionsSchema.safeParse([
+    {
+      verb: "resetSPSiteRoleInheritance",
+    },
+  ]);
+  assert(!rootResetSite.success, "SharePoint root schema should reject resetSPSiteRoleInheritance");
+
+  const rootGrantList = sharePointActionsSchema.safeParse([
+    {
+      verb: "grantSPListRoleAssignment",
+      principalType: "m365GroupMailNickname",
+      principal: "project-members",
+      roleType: "contribute",
+    },
+  ]);
+  assert(!rootGrantList.success, "SharePoint root schema should reject grantSPListRoleAssignment");
+
+  const rootRemoveList = sharePointActionsSchema.safeParse([
+    {
+      verb: "removeSPListRoleAssignment",
+      principalType: "spGroupName",
+      principal: "Project Visitors",
+      roleName: "Read",
+    },
+  ]);
+  assert(!rootRemoveList.success, "SharePoint root schema should reject removeSPListRoleAssignment");
+
+  const rootBreakList = sharePointActionsSchema.safeParse([
+    {
+      verb: "breakSPListRoleInheritance",
+    },
+  ]);
+  assert(!rootBreakList.success, "SharePoint root schema should reject breakSPListRoleInheritance");
+
+  const rootResetList = sharePointActionsSchema.safeParse([
+    {
+      verb: "resetSPListRoleInheritance",
+    },
+  ]);
+  assert(!rootResetList.success, "SharePoint root schema should reject resetSPListRoleInheritance");
+
+  const rootGrantSite = sharePointActionsSchema.safeParse([
+    {
+      verb: "grantSPSiteRoleAssignment",
+      principalType: "spGroupName",
+      principal: "Project Owners",
+      roleName: "Full Control",
+    },
+  ]);
+  assert(!rootGrantSite.success, "SharePoint root schema should reject grantSPSiteRoleAssignment");
+
+  const rootRemoveSite = sharePointActionsSchema.safeParse([
+    {
+      verb: "removeSPSiteRoleAssignment",
+      principalType: "spGroupName",
+      principal: "Project Owners",
+      roleName: "Read",
+    },
+  ]);
+  assert(!rootRemoveSite.success, "SharePoint root schema should reject removeSPSiteRoleAssignment");
+
+  const siteUsesListPermission = siteSubactionSchema.safeParse({
+    verb: "grantSPListRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+    roleType: "contribute",
+  });
+  assert(!siteUsesListPermission.success, "SharePoint site subaction schema should reject list permission actions directly");
+
+  const siteUsesListBreak = siteSubactionSchema.safeParse({
+    verb: "breakSPListRoleInheritance",
+  });
+  assert(!siteUsesListBreak.success, "SharePoint site subaction schema should reject breakSPListRoleInheritance");
+
+  const siteUsesListReset = siteSubactionSchema.safeParse({
+    verb: "resetSPListRoleInheritance",
+  });
+  assert(!siteUsesListReset.success, "SharePoint site subaction schema should reject resetSPListRoleInheritance");
+
+  const siteUsesListRemove = siteSubactionSchema.safeParse({
+    verb: "removeSPListRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+    roleName: "Read",
+  });
+  assert(!siteUsesListRemove.success, "SharePoint site subaction schema should reject removeSPListRoleAssignment");
+
+  const listUsesSitePermission = listSubactionSchema.safeParse({
+    verb: "grantSPSiteRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+    roleType: "contribute",
+  });
+  assert(!listUsesSitePermission.success, "SharePoint list subaction schema should reject site permission actions");
+
+  const listUsesSiteBreak = listSubactionSchema.safeParse({
+    verb: "breakSPSiteRoleInheritance",
+  });
+  assert(!listUsesSiteBreak.success, "SharePoint list subaction schema should reject breakSPSiteRoleInheritance");
+
+  const listUsesSiteReset = listSubactionSchema.safeParse({
+    verb: "resetSPSiteRoleInheritance",
+  });
+  assert(!listUsesSiteReset.success, "SharePoint list subaction schema should reject resetSPSiteRoleInheritance");
+
+  const listUsesSiteRemove = listSubactionSchema.safeParse({
+    verb: "removeSPSiteRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+    roleName: "Read",
+  });
+  assert(!listUsesSiteRemove.success, "SharePoint list subaction schema should reject removeSPSiteRoleAssignment");
+
+  const twoRoleRefs = grantSPListRoleAssignmentSchema.safeParse({
+    verb: "grantSPListRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+    roleName: "Contribute",
+    roleType: "contribute",
+  });
+  assert(!twoRoleRefs.success, "Permission schema should reject multiple role references");
+
+  const noRoleRef = grantSPListRoleAssignmentSchema.safeParse({
+    verb: "grantSPListRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+  });
+  assert(!noRoleRef.success, "Permission schema should reject missing role reference");
+
+  const twoSiteRoleRefs = grantSPSiteRoleAssignmentSchema.safeParse({
+    verb: "grantSPSiteRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+    roleName: "Contribute",
+    roleType: "contribute",
+  });
+  assert(!twoSiteRoleRefs.success, "Permission schema should reject multiple role references");
+
+  const noSiteRoleRef = grantSPSiteRoleAssignmentSchema.safeParse({
+    verb: "grantSPSiteRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+  });
+  assert(!noSiteRoleRef.success, "Permission schema should reject missing role reference");
+
+  const copyWithoutBreak = grantSPSiteRoleAssignmentSchema.safeParse({
+    verb: "grantSPSiteRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+    roleType: "contribute",
+    copyRoleAssignments: true,
+  });
+  assert(!copyWithoutBreak.success, "Permission schema should reject copyRoleAssignments without breakRoleInheritance:true");
+
+  const clearWithoutBreak = grantSPSiteRoleAssignmentSchema.safeParse({
+    verb: "grantSPSiteRoleAssignment",
+    principalType: "spGroupName",
+    principal: "Project Members",
+    roleType: "contribute",
+    clearSubscopes: false,
+  });
+  assert(!clearWithoutBreak.success, "Permission schema should reject clearSubscopes without breakRoleInheritance:true");
+
+  assertStringArrayEqual(
+    breakSPSiteRoleInheritanceActionModule.placements,
+    ["siteSubaction"],
+    "breakSPSiteRoleInheritance action module should be site-subaction only"
+  );
+  assertStringArrayEqual(
+    resetSPSiteRoleInheritanceActionModule.placements,
+    ["siteSubaction"],
+    "resetSPSiteRoleInheritance action module should be site-subaction only"
+  );
+  assertStringArrayEqual(
+    grantSPSiteRoleAssignmentActionModule.placements,
+    ["siteSubaction"],
+    "grantSPSiteRoleAssignment action module should be site-subaction only"
+  );
+  assertStringArrayEqual(
+    removeSPSiteRoleAssignmentActionModule.placements,
+    ["siteSubaction"],
+    "removeSPSiteRoleAssignment action module should be site-subaction only"
+  );
+  assertStringArrayEqual(
+    breakSPListRoleInheritanceActionModule.placements,
+    ["listSubaction"],
+    "breakSPListRoleInheritance action module should be list-subaction only"
+  );
+  assertStringArrayEqual(
+    resetSPListRoleInheritanceActionModule.placements,
+    ["listSubaction"],
+    "resetSPListRoleInheritance action module should be list-subaction only"
+  );
+  assertStringArrayEqual(
+    grantSPListRoleAssignmentActionModule.placements,
+    ["listSubaction"],
+    "grantSPListRoleAssignment action module should be list-subaction only"
+  );
+  assertStringArrayEqual(
+    removeSPListRoleAssignmentActionModule.placements,
+    ["listSubaction"],
+    "removeSPListRoleAssignment action module should be list-subaction only"
+  );
+
+  const permissionActions = [
+    new BreakSPSiteRoleInheritanceAction(),
+    new ResetSPSiteRoleInheritanceAction(),
+    new GrantSPSiteRoleAssignmentAction(),
+    new RemoveSPSiteRoleAssignmentAction(),
+    new BreakSPListRoleInheritanceAction(),
+    new ResetSPListRoleInheritanceAction(),
+    new GrantSPListRoleAssignmentAction(),
+    new RemoveSPListRoleAssignmentAction(),
+  ];
+  for (const action of permissionActions) {
+    assertStringArrayEqual(
+      action.requiredClients ?? [],
+      ["spfi"],
+      `${action.verb} should require only spfi at the action-definition level`
+    );
+  }
+
+  assert(breakSPSiteRoleInheritanceSchema.safeParse({ verb: "breakSPSiteRoleInheritance" }).success, "Public breakSPSiteRoleInheritanceSchema should parse minimal payload");
+  assert(resetSPSiteRoleInheritanceSchema.safeParse({ verb: "resetSPSiteRoleInheritance" }).success, "Public resetSPSiteRoleInheritanceSchema should parse minimal payload");
+  assert(grantSPSiteRoleAssignmentSchema.safeParse({ verb: "grantSPSiteRoleAssignment", principalType: "loginName", principal: "i:0#.f|membership|user@contoso.com", roleType: "read" }).success, "Public grantSPSiteRoleAssignmentSchema should parse roleType payload");
+  assert(removeSPSiteRoleAssignmentSchema.safeParse({ verb: "removeSPSiteRoleAssignment", principalType: "spGroupName", principal: "Visitors", roleName: "Read" }).success, "Public removeSPSiteRoleAssignmentSchema should parse roleName payload");
+  assert(breakSPListRoleInheritanceSchema.safeParse({ verb: "breakSPListRoleInheritance" }).success, "Public breakSPListRoleInheritanceSchema should parse minimal payload");
+  assert(resetSPListRoleInheritanceSchema.safeParse({ verb: "resetSPListRoleInheritance" }).success, "Public resetSPListRoleInheritanceSchema should parse minimal payload");
+  assert(grantSPListRoleAssignmentSchema.safeParse({ verb: "grantSPListRoleAssignment", principalType: "m365GroupId", principal: "7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7", roleType: "edit" }).success, "Public grantSPListRoleAssignmentSchema should parse m365GroupId payload");
+  assert(removeSPListRoleAssignmentSchema.safeParse({ verb: "removeSPListRoleAssignment", principalType: "entraGroupId", principal: "7f7d25e4-0f82-4e06-a8bb-1ed86a80c3d7", roleId: 1073741827 }).success, "Public removeSPListRoleAssignmentSchema should parse roleId payload");
 }
 
 function assertSharePointListViewPublicBarrelExports(): void {
@@ -2398,6 +2726,7 @@ async function assertCreateSPSiteColumnIgnoresStaleListScope(): Promise<void> {
 
 async function main(): Promise<void> {
   assertSharePointCatalogComposition();
+  assertSharePointPermissionsCatalogComposition();
   assertSharePointListViewPublicBarrelExports();
   assertContentTypeFieldReferenceScopeResolution();
   assertFieldStructuralCompatibility();
