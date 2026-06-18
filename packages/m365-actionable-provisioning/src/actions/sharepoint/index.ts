@@ -57,16 +57,6 @@ export { deleteSPListSchema, type DeleteSPListPayload } from "./lists/delete-sp-
 export { EnableSPListRatingAction } from "./lists";
 export { enableSPListRatingSchema, type EnableSPListRatingPayload } from "./lists/enable-sp-list-rating";
 
-// List view actions - using direct imports
-export { CreateSPListViewAction } from "./views";
-export { createSPListViewSchema, type CreateSPListViewPayload } from "./views/create-sp-list-view";
-
-export { ModifySPListViewAction } from "./views";
-export { modifySPListViewSchema, type ModifySPListViewPayload } from "./views/modify-sp-list-view";
-
-export { DeleteSPListViewAction } from "./views";
-export { deleteSPListViewSchema, type DeleteSPListViewPayload } from "./views/delete-sp-list-view";
-
 // Content type actions - using direct imports
 export { CreateSPContentTypeAction } from "./content-types";
 export { createSPContentTypeSchema, type CreateSPContentTypePayload } from "./content-types/create-sp-content-type";
