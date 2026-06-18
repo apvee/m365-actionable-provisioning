@@ -8,6 +8,7 @@ This document provides a complete reference for the `@apvee/m365-actionable-prov
 - [Parameters](#parameters)
 - [Site Actions](#site-actions)
 - [List Actions](#list-actions)
+- [Permission Actions](#permission-actions)
 - [Field Actions](#field-actions)
 - [Content Type Actions](#content-type-actions)
 - [Schema Exports](#schema-exports)
@@ -528,6 +529,97 @@ Enables ratings on a list (subaction within `createSPList` or `modifySPList`).
   ]
 }
 ```
+
+---
+
+## Permission Actions
+
+Permission actions manage SharePoint role inheritance and explicit role
+bindings on site and list/library scopes. V1 is additive and targeted: it
+changes only the declared inheritance state or principal/role binding. Grant
+and remove role-assignment actions affect only the declared principal/role
+binding.
+
+Site permission actions are allowed only under `createSPSite` and
+`modifySPSite`:
+
+```ts
+{
+  verb: "modifySPSite",
+  siteUrl: "https://contoso.sharepoint.com/sites/project",
+  subactions: [
+    {
+      verb: "grantSPSiteRoleAssignment",
+      principalType: "spGroupName",
+      principal: "Project Owners",
+      roleName: "Full Control",
+      breakRoleInheritance: true,
+      copyRoleAssignments: true,
+      clearSubscopes: false
+    }
+  ]
+}
+```
+
+List/library permission actions are allowed only under `createSPList` and
+`modifySPList`:
+
+```ts
+{
+  verb: "modifySPList",
+  listName: "documents",
+  subactions: [
+    {
+      verb: "grantSPListRoleAssignment",
+      principalType: "m365GroupMailNickname",
+      principal: "project-members",
+      roleType: "contribute"
+    }
+  ]
+}
+```
+
+Supported verbs:
+
+| Scope | Inheritance | Role assignments |
+|-------|-------------|------------------|
+| Site | `breakSPSiteRoleInheritance`, `resetSPSiteRoleInheritance` | `grantSPSiteRoleAssignment`, `removeSPSiteRoleAssignment` |
+| List/library | `breakSPListRoleInheritance`, `resetSPListRoleInheritance` | `grantSPListRoleAssignment`, `removeSPListRoleAssignment` |
+
+Principal fields:
+
+```ts
+principalType:
+  | "loginName"
+  | "spGroupName"
+  | "entraGroupId"
+  | "m365GroupId"
+  | "entraGroupName"
+  | "m365GroupName"
+  | "m365GroupMailNickname";
+principal: string;
+```
+
+Role fields require exactly one of:
+
+```ts
+roleId?: number;
+roleName?: string;
+roleType?: "read" | "contribute" | "edit" | "design" | "fullControl";
+```
+
+`grant*RoleAssignment` can break inherited permissions only when
+`breakRoleInheritance: true` is declared. The public defaults are
+`copyRoleAssignments: true` and `clearSubscopes: false`.
+
+`reset*RoleInheritance` removes unique local role assignments and returns the
+target to inherited permissions. Use it only when that destructive behavior is
+intended.
+
+Group name lookups are convenience features and must resolve to exactly one
+group. Prefer `entraGroupId`, `m365GroupId`, or `m365GroupMailNickname` for
+deterministic provisioning. Graph is used only for group lookup by name or mail
+nickname; role assignment writes use SharePoint security APIs.
 
 ---
 

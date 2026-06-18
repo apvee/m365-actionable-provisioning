@@ -44,6 +44,14 @@ SharePoint list/library views are list subactions in V1:
 
 Use `viewQuery` as a CAML query fragment, not a full `<View>` or `<Query>` document.
 
+## Permissions
+
+SharePoint site and list/library permissions are subactions in V1:
+
+- Break or reset role inheritance on site and list/library scopes.
+- Additive grant/remove role assignments for one declared principal and role.
+- Optional Entra/Microsoft 365 group lookup by name or mail nickname; role assignment writes use SharePoint security APIs.
+
 ## Warnings
 
 Action results may include `warnings`. Warnings are non-blocking audit details. They are used when an action succeeds or skips but part of the operation needs operator attention, such as a best-effort SharePoint post-create setting that could not be applied.

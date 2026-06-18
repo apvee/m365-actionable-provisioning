@@ -127,6 +127,28 @@ or leading XML comments:
 <OrderBy><FieldRef Name="Modified" Ascending="FALSE" /></OrderBy>
 ```
 
+## Permissions V1
+
+Permission actions are subactions only.
+
+Site actions:
+
+- `breakSPSiteRoleInheritance`
+- `resetSPSiteRoleInheritance`
+- `grantSPSiteRoleAssignment`
+- `removeSPSiteRoleAssignment`
+
+List/library actions:
+
+- `breakSPListRoleInheritance`
+- `resetSPListRoleInheritance`
+- `grantSPListRoleAssignment`
+- `removeSPListRoleAssignment`
+
+V1 uses PnPjs SharePoint security APIs. It does not use Graph to write role
+assignments. Graph is used only for optional Entra/Microsoft 365 group lookup
+by name or mail nickname.
+
 ## Shared Utilities
 
 Action handlers use SharePoint domain helpers from `domains`
