@@ -34,6 +34,16 @@ Use a follow-up `modify*` action when a plan must enforce mutable state:
 
 Create actions may still report structural warnings or non-compliant compliance results for collisions that make the plan ambiguous, such as an existing field with the requested internal name but a different SharePoint field type.
 
+## List Views
+
+SharePoint list/library views are list subactions in V1:
+
+- `createSPListView` creates a public view and skips when a public view with the same title already exists.
+- `modifySPListView` enforces supported mutable view state on an existing public view.
+- `deleteSPListView` deletes a non-default public view and skips with a warning when the target is the current default view.
+
+Use `viewQuery` as a CAML query fragment, not a full `<View>` or `<Query>` document.
+
 ## Warnings
 
 Action results may include `warnings`. Warnings are non-blocking audit details. They are used when an action succeeds or skips but part of the operation needs operator attention, such as a best-effort SharePoint post-create setting that could not be applied.

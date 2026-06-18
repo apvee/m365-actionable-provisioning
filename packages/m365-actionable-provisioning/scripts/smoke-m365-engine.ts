@@ -5,15 +5,36 @@ import { ProvisioningEngine } from "../src/core/engine";
 import { createLogger, createMultiSink, type LogEvent } from "../src/core/logger";
 import { createProvisioningPlanSchema, type BaseProvisioningPlan } from "../src/core/provisioning-plan";
 import type { PermissionCheckResult } from "../src/core/permissions";
-import { sharePointActionDefinitions, sharePointActionsSchema } from "../src/actions/sharepoint";
+import {
+  CreateSPListViewAction as RootCreateSPListViewAction,
+  DeleteSPListViewAction as RootDeleteSPListViewAction,
+  ModifySPListViewAction as RootModifySPListViewAction,
+  createSPListViewSchema as rootCreateSPListViewSchema,
+  deleteSPListViewSchema as rootDeleteSPListViewSchema,
+  modifySPListViewSchema as rootModifySPListViewSchema,
+} from "../src";
+import {
+  CreateSPListViewAction as PublicCreateSPListViewAction,
+  DeleteSPListViewAction as PublicDeleteSPListViewAction,
+  ModifySPListViewAction as PublicModifySPListViewAction,
+  createSPListViewSchema as publicCreateSPListViewSchema,
+  deleteSPListViewSchema as publicDeleteSPListViewSchema,
+  modifySPListViewSchema as publicModifySPListViewSchema,
+  sharePointActionDefinitions,
+  sharePointActionsSchema,
+} from "../src/actions/sharepoint";
 import { sharePointActionModules } from "../src/actions/sharepoint/action-modules";
 import { contentTypeSubactionSchema } from "../src/actions/sharepoint/_composition/content-type-subactions-schema";
 import { listSubactionSchema } from "../src/actions/sharepoint/_composition/list-subactions-schema";
 import { siteSubactionSchema } from "../src/actions/sharepoint/_composition/site-subactions-schema";
+import { CreateSPListViewAction, createSPListViewActionModule } from "../src/actions/sharepoint/views/create-sp-list-view";
+import { DeleteSPListViewAction, deleteSPListViewActionModule } from "../src/actions/sharepoint/views/delete-sp-list-view";
+import { ModifySPListViewAction, modifySPListViewActionModule } from "../src/actions/sharepoint/views/modify-sp-list-view";
 import { CreateSPSiteColumnAction } from "../src/actions/sharepoint/fields/create-sp-site-column";
 import { resolveFieldReferenceFromScope } from "../src/actions/sharepoint/domains/content-types";
 import { checkFieldStructuralCompatibility } from "../src/actions/sharepoint/domains/fields/field-structural-compatibility";
 import { checkListStructuralCompatibility } from "../src/actions/sharepoint/domains/lists/list-structural-compatibility";
+import { getPublicListViewInfoByTitle, resolveViewFieldInternalNames, type ListViewInfo } from "../src/actions/sharepoint/domains/views";
 import type { M365Clients, M365Scope, ProvisioningResultLight } from "../src/runtime";
 
 type SmokeScope = {
@@ -38,6 +59,52 @@ type SmokeWarning = {
 type SmokeResult =
   | { outcome: "executed"; resource: string; warnings?: readonly SmokeWarning[] }
   | { outcome: "skipped"; resource: string; reason: string; warnings?: readonly SmokeWarning[] };
+
+type SmokeFieldInfo = { Id: string; InternalName: string; Title: string };
+
+function fieldLookupFrom(fields: Record<string, SmokeFieldInfo> | readonly SmokeFieldInfo[]) {
+  const fieldsByReference = Array.isArray(fields)
+    ? Object.fromEntries(fields.flatMap((field) => [[field.InternalName, field], [field.Title, field]]))
+    : fields;
+
+  return {
+    getByInternalNameOrTitle: (fieldRef: string) => ({
+      select: () => async () => {
+        const field = fieldsByReference[fieldRef];
+        if (!field) throw new Error("not found");
+        return field;
+      },
+    }),
+  };
+}
+
+function publicViewFilterFrom(
+  resultsOrFactory: readonly ListViewInfo[] | ((filter: string) => readonly ListViewInfo[]),
+  options: {
+    onFilter?: (filter: string) => void;
+    onTop?: (top: number) => void;
+    onSelect?: (fields: readonly string[]) => void;
+  } = {}
+) {
+  return (filter: string) => {
+    options.onFilter?.(filter);
+    let requestedTop: number | undefined;
+    const query = {
+      top: (top: number) => {
+        requestedTop = top;
+        options.onTop?.(top);
+        return query;
+      },
+      select: (...fields: string[]) => async () => {
+        options.onSelect?.(fields);
+        if (requestedTop !== 1) throw new Error("List view lookup should limit filtered title queries with top(1)");
+        const results = typeof resultsOrFactory === "function" ? resultsOrFactory(filter) : resultsOrFactory;
+        return [...results];
+      },
+    };
+    return query;
+  };
+}
 
 const graphSmokeSchema = z.object({
   verb: z.literal("graphSmoke"),
@@ -203,8 +270,38 @@ const logger = createLogger({
   sink: { write: () => undefined },
 });
 
+function idleOut() {
+  return { byAction: {}, trace: { status: "idle" as const, byPath: {}, order: [] } };
+}
+
 function assert(condition: unknown, message: string): void {
   if (!condition) throw new Error(message);
+}
+
+function assertStringArrayEqual(actual: readonly string[], expected: readonly string[], message: string): void {
+  const matches = actual.length === expected.length && actual.every((value, index) => value === expected[index]);
+  if (!matches) {
+    throw new Error(`${message}. Expected [${expected.join(", ")}], got [${actual.join(", ")}]`);
+  }
+}
+
+async function assertRejectsWithMessage(
+  action: () => Promise<unknown>,
+  expectedMessagePart: string,
+  message: string
+): Promise<void> {
+  let rejection: unknown;
+  try {
+    await action();
+  } catch (error) {
+    rejection = error;
+  }
+
+  assert(rejection instanceof Error, `${message}. Expected an Error rejection`);
+  assert(
+    rejection.message.includes(expectedMessagePart),
+    `${message}. Expected rejection message to include "${expectedMessagePart}", got "${rejection.message}"`
+  );
 }
 
 function assertSharePointCatalogComposition(): void {
@@ -212,10 +309,7 @@ function assertSharePointCatalogComposition(): void {
   const definitionVerbs = sharePointActionDefinitions.map((definition) => definition.verb);
 
   assert(moduleVerbs.length === new Set(moduleVerbs).size, "SharePoint action modules should not contain duplicate verbs");
-  assert(
-    JSON.stringify(moduleVerbs) === JSON.stringify(definitionVerbs),
-    "SharePoint action definitions should be derived from action modules in the same order"
-  );
+  assertStringArrayEqual(moduleVerbs, definitionVerbs, "SharePoint action definitions should be derived from action modules in the same order");
 
   const rootList = sharePointActionsSchema.safeParse([
     {
@@ -225,6 +319,36 @@ function assertSharePointCatalogComposition(): void {
     },
   ]);
   assert(rootList.success, "SharePoint root schema should accept root list actions");
+
+  const rootListWithViewSubaction = sharePointActionsSchema.safeParse([
+    {
+      verb: "createSPList",
+      listName: "SmokeListWithView",
+      title: "Smoke List With View",
+      subactions: [
+        {
+          verb: "createSPListView",
+          title: "Smoke View",
+        },
+      ],
+    },
+  ]);
+  assert(rootListWithViewSubaction.success, "SharePoint root list actions should accept list view subactions");
+
+  const rootModifyListWithViewSubaction = sharePointActionsSchema.safeParse([
+    {
+      verb: "modifySPList",
+      listName: "SmokeListWithView",
+      subactions: [
+        {
+          verb: "modifySPListView",
+          title: "Smoke View",
+          rowLimit: 50,
+        },
+      ],
+    },
+  ]);
+  assert(rootModifyListWithViewSubaction.success, "SharePoint root modify list actions should accept list view subactions");
 
   const rootField = sharePointActionsSchema.safeParse([
     {
@@ -296,9 +420,27 @@ function assertSharePointCatalogComposition(): void {
         fieldName: "SmokeText",
         displayName: "Smoke Text",
       },
+      {
+        verb: "createSPListView",
+        title: "Smoke Nested View",
+        fields: ["Title", "SmokeText"],
+      },
     ],
   });
-  assert(nestedList.success, "SharePoint site subaction schema should accept list actions with field subactions");
+  assert(nestedList.success, "SharePoint site subaction schema should accept list actions with field and view subactions");
+
+  const nestedModifyList = siteSubactionSchema.safeParse({
+    verb: "modifySPList",
+    listName: "SmokeNestedList",
+    subactions: [
+      {
+        verb: "modifySPListView",
+        title: "Smoke Nested View",
+        rowLimit: 50,
+      },
+    ],
+  });
+  assert(nestedModifyList.success, "SharePoint site subaction schema should accept modify list actions with view subactions");
 
   const nestedContentType = siteSubactionSchema.safeParse({
     verb: "createSPContentType",
@@ -334,9 +476,1609 @@ function assertSharePointCatalogComposition(): void {
 
   const listCreatesView = listSubactionSchema.safeParse({
     verb: "createSPListView",
-    title: "Unsupported view",
+    title: "Smoke View",
+    fields: ["Title", "SmokeText"],
+    viewQuery: '<OrderBy><FieldRef Name="SmokeText" /></OrderBy>',
+    rowLimit: 50,
+    paged: true,
+    defaultView: true,
   });
-  assert(!listCreatesView.success, "SharePoint list subaction schema should reject removed list view actions");
+  assert(listCreatesView.success, "SharePoint list subaction schema should accept createSPListView");
+
+  const listCreatesViewWithSpacedNames = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: " Customers by Code ",
+    fields: ["Title", " Customer Email "],
+    viewQuery: '  <OrderBy><FieldRef Name="CustomerEmail" /></OrderBy>  ',
+  });
+  assert(listCreatesViewWithSpacedNames.success, "SharePoint list view schema should accept names with internal spaces");
+  if (listCreatesViewWithSpacedNames.success) {
+    assert(listCreatesViewWithSpacedNames.data.title === "Customers by Code", "SharePoint list view schema should trim view titles");
+    assertStringArrayEqual(
+      listCreatesViewWithSpacedNames.data.fields ?? [],
+      ["Title", "Customer Email"],
+      "SharePoint list view schema should trim field references while preserving internal spaces"
+    );
+    assert(
+      listCreatesViewWithSpacedNames.data.viewQuery === '<OrderBy><FieldRef Name="CustomerEmail" /></OrderBy>',
+      "SharePoint list view schema should trim viewQuery fragments"
+    );
+  }
+
+  const listModifiesView = listSubactionSchema.safeParse({
+    verb: "modifySPListView",
+    title: "Smoke View",
+    fields: ["Title", "SmokeText"],
+    viewQuery: '<Where><Eq><FieldRef Name="SmokeText" /><Value Type="Text">Active</Value></Eq></Where>',
+    rowLimit: 100,
+    paged: false,
+    defaultView: true,
+  });
+  assert(listModifiesView.success, "SharePoint list subaction schema should accept modifySPListView");
+
+  const listDeletesView = listSubactionSchema.safeParse({
+    verb: "deleteSPListView",
+    title: "Smoke View",
+  });
+  assert(listDeletesView.success, "SharePoint list subaction schema should accept deleteSPListView");
+  assertStringArrayEqual(
+    createSPListViewActionModule.placements,
+    ["listSubaction"],
+    "createSPListView action module should be list-subaction only"
+  );
+  assertStringArrayEqual(
+    modifySPListViewActionModule.placements,
+    ["listSubaction"],
+    "modifySPListView action module should be list-subaction only"
+  );
+  assertStringArrayEqual(
+    deleteSPListViewActionModule.placements,
+    ["listSubaction"],
+    "deleteSPListView action module should be list-subaction only"
+  );
+
+  const rootCreatesView = sharePointActionsSchema.safeParse([
+    {
+      verb: "createSPListView",
+      title: "Root View",
+    },
+  ]);
+  assert(!rootCreatesView.success, "SharePoint root schema should reject list view actions");
+
+  const siteCreatesView = siteSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Site View",
+  });
+  assert(!siteCreatesView.success, "SharePoint site subaction schema should reject list view actions");
+
+  const listCreatesDefaultFalseView = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Default False View",
+    defaultView: false,
+  });
+  assert(!listCreatesDefaultFalseView.success, "SharePoint list subaction schema should reject defaultView:false for list views");
+
+  const listCreatesWrappedQueryView = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Wrapped Query View",
+    viewQuery: '<Query><OrderBy><FieldRef Name="SmokeText" /></OrderBy></Query>',
+  });
+  assert(!listCreatesWrappedQueryView.success, "SharePoint list subaction schema should reject <Query>-wrapped viewQuery");
+
+  const listCreatesWrappedQueryViewWithWhitespace = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Wrapped Query View With Whitespace",
+    viewQuery: '  <Query><OrderBy><FieldRef Name="SmokeText" /></OrderBy></Query>',
+  });
+  assert(!listCreatesWrappedQueryViewWithWhitespace.success, "SharePoint list subaction schema should reject trimmed <Query>-wrapped viewQuery");
+
+  const listCreatesWrappedView = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Wrapped View",
+    viewQuery: '<View><Query><OrderBy><FieldRef Name="SmokeText" /></OrderBy></Query></View>',
+  });
+  assert(!listCreatesWrappedView.success, "SharePoint list subaction schema should reject <View>-wrapped viewQuery");
+
+  const listCreatesWrappedViewWithXmlDeclaration = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Wrapped View With Xml Declaration",
+    viewQuery: '<?xml version="1.0"?><View><Query><OrderBy><FieldRef Name="SmokeText" /></OrderBy></Query></View>',
+  });
+  assert(!listCreatesWrappedViewWithXmlDeclaration.success, "SharePoint list subaction schema should reject XML-declared <View>-wrapped viewQuery");
+
+  const listCreatesWrappedQueryWithComment = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Wrapped Query With Comment",
+    viewQuery: '<!-- generated --><Query><OrderBy><FieldRef Name="SmokeText" /></OrderBy></Query>',
+  });
+  assert(!listCreatesWrappedQueryWithComment.success, "SharePoint list subaction schema should reject comment-prefixed <Query>-wrapped viewQuery");
+
+  const listCreatesWrappedQueryWithXmlDeclarationAndComment = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Wrapped Query With Xml Declaration And Comment",
+    viewQuery: '<?xml version="1.0"?><!-- generated --><QuErY><OrderBy><FieldRef Name="SmokeText" /></OrderBy></QuErY>',
+  });
+  assert(
+    !listCreatesWrappedQueryWithXmlDeclarationAndComment.success,
+    "SharePoint list subaction schema should reject XML-declared and comment-prefixed mixed-case <Query>-wrapped viewQuery"
+  );
+
+  const listCreatesFragmentWithComment = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Fragment With Comment",
+    viewQuery: '<!-- generated --><OrderBy><FieldRef Name="SmokeText" /></OrderBy>',
+  });
+  assert(listCreatesFragmentWithComment.success, "SharePoint list subaction schema should accept comment-prefixed CAML fragments");
+
+  const listCreatesEmptyQuery = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Empty Query",
+    viewQuery: "   ",
+  });
+  assert(!listCreatesEmptyQuery.success, "SharePoint list view schema should reject empty viewQuery after trimming");
+
+  const listCreatesDuplicateFields = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Duplicate Fields",
+    fields: ["Title", " Title "],
+  });
+  assert(!listCreatesDuplicateFields.success, "SharePoint list view schema should reject duplicate raw field references after trimming");
+
+  const listCreatesViewWithRootPayload = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Unexpected Root Payload",
+    webUrl: "https://contoso.sharepoint.com/sites/smoke",
+  });
+  assert(!listCreatesViewWithRootPayload.success, "SharePoint list view schema should reject root-level payload fields");
+
+  const listCreatesViewWithNestedSubaction = listSubactionSchema.safeParse({
+    verb: "createSPListView",
+    title: "Nested View",
+    subactions: [
+      {
+        verb: "addSPField",
+        fieldType: "Text",
+        fieldName: "NestedText",
+      },
+    ],
+  });
+  assert(!listCreatesViewWithNestedSubaction.success, "SharePoint list view schema should reject nested subactions");
+}
+
+function assertSharePointListViewPublicBarrelExports(): void {
+  assert(new RootCreateSPListViewAction().verb === "createSPListView", "Package root should export CreateSPListViewAction");
+  assert(new RootModifySPListViewAction().verb === "modifySPListView", "Package root should export ModifySPListViewAction");
+  assert(new RootDeleteSPListViewAction().verb === "deleteSPListView", "Package root should export DeleteSPListViewAction");
+  assert(
+    rootCreateSPListViewSchema.safeParse({ verb: "createSPListView", title: "Root View" }).success,
+    "Package root should export createSPListViewSchema"
+  );
+  assert(
+    rootModifySPListViewSchema.safeParse({ verb: "modifySPListView", title: "Root View", rowLimit: 25 }).success,
+    "Package root should export modifySPListViewSchema"
+  );
+  assert(
+    rootDeleteSPListViewSchema.safeParse({ verb: "deleteSPListView", title: "Root View" }).success,
+    "Package root should export deleteSPListViewSchema"
+  );
+
+  assert(new PublicCreateSPListViewAction().verb === "createSPListView", "Public SharePoint barrel should export CreateSPListViewAction");
+  assert(new PublicModifySPListViewAction().verb === "modifySPListView", "Public SharePoint barrel should export ModifySPListViewAction");
+  assert(new PublicDeleteSPListViewAction().verb === "deleteSPListView", "Public SharePoint barrel should export DeleteSPListViewAction");
+
+  assert(
+    publicCreateSPListViewSchema.safeParse({ verb: "createSPListView", title: "Public View" }).success,
+    "Public SharePoint barrel should export createSPListViewSchema"
+  );
+  assert(
+    publicModifySPListViewSchema.safeParse({ verb: "modifySPListView", title: "Public View", rowLimit: 25 }).success,
+    "Public SharePoint barrel should export modifySPListViewSchema"
+  );
+  assert(
+    publicDeleteSPListViewSchema.safeParse({ verb: "deleteSPListView", title: "Public View" }).success,
+    "Public SharePoint barrel should export deleteSPListViewSchema"
+  );
+}
+
+async function assertListViewFieldResolutionGuards(): Promise<void> {
+  const fields: readonly SmokeFieldInfo[] = [
+    { Id: "1", InternalName: "Title", Title: "Title" },
+    { Id: "2", InternalName: "CustomerEmail", Title: "Customer Email" },
+  ];
+
+  const list = {
+    fields: fieldLookupFrom(fields),
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const resolved = await resolveViewFieldInternalNames(list, ["Title", "Customer Email"]);
+  assertStringArrayEqual(resolved, ["Title", "CustomerEmail"], "List view fields should resolve display titles to internal names");
+
+  await assertRejectsWithMessage(
+    () => resolveViewFieldInternalNames(list, ["Title", " Title "]),
+    "duplicate references",
+    "Duplicate raw list view field references should be rejected after trimming"
+  );
+
+  await assertRejectsWithMessage(
+    () => resolveViewFieldInternalNames(list, ["CustomerEmail", "Customer Email"]),
+    "duplicate internal names",
+    "Duplicate resolved list view field references should be rejected"
+  );
+}
+
+async function assertListViewLookupUsesFilteredTopOneQuery(): Promise<void> {
+  let capturedFilter = "";
+  let capturedTop: number | undefined;
+  let capturedSelect: readonly string[] = [];
+  const expectedInfo = {
+    Id: "view-quote",
+    Title: "Customer's View",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+
+  const list = {
+    views: {
+      filter: publicViewFilterFrom([expectedInfo], {
+        onFilter: (filter) => {
+          capturedFilter = filter;
+        },
+        onTop: (top) => {
+          capturedTop = top;
+        },
+        onSelect: (fields) => {
+          capturedSelect = fields;
+        },
+      }),
+      getByTitle: () => {
+        throw new Error("List view lookup should not use getByTitle for titles with spaces or apostrophes");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const info = await getPublicListViewInfoByTitle(list, "Customer's View");
+  assert(info?.Id === "view-quote", "List view lookup should return the matching filtered view");
+  assert(
+    capturedFilter === "Title eq 'Customer''s View' and PersonalView eq false",
+    "List view lookup should escape apostrophes and restrict title filters to public views"
+  );
+  assert(capturedTop === 1, "List view lookup should request at most one title match");
+  assertStringArrayEqual(
+    capturedSelect,
+    ["Id", "Title", "PersonalView", "DefaultView", "ViewQuery", "RowLimit", "Paged"],
+    "List view lookup should select all fields needed by handlers and compliance"
+  );
+
+  const direct404List = {
+    views: {
+      filter: () => {
+        throw Object.assign(new Error("not found"), { status: 404 });
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+  const direct404Info = await getPublicListViewInfoByTitle(direct404List, "Missing View");
+  assert(direct404Info === undefined, "List view lookup should treat direct 404 status errors as missing views");
+
+  const response404List = {
+    views: {
+      filter: () => {
+        throw Object.assign(new Error("not found"), { response: { status: 404 } });
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+  const response404Info = await getPublicListViewInfoByTitle(response404List, "Missing View");
+  assert(response404Info === undefined, "List view lookup should treat response.status 404 errors as missing views");
+}
+
+async function assertListViewPermissionChecks(): Promise<void> {
+  const web = {
+    currentUserHasPermissions: async () => true,
+  } as unknown as NonNullable<M365Scope["web"]>;
+
+  const createAction = new CreateSPListViewAction();
+  const createMissingSpfi = await createAction.checkPermissions({
+    scopeIn: { web },
+    clients: {},
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: { verb: "createSPListView", title: "Smoke View" },
+    },
+  } as Parameters<CreateSPListViewAction["checkPermissions"]>[0]);
+  assert(createMissingSpfi.decision === "deny", "createSPListView permission check should deny when SPFI is missing");
+
+  const modifyAction = new ModifySPListViewAction();
+  const modifyMissingWeb = await modifyAction.checkPermissions({
+    scopeIn: {},
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: { verb: "modifySPListView", title: "Smoke View" },
+    },
+  } as Parameters<ModifySPListViewAction["checkPermissions"]>[0]);
+  assert(modifyMissingWeb.decision === "unknown", "modifySPListView permission check should be unknown when web scope is missing");
+
+  const deleteAction = new DeleteSPListViewAction();
+  const deleteAllowed = await deleteAction.checkPermissions({
+    scopeIn: { web, webUrl: "https://contoso.sharepoint.com/sites/smoke" },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "deleteSPListView",
+      payload: { verb: "deleteSPListView", title: "Smoke View" },
+    },
+  } as Parameters<DeleteSPListViewAction["checkPermissions"]>[0]);
+  assert(deleteAllowed.decision === "allow", "deleteSPListView permission check should allow when ManageLists probe passes");
+}
+
+async function assertListViewCompliancePrerequisiteGuards(): Promise<void> {
+  const createMissingSpfi = await new CreateSPListViewAction().checkCompliance({
+    scopeIn: {},
+    clients: {},
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: { verb: "createSPListView", title: "Smoke View" },
+    },
+  } as Parameters<CreateSPListViewAction["checkCompliance"]>[0]);
+  assert(createMissingSpfi.outcome === "unverifiable", "createSPListView compliance should be unverifiable when SPFI is missing");
+  assert(createMissingSpfi.reason === "missing_prerequisite", "createSPListView compliance should report missing_prerequisite when SPFI is missing");
+  assert(
+    createMissingSpfi.message === "SPFI instance not available in scope",
+    "createSPListView compliance should keep the missing SPFI prerequisite message"
+  );
+
+  const modifyMissingList = await new ModifySPListViewAction().checkCompliance({
+    scopeIn: {},
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: { verb: "modifySPListView", title: "Smoke View", rowLimit: 25 },
+    },
+  } as Parameters<ModifySPListViewAction["checkCompliance"]>[0]);
+  assert(modifyMissingList.outcome === "unverifiable", "modifySPListView compliance should be unverifiable when list scope is missing");
+  assert(modifyMissingList.reason === "missing_prerequisite", "modifySPListView compliance should report missing_prerequisite when list scope is missing");
+  assert(
+    modifyMissingList.message === "SharePoint list scope not available",
+    "modifySPListView compliance should keep the missing list prerequisite message"
+  );
+
+  const deleteMissingList = await new DeleteSPListViewAction().checkCompliance({
+    scopeIn: {},
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "deleteSPListView",
+      payload: { verb: "deleteSPListView", title: "Smoke View" },
+    },
+  } as Parameters<DeleteSPListViewAction["checkCompliance"]>[0]);
+  assert(deleteMissingList.outcome === "unverifiable", "deleteSPListView compliance should be unverifiable when list scope is missing");
+  assert(deleteMissingList.reason === "missing_prerequisite", "deleteSPListView compliance should report missing_prerequisite when list scope is missing");
+  assert(
+    deleteMissingList.message === "SharePoint list scope not available",
+    "deleteSPListView compliance should keep the missing list prerequisite message"
+  );
+}
+
+async function assertListViewHandlerPrerequisiteGuards(): Promise<void> {
+  const createResult = await new CreateSPListViewAction().handler({
+    scopeIn: {},
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: { verb: "createSPListView", title: "Smoke View" },
+    },
+  } as Parameters<CreateSPListViewAction["handler"]>[0]);
+
+  const modifyResult = await new ModifySPListViewAction().handler({
+    scopeIn: {},
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: { verb: "modifySPListView", title: "Smoke View" },
+    },
+  } as Parameters<ModifySPListViewAction["handler"]>[0]);
+
+  const deleteResult = await new DeleteSPListViewAction().handler({
+    scopeIn: {},
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "deleteSPListView",
+      payload: { verb: "deleteSPListView", title: "Smoke View" },
+    },
+  } as Parameters<DeleteSPListViewAction["handler"]>[0]);
+
+  assert(createResult.result?.outcome === "skipped", "createSPListView handler should skip when list scope is missing");
+  assert(createResult.result?.reason === "missing_prerequisite", "createSPListView handler should report missing_prerequisite without list scope");
+  assert(modifyResult.result?.outcome === "skipped", "modifySPListView handler should skip when list scope is missing");
+  assert(modifyResult.result?.reason === "missing_prerequisite", "modifySPListView handler should report missing_prerequisite without list scope");
+  assert(deleteResult.result?.outcome === "skipped", "deleteSPListView handler should skip when list scope is missing");
+  assert(deleteResult.result?.reason === "missing_prerequisite", "deleteSPListView handler should report missing_prerequisite without list scope");
+}
+
+async function assertCreateSPListViewComplianceDetectsDrift(): Promise<void> {
+  const existingInfo = {
+    Id: "view-drift",
+    Title: "Customers by Code",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: '<OrderBy><FieldRef Name="CustomerEmail" /></OrderBy>',
+    RowLimit: 30,
+    Paged: true,
+  };
+
+  const fields: readonly SmokeFieldInfo[] = [
+    { Id: "1", InternalName: "Title", Title: "Title" },
+    { Id: "2", InternalName: "CustomerCode", Title: "Customer Code" },
+  ];
+
+  const view = {
+    fields: async () => ({ Items: ["Title", "CustomerEmail"] }),
+  };
+
+  const list = {
+    fields: fieldLookupFrom(fields),
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      getById: () => view,
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const action = new CreateSPListViewAction();
+  const compliance = await action.checkCompliance({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: {
+        verb: "createSPListView",
+        title: "Customers by Code",
+        fields: ["Title", "Customer Code"],
+        viewQuery: '<OrderBy><FieldRef Name="CustomerCode" /></OrderBy>',
+        rowLimit: 50,
+        paged: false,
+        defaultView: true,
+      },
+    },
+  } as Parameters<CreateSPListViewAction["checkCompliance"]>[0]);
+
+  assert(compliance.outcome === "non_compliant", "createSPListView compliance should detect drift on existing views");
+  assert(compliance.reason === "drift", "createSPListView compliance should report drift when mutable view state differs");
+}
+
+async function assertListViewComplianceAvoidsFieldReadsWhenFieldsAreNotDeclared(): Promise<void> {
+  const titleOnlyInfo: ListViewInfo = {
+    Id: "view-title-only",
+    Title: "Title Only",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+  const titleOnlyList = {
+    views: {
+      filter: publicViewFilterFrom([titleOnlyInfo]),
+      getById: () => {
+        throw new Error("createSPListView compliance should not resolve a view handle when fields are not declared");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const createCompliance = await new CreateSPListViewAction().checkCompliance({
+    scopeIn: { list: titleOnlyList },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: {
+        verb: "createSPListView",
+        title: "Title Only",
+      },
+    },
+  } as Parameters<CreateSPListViewAction["checkCompliance"]>[0]);
+
+  assert(createCompliance.outcome === "compliant", "createSPListView compliance should accept an existing title-only public view");
+
+  const scalarOnlyInfo: ListViewInfo = {
+    Id: "view-scalar-only-compliance",
+    Title: "Scalar Only",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: '<OrderBy><FieldRef Name="Title" /></OrderBy>',
+    RowLimit: 50,
+    Paged: true,
+  };
+  const scalarOnlyList = {
+    views: {
+      filter: publicViewFilterFrom([scalarOnlyInfo]),
+      getById: () => {
+        throw new Error("modifySPListView compliance should not resolve a view handle when fields are not declared");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const modifyCompliance = await new ModifySPListViewAction().checkCompliance({
+    scopeIn: { list: scalarOnlyList },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: {
+        verb: "modifySPListView",
+        title: "Scalar Only",
+        viewQuery: '<OrderBy><FieldRef Name="Title" /></OrderBy>',
+        rowLimit: 50,
+        paged: true,
+      },
+    },
+  } as Parameters<ModifySPListViewAction["checkCompliance"]>[0]);
+
+  assert(modifyCompliance.outcome === "compliant", "modifySPListView compliance should compare scalar-only payloads without reading fields");
+}
+
+async function assertListViewComplianceHandlesMissingViewQueryValue(): Promise<void> {
+  const existingInfo = {
+    Id: "view-missing-query",
+    Title: "Customers by Missing Query",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: undefined,
+    RowLimit: 50,
+    Paged: true,
+  } as unknown as ListViewInfo;
+
+  const list = {
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      getById: () => ({
+        fields: async () => ({ Items: ["Title"] }),
+      }),
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const compliance = await new ModifySPListViewAction().checkCompliance({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: {
+        verb: "modifySPListView",
+        title: "Customers by Missing Query",
+        viewQuery: '<OrderBy><FieldRef Name="Title" /></OrderBy>',
+      },
+    },
+  } as Parameters<ModifySPListViewAction["checkCompliance"]>[0]);
+
+  assert(compliance.outcome === "non_compliant", "modifySPListView compliance should treat missing ViewQuery as drift");
+  assert(compliance.reason === "drift", "modifySPListView compliance should not become unverifiable when ViewQuery is missing");
+}
+
+async function assertListViewComplianceReadsWrappedViewFieldItems(): Promise<void> {
+  const existingInfo: ListViewInfo = {
+    Id: "view-wrapped-fields",
+    Title: "Wrapped Field Items",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+
+  const list = {
+    fields: fieldLookupFrom([
+      { Id: "1", InternalName: "Title", Title: "Title" },
+      { Id: "2", InternalName: "CustomerCode", Title: "Customer Code" },
+    ]),
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      getById: () => ({
+        fields: async () => ({ Items: { results: ["Title", "CustomerCode"] } }),
+      }),
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const compliance = await new CreateSPListViewAction().checkCompliance({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: {
+        verb: "createSPListView",
+        title: "Wrapped Field Items",
+        fields: ["Title", "Customer Code"],
+      },
+    },
+  } as Parameters<CreateSPListViewAction["checkCompliance"]>[0]);
+
+  assert(compliance.outcome === "compliant", "List view compliance should read wrapped Items.results field collections");
+}
+
+async function assertListViewComplianceReportsMissingFieldsAsDrift(): Promise<void> {
+  const existingInfo: ListViewInfo = {
+    Id: "view-missing-field",
+    Title: "Customers by Missing Field",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+
+  const list = {
+    fields: fieldLookupFrom({
+      Title: { Id: "1", InternalName: "Title", Title: "Title" },
+    }),
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      getById: () => ({
+        fields: async () => ({ Items: ["Title"] }),
+      }),
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const createCompliance = await new CreateSPListViewAction().checkCompliance({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: {
+        verb: "createSPListView",
+        title: "Customers by Missing Field",
+        fields: ["Title", "Missing Field"],
+      },
+    },
+  } as Parameters<CreateSPListViewAction["checkCompliance"]>[0]);
+
+  const modifyCompliance = await new ModifySPListViewAction().checkCompliance({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: {
+        verb: "modifySPListView",
+        title: "Customers by Missing Field",
+        fields: ["Title", "Missing Field"],
+      },
+    },
+  } as Parameters<ModifySPListViewAction["checkCompliance"]>[0]);
+
+  const createDetails = createCompliance.details as { mismatches?: readonly { reason?: string }[] } | undefined;
+  const modifyDetails = modifyCompliance.details as { mismatches?: readonly { reason?: string }[] } | undefined;
+
+  assert(createCompliance.outcome === "non_compliant", "createSPListView compliance should report missing requested view fields as non-compliant");
+  assert(createCompliance.reason === "drift", "createSPListView compliance should report missing requested view fields as drift");
+  assert(createDetails?.mismatches?.[0]?.reason === "missing_fields", "createSPListView compliance should identify missing view fields");
+
+  assert(modifyCompliance.outcome === "non_compliant", "modifySPListView compliance should report missing requested view fields as non-compliant");
+  assert(modifyCompliance.reason === "drift", "modifySPListView compliance should report missing requested view fields as drift");
+  assert(modifyDetails?.mismatches?.[0]?.reason === "missing_fields", "modifySPListView compliance should identify missing view fields");
+}
+
+async function assertListViewHandlersValidateFieldsBeforeWrites(): Promise<void> {
+  let createAddCalled = false;
+  const createList = {
+    fields: fieldLookupFrom({
+      Title: { Id: "1", InternalName: "Title", Title: "Title" },
+    }),
+    views: {
+      filter: publicViewFilterFrom([]),
+      add: async () => {
+        createAddCalled = true;
+        throw new Error("createSPListView should not create a view when requested fields are missing");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  await assertRejectsWithMessage(
+    () => new CreateSPListViewAction().handler({
+      scopeIn: { list: createList },
+      clients: { spfi: {} },
+      out: idleOut(),
+      logger,
+      action: {
+        path: "1",
+        verb: "createSPListView",
+        payload: {
+          verb: "createSPListView",
+          title: "Missing Field View",
+          fields: ["Title", "Missing Field"],
+        },
+      },
+    } as Parameters<CreateSPListViewAction["handler"]>[0]),
+    "do not exist",
+    "createSPListView should validate requested fields before creating a view"
+  );
+  assert(!createAddCalled, "createSPListView should not call views.add when requested fields are missing");
+
+  let modifyRemoveAllCalled = false;
+  let modifyUpdateCalled = false;
+  const existingInfo: ListViewInfo = {
+    Id: "view-missing-field-modify",
+    Title: "Missing Field View",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+  const modifyList = {
+    fields: fieldLookupFrom({
+      Title: { Id: "1", InternalName: "Title", Title: "Title" },
+    }),
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      getById: () => ({
+        fields: Object.assign(
+          async () => ({ Items: ["Title"] }),
+          {
+            removeAll: async () => {
+              modifyRemoveAllCalled = true;
+            },
+            add: async () => undefined,
+          }
+        ),
+        update: async () => {
+          modifyUpdateCalled = true;
+        },
+      }),
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  await assertRejectsWithMessage(
+    () => new ModifySPListViewAction().handler({
+      scopeIn: { list: modifyList },
+      clients: { spfi: {} },
+      out: idleOut(),
+      logger,
+      action: {
+        path: "1",
+        verb: "modifySPListView",
+        payload: {
+          verb: "modifySPListView",
+          title: "Missing Field View",
+          fields: ["Title", "Missing Field"],
+          rowLimit: 50,
+        },
+      },
+    } as Parameters<ModifySPListViewAction["handler"]>[0]),
+    "do not exist",
+    "modifySPListView should validate requested fields before replacing fields"
+  );
+  assert(!modifyRemoveAllCalled, "modifySPListView should not remove existing fields when requested fields are missing");
+  assert(!modifyUpdateCalled, "modifySPListView should not update scalar state when requested fields are missing");
+}
+
+async function assertCreateSPListViewHandlerAppliesFieldsBeforeScalars(): Promise<void> {
+  const events: string[] = [];
+  let addedTitle = "";
+  let requestedViewId = "";
+  let updatedProps: Record<string, unknown> | undefined;
+  const fields: readonly SmokeFieldInfo[] = [
+    { Id: "1", InternalName: "Title", Title: "Title" },
+    { Id: "2", InternalName: "CustomerCode", Title: "Customer Code" },
+  ];
+  const addedFields: string[] = [];
+  const viewFields = Object.assign(
+    async () => ({ Items: ["Title"] }),
+    {
+      removeAll: async () => {
+        events.push("fields.removeAll");
+      },
+      add: async (fieldName: string) => {
+        events.push(`fields.add:${fieldName}`);
+        addedFields.push(fieldName);
+      },
+    }
+  );
+  const view = {
+    fields: viewFields,
+    update: async (props: Record<string, unknown>) => {
+      events.push("view.update");
+      updatedProps = props;
+      return props;
+    },
+  };
+  const list = {
+    fields: fieldLookupFrom(fields),
+    views: {
+      filter: publicViewFilterFrom([]),
+      add: async (title: string, personalView: boolean, additionalSettings: Record<string, unknown>) => {
+        events.push("views.add");
+        addedTitle = title;
+        assert(personalView === false, "createSPListView should create public list views in V1");
+        assert(Object.keys(additionalSettings).length === 0, "createSPListView should create minimally before applying mutable state");
+        return { Id: "view-created", Title: title };
+      },
+      getById: (id: string) => {
+        requestedViewId = id;
+        return view;
+      },
+      getByTitle: () => {
+        throw new Error("createSPListView should use the created view Id, not getByTitle");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const action = new CreateSPListViewAction();
+  const result = await action.handler({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: {
+        verb: "createSPListView",
+        title: "Customers by Code",
+        fields: ["Title", "Customer Code"],
+        viewQuery: '<OrderBy><FieldRef Name="CustomerCode" /></OrderBy>',
+        rowLimit: 50,
+        paged: false,
+        defaultView: true,
+      },
+    },
+  } as Parameters<CreateSPListViewAction["handler"]>[0]);
+
+  assert(result.result?.outcome === "executed", "createSPListView should execute when the view does not exist");
+  assert(addedTitle === "Customers by Code", "createSPListView should pass the requested title to PnPjs add");
+  assert(requestedViewId === "view-created", "createSPListView should resolve the created view by returned Id");
+  assertStringArrayEqual(addedFields, ["Title", "CustomerCode"], "createSPListView should add resolved internal names to the created view");
+  assert(
+    updatedProps?.ViewQuery === '<OrderBy><FieldRef Name="CustomerCode" /></OrderBy>' &&
+      updatedProps.RowLimit === 50 &&
+      updatedProps.Paged === false &&
+      updatedProps.DefaultView === true,
+    "createSPListView should apply scalar view properties through PnPjs update"
+  );
+  assert(
+    events.indexOf("views.add") !== -1 &&
+      events.indexOf("fields.removeAll") !== -1 &&
+      events.indexOf("view.update") !== -1 &&
+      events.indexOf("views.add") < events.indexOf("fields.removeAll") &&
+      events.indexOf("fields.removeAll") < events.indexOf("view.update"),
+    "createSPListView should create minimally, replace fields, then apply scalar updates"
+  );
+}
+
+async function assertCreateSPListViewSkipsExistingViewWithoutWrites(): Promise<void> {
+  let addCalled = false;
+  let getByIdCalled = false;
+  const existingInfo = {
+    Id: "view-existing",
+    Title: "Customers by Code",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+  const list = {
+    fields: fieldLookupFrom({}),
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      add: async () => {
+        addCalled = true;
+        throw new Error("createSPListView should not add when the view already exists");
+      },
+      getById: () => {
+        getByIdCalled = true;
+        throw new Error("createSPListView should not resolve a mutable view handle when skipping existing views");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const action = new CreateSPListViewAction();
+  const result = await action.handler({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: {
+        verb: "createSPListView",
+        title: "Customers by Code",
+        fields: ["Title", "Customer Code"],
+        viewQuery: '<OrderBy><FieldRef Name="CustomerCode" /></OrderBy>',
+        rowLimit: 50,
+        paged: false,
+        defaultView: true,
+      },
+    },
+  } as Parameters<CreateSPListViewAction["handler"]>[0]);
+
+  assert(result.result?.outcome === "skipped", "createSPListView should skip existing views");
+  assert(result.result?.outcome === "skipped" && result.result.reason === "already_exists", "createSPListView should report already_exists for existing views");
+  assert(result.scopeDelta?.list === list, "createSPListView should propagate the existing list scope when skipping existing views");
+  assert(
+    !Object.prototype.hasOwnProperty.call(result.scopeDelta ?? {}, "web") &&
+      !Object.prototype.hasOwnProperty.call(result.scopeDelta ?? {}, "webUrl"),
+    "createSPListView should not add undefined web scope keys when building list view scope deltas"
+  );
+  assert(!addCalled, "createSPListView should not call views.add when the view already exists");
+  assert(!getByIdCalled, "createSPListView should not call getById when the view already exists");
+}
+
+async function assertCreateSPListViewIgnoresPersonalViewsWithSameTitle(): Promise<void> {
+  let addCalled = false;
+  let createdPersonalView: boolean | undefined;
+  const personalViewInfo: ListViewInfo = {
+    Id: "view-personal",
+    Title: "Customers by Code",
+    PersonalView: true,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+  const list = {
+    views: {
+      filter: publicViewFilterFrom((filter) =>
+        filter === "Title eq 'Customers by Code' and PersonalView eq false" ? [] : [personalViewInfo]
+      ),
+      add: async (title: string, personalView: boolean, additionalSettings: Record<string, unknown>) => {
+        addCalled = true;
+        createdPersonalView = personalView;
+        assert(title === "Customers by Code", "createSPListView should create the requested public title when only a personal view exists");
+        assert(Object.keys(additionalSettings).length === 0, "createSPListView should still create minimally when ignoring personal views");
+        return { Id: "view-created-public", Title: title };
+      },
+      getById: (id: string) => {
+        assert(id === "view-created-public", "createSPListView should resolve the newly created public view by Id");
+        return {};
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const result = await new CreateSPListViewAction().handler({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: {
+        verb: "createSPListView",
+        title: "Customers by Code",
+      },
+    },
+  } as Parameters<CreateSPListViewAction["handler"]>[0]);
+
+  assert(result.result?.outcome === "executed", "createSPListView should create when only a same-title personal view exists");
+  assert(addCalled, "createSPListView should not treat personal views as existing public views");
+  assert(createdPersonalView === false, "createSPListView should create public views");
+}
+
+async function assertListViewFieldOnlyChangesDoNotSendEmptyScalarUpdates(): Promise<void> {
+  const fields: readonly SmokeFieldInfo[] = [
+    { Id: "1", InternalName: "Title", Title: "Title" },
+    { Id: "2", InternalName: "CustomerCode", Title: "Customer Code" },
+  ];
+
+  let createUpdateCalled = false;
+  const createAddedFields: string[] = [];
+  const createViewFields = Object.assign(
+    async () => ({ Items: ["Title"] }),
+    {
+      removeAll: async () => undefined,
+      add: async (fieldName: string) => {
+        createAddedFields.push(fieldName);
+      },
+    }
+  );
+  const createList = {
+    fields: fieldLookupFrom(fields),
+    views: {
+      filter: publicViewFilterFrom([]),
+      add: async (title: string) => ({ Id: "view-created-field-only", Title: title }),
+      getById: () => ({
+        fields: createViewFields,
+        update: async () => {
+          createUpdateCalled = true;
+          throw new Error("createSPListView should not send empty scalar updates for field-only creates");
+        },
+      }),
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const createResult = await new CreateSPListViewAction().handler({
+    scopeIn: { list: createList },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "createSPListView",
+      payload: {
+        verb: "createSPListView",
+        title: "Field Only Create",
+        fields: ["Title", "Customer Code"],
+      },
+    },
+  } as Parameters<CreateSPListViewAction["handler"]>[0]);
+
+  assert(createResult.result?.outcome === "executed", "createSPListView should execute field-only creates");
+  assertStringArrayEqual(createAddedFields, ["Title", "CustomerCode"], "createSPListView should replace fields for field-only creates");
+  assert(!createUpdateCalled, "createSPListView should not call view.update when only fields are declared");
+
+  let modifyUpdateCalled = false;
+  const modifyAddedFields: string[] = [];
+  const existingInfo = {
+    Id: "view-modify-field-only",
+    Title: "Field Only Modify",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+  const modifyViewFields = Object.assign(
+    async () => ({ Items: ["Title"] }),
+    {
+      removeAll: async () => undefined,
+      add: async (fieldName: string) => {
+        modifyAddedFields.push(fieldName);
+      },
+    }
+  );
+  const modifyList = {
+    fields: fieldLookupFrom(fields),
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      getById: () => ({
+        fields: modifyViewFields,
+        update: async () => {
+          modifyUpdateCalled = true;
+          throw new Error("modifySPListView should not send empty scalar updates for field-only changes");
+        },
+      }),
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const modifyResult = await new ModifySPListViewAction().handler({
+    scopeIn: { list: modifyList },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: {
+        verb: "modifySPListView",
+        title: "Field Only Modify",
+        fields: ["Title", "Customer Code"],
+      },
+    },
+  } as Parameters<ModifySPListViewAction["handler"]>[0]);
+
+  assert(modifyResult.result?.outcome === "executed", "modifySPListView should execute field-only changes");
+  assertStringArrayEqual(modifyAddedFields, ["Title", "CustomerCode"], "modifySPListView should replace fields for field-only changes");
+  assert(!modifyUpdateCalled, "modifySPListView should not call view.update when only fields changed");
+}
+
+async function assertModifySPListViewAppliesFieldAndScalarChanges(): Promise<void> {
+  const events: string[] = [];
+  let requestedViewId = "";
+  let updatedProps: Record<string, unknown> | undefined;
+  const existingInfo = {
+    Id: "view-modify",
+    Title: "Customers by Code",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: '<OrderBy><FieldRef Name="CustomerEmail" /></OrderBy>',
+    RowLimit: 30,
+    Paged: true,
+  };
+  const fields: readonly SmokeFieldInfo[] = [
+    { Id: "1", InternalName: "Title", Title: "Title" },
+    { Id: "2", InternalName: "CustomerCode", Title: "Customer Code" },
+  ];
+  const addedFields: string[] = [];
+  const viewFields = Object.assign(
+    async () => ({ Items: ["Title", "CustomerEmail"] }),
+    {
+      removeAll: async () => {
+        events.push("fields.removeAll");
+      },
+      add: async (fieldName: string) => {
+        events.push(`fields.add:${fieldName}`);
+        addedFields.push(fieldName);
+      },
+    }
+  );
+  const view = {
+    fields: viewFields,
+    update: async (props: Record<string, unknown>) => {
+      events.push("view.update");
+      updatedProps = props;
+      return { ...existingInfo, ...props };
+    },
+  };
+  const list = {
+    fields: fieldLookupFrom(fields),
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      getById: (id: string) => {
+        requestedViewId = id;
+        return view;
+      },
+      getByTitle: () => {
+        throw new Error("modifySPListView should use getById after title lookup, not getByTitle");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const action = new ModifySPListViewAction();
+  const result = await action.handler({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: {
+        verb: "modifySPListView",
+        title: "Customers by Code",
+        fields: ["Title", "Customer Code"],
+        viewQuery: '<OrderBy><FieldRef Name="CustomerCode" /></OrderBy>',
+        rowLimit: 50,
+        paged: false,
+        defaultView: true,
+      },
+    },
+  } as Parameters<ModifySPListViewAction["handler"]>[0]);
+
+  assert(result.result?.outcome === "executed", "modifySPListView should execute when supported mutable state differs");
+  assert(requestedViewId === "view-modify", "modifySPListView should resolve the mutable view by ID after title lookup");
+  assertStringArrayEqual(addedFields, ["Title", "CustomerCode"], "modifySPListView should replace view fields with resolved internal names");
+  assert(
+    updatedProps?.ViewQuery === '<OrderBy><FieldRef Name="CustomerCode" /></OrderBy>' &&
+      updatedProps.RowLimit === 50 &&
+      updatedProps.Paged === false &&
+      updatedProps.DefaultView === true,
+    "modifySPListView should apply scalar view properties through PnPjs update"
+  );
+  assert(
+    events.indexOf("fields.removeAll") !== -1 &&
+      events.indexOf("view.update") !== -1 &&
+      events.indexOf("fields.removeAll") < events.indexOf("view.update"),
+    "modifySPListView should replace fields before applying scalar updates"
+  );
+}
+
+async function assertModifySPListViewAppliesScalarChangesWithoutFieldWrites(): Promise<void> {
+  let requestedViewId = "";
+  let fieldsRead = false;
+  let updatedProps: Record<string, unknown> | undefined;
+  const existingInfo = {
+    Id: "view-scalar-only",
+    Title: "Customers by Code",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+  const view = {
+    fields: Object.assign(
+      async () => {
+        fieldsRead = true;
+        return { Items: ["Title"] };
+      },
+      {
+        removeAll: async () => {
+          throw new Error("modifySPListView should not remove fields for scalar-only changes");
+        },
+        add: async () => {
+          throw new Error("modifySPListView should not add fields for scalar-only changes");
+        },
+      }
+    ),
+    update: async (props: Record<string, unknown>) => {
+      updatedProps = props;
+      return { ...existingInfo, ...props };
+    },
+  };
+  const list = {
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      getById: (id: string) => {
+        requestedViewId = id;
+        return view;
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const result = await new ModifySPListViewAction().handler({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: {
+        verb: "modifySPListView",
+        title: "Customers by Code",
+        rowLimit: 50,
+      },
+    },
+  } as Parameters<ModifySPListViewAction["handler"]>[0]);
+
+  assert(result.result?.outcome === "executed", "modifySPListView should execute scalar-only changes");
+  assert(requestedViewId === "view-scalar-only", "modifySPListView should resolve scalar-only target views by ID");
+  assert(updatedProps?.RowLimit === 50, "modifySPListView should apply scalar-only rowLimit changes through PnPjs update");
+  assert(!Object.prototype.hasOwnProperty.call(updatedProps ?? {}, "ViewQuery"), "modifySPListView should not send undefined ViewQuery in scalar-only updates");
+  assert(!fieldsRead, "modifySPListView should not read view fields for scalar-only changes");
+}
+
+async function assertModifySPListViewSkipsWhenAlreadyCompliant(): Promise<void> {
+  let removeAllCalled = false;
+  let addCalled = false;
+  let updateCalled = false;
+  const existingInfo = {
+    Id: "view-no-change",
+    Title: "Customers by Code",
+    PersonalView: false,
+    DefaultView: true,
+    ViewQuery: '<OrderBy><FieldRef Name="CustomerCode" /></OrderBy>',
+    RowLimit: 50,
+    Paged: false,
+  };
+  const fields: readonly SmokeFieldInfo[] = [
+    { Id: "1", InternalName: "Title", Title: "Title" },
+    { Id: "2", InternalName: "CustomerCode", Title: "Customer Code" },
+  ];
+  const viewFields = Object.assign(
+    async () => ({ Items: ["Title", "CustomerCode"] }),
+    {
+      removeAll: async () => {
+        removeAllCalled = true;
+      },
+      add: async () => {
+        addCalled = true;
+      },
+    }
+  );
+  const view = {
+    fields: viewFields,
+    update: async () => {
+      updateCalled = true;
+      return existingInfo;
+    },
+  };
+  const list = {
+    fields: fieldLookupFrom(fields),
+    views: {
+      filter: publicViewFilterFrom([existingInfo]),
+      getById: () => view,
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const action = new ModifySPListViewAction();
+  const result = await action.handler({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: {
+        verb: "modifySPListView",
+        title: "Customers by Code",
+        fields: ["Title", "Customer Code"],
+        viewQuery: '<OrderBy><FieldRef Name="CustomerCode" /></OrderBy>',
+        rowLimit: 50,
+        paged: false,
+        defaultView: true,
+      },
+    },
+  } as Parameters<ModifySPListViewAction["handler"]>[0]);
+
+  assert(result.result?.outcome === "skipped", "modifySPListView should skip already-compliant views");
+  assert(result.result?.outcome === "skipped" && result.result.reason === "no_changes", "modifySPListView should report no_changes for already-compliant views");
+  assert(!removeAllCalled, "modifySPListView should not remove fields when the requested order already matches");
+  assert(!addCalled, "modifySPListView should not add fields when the requested order already matches");
+  assert(!updateCalled, "modifySPListView should not update scalar state when it already matches");
+}
+
+async function assertModifyAndDeleteListViewSkipMissingViewsWithoutWrites(): Promise<void> {
+  let modifyGetByIdCalled = false;
+  const modifyList = {
+    views: {
+      filter: publicViewFilterFrom([]),
+      getById: () => {
+        modifyGetByIdCalled = true;
+        throw new Error("modifySPListView should not resolve a view handle when the view is missing");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const modifyResult = await new ModifySPListViewAction().handler({
+    scopeIn: { list: modifyList },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: {
+        verb: "modifySPListView",
+        title: "Missing View",
+        rowLimit: 25,
+      },
+    },
+  } as Parameters<ModifySPListViewAction["handler"]>[0]);
+
+  assert(modifyResult.result?.outcome === "skipped", "modifySPListView should skip missing views");
+  assert(modifyResult.result?.outcome === "skipped" && modifyResult.result.reason === "not_found", "modifySPListView should report not_found for missing views");
+  assert(!modifyGetByIdCalled, "modifySPListView should not call getById when the view is missing");
+
+  let deleteGetByIdCalled = false;
+  const deleteList = {
+    views: {
+      filter: publicViewFilterFrom([]),
+      getById: () => {
+        deleteGetByIdCalled = true;
+        throw new Error("deleteSPListView should not resolve a view handle when the view is missing");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const deleteResult = await new DeleteSPListViewAction().handler({
+    scopeIn: { list: deleteList },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "deleteSPListView",
+      payload: { verb: "deleteSPListView", title: "Missing View" },
+    },
+  } as Parameters<DeleteSPListViewAction["handler"]>[0]);
+
+  assert(deleteResult.result?.outcome === "skipped", "deleteSPListView should skip missing views");
+  assert(deleteResult.result?.outcome === "skipped" && deleteResult.result.reason === "not_found", "deleteSPListView should report not_found for missing views");
+  assert(!deleteGetByIdCalled, "deleteSPListView should not call getById when the view is missing");
+}
+
+async function assertListViewComplianceHandlesMissingAndDeleteTargets(): Promise<void> {
+  let missingGetByIdCalled = false;
+  const missingList = {
+    views: {
+      filter: publicViewFilterFrom([]),
+      getById: () => {
+        missingGetByIdCalled = true;
+        throw new Error("List view compliance should not resolve a mutable view handle when lookup misses");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const modifyMissing = await new ModifySPListViewAction().checkCompliance({
+    scopeIn: { list: missingList },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "modifySPListView",
+      payload: { verb: "modifySPListView", title: "Missing View", rowLimit: 25 },
+    },
+  } as Parameters<ModifySPListViewAction["checkCompliance"]>[0]);
+
+  assert(modifyMissing.outcome === "non_compliant", "modifySPListView compliance should flag missing target views");
+  assert(modifyMissing.reason === "not_found", "modifySPListView compliance should report not_found for missing target views");
+
+  const deleteMissing = await new DeleteSPListViewAction().checkCompliance({
+    scopeIn: { list: missingList },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "deleteSPListView",
+      payload: { verb: "deleteSPListView", title: "Missing View" },
+    },
+  } as Parameters<DeleteSPListViewAction["checkCompliance"]>[0]);
+
+  assert(deleteMissing.outcome === "compliant", "deleteSPListView compliance should treat already-missing views as compliant");
+  assert(!missingGetByIdCalled, "List view compliance should not call getById when title lookup returns no public view");
+
+  const existingViewInfo = {
+    Id: "view-delete",
+    Title: "Temporary View",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+  const existingList = {
+    views: {
+      filter: publicViewFilterFrom([existingViewInfo]),
+      getById: () => {
+        throw new Error("deleteSPListView compliance should not resolve a mutable view handle for existence checks");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const deleteExisting = await new DeleteSPListViewAction().checkCompliance({
+    scopeIn: { list: existingList },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "deleteSPListView",
+      payload: { verb: "deleteSPListView", title: "Temporary View" },
+    },
+  } as Parameters<DeleteSPListViewAction["checkCompliance"]>[0]);
+
+  assert(deleteExisting.outcome === "non_compliant", "deleteSPListView compliance should flag existing non-default views");
+  assert(deleteExisting.reason === "exists", "deleteSPListView compliance should report exists for non-default target views");
+}
+
+async function assertDeleteSPListViewDefaultViewGuard(): Promise<void> {
+  let deleteCalled = false;
+  let lastViewFilter = "";
+  const defaultViewInfo = {
+    Id: "view-1",
+    Title: "Default View",
+    PersonalView: false,
+    DefaultView: true,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+  const view = {
+    select: () => async () => defaultViewInfo,
+    delete: async () => {
+      deleteCalled = true;
+    },
+  };
+  const list = {
+    views: {
+      filter: publicViewFilterFrom(
+        (filter) => filter === "Title eq 'Default View' and PersonalView eq false" ? [defaultViewInfo] : [],
+        {
+          onFilter: (filter) => {
+            lastViewFilter = filter;
+          },
+        }
+      ),
+      getById: () => view,
+      getByTitle: () => {
+        throw new Error("List view lookup should not use getByTitle for titles with spaces");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const action = new DeleteSPListViewAction();
+  const result = await action.handler({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "deleteSPListView",
+      payload: { verb: "deleteSPListView", title: "Default View" },
+    },
+  } as Parameters<DeleteSPListViewAction["handler"]>[0]);
+
+  assert(result.result?.outcome === "skipped", "deleteSPListView should skip current default view");
+  assert(
+    lastViewFilter === "Title eq 'Default View' and PersonalView eq false",
+    "List view lookup should filter by raw title with spaces and public views"
+  );
+  assert(
+    result.result?.outcome === "skipped" && result.result.reason === "unsupported",
+    "deleteSPListView should report unsupported for current default view"
+  );
+  assert(
+    result.result?.warnings?.[0]?.code === "LIST_VIEW_DEFAULT_DELETE_BLOCKED",
+    "deleteSPListView should emit default-view delete warning"
+  );
+  assert(!deleteCalled, "deleteSPListView should not call delete for current default view");
+
+  const compliance = await action.checkCompliance({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "deleteSPListView",
+      payload: { verb: "deleteSPListView", title: "Default View" },
+    },
+  } as Parameters<DeleteSPListViewAction["checkCompliance"]>[0]);
+
+  assert(compliance.outcome === "non_compliant", "deleteSPListView compliance should flag existing default view");
+  assert(compliance.reason === "default_view", "deleteSPListView compliance should report default_view reason");
+}
+
+async function assertDeleteSPListViewRemovesNonDefaultView(): Promise<void> {
+  let requestedViewId = "";
+  let deleteCalled = false;
+  const viewInfo = {
+    Id: "view-delete",
+    Title: "Temporary View",
+    PersonalView: false,
+    DefaultView: false,
+    ViewQuery: "",
+    RowLimit: 30,
+    Paged: true,
+  };
+  const list = {
+    views: {
+      filter: publicViewFilterFrom([viewInfo]),
+      getById: (id: string) => {
+        requestedViewId = id;
+        return {
+          delete: async () => {
+            deleteCalled = true;
+          },
+        };
+      },
+      getByTitle: () => {
+        throw new Error("deleteSPListView should use getById after title lookup, not getByTitle");
+      },
+    },
+  } as unknown as NonNullable<M365Scope["list"]>;
+
+  const action = new DeleteSPListViewAction();
+  const result = await action.handler({
+    scopeIn: { list },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "deleteSPListView",
+      payload: { verb: "deleteSPListView", title: "Temporary View" },
+    },
+  } as Parameters<DeleteSPListViewAction["handler"]>[0]);
+
+  assert(result.result?.outcome === "executed", "deleteSPListView should execute for non-default views");
+  assert(requestedViewId === "view-delete", "deleteSPListView should resolve the mutable view by ID after title lookup");
+  assert(deleteCalled, "deleteSPListView should call delete for non-default views");
 }
 
 function assertContentTypeFieldReferenceScopeResolution(): void {
@@ -633,7 +2375,7 @@ async function assertCreateSPSiteColumnIgnoresStaleListScope(): Promise<void> {
   const result = await action.handler({
     scopeIn: { web, list } as unknown as M365Scope,
     clients: {},
-    out: { byAction: {}, trace: { status: "idle", byPath: {}, order: [] } },
+    out: idleOut(),
     logger,
     action: {
       path: "1",
@@ -656,11 +2398,34 @@ async function assertCreateSPSiteColumnIgnoresStaleListScope(): Promise<void> {
 
 async function main(): Promise<void> {
   assertSharePointCatalogComposition();
+  assertSharePointListViewPublicBarrelExports();
   assertContentTypeFieldReferenceScopeResolution();
   assertFieldStructuralCompatibility();
   assertListStructuralCompatibility();
   assertJsonResultContract();
   assertLoggerContract();
+  await assertListViewFieldResolutionGuards();
+  await assertListViewLookupUsesFilteredTopOneQuery();
+  await assertListViewPermissionChecks();
+  await assertListViewCompliancePrerequisiteGuards();
+  await assertListViewHandlerPrerequisiteGuards();
+  await assertCreateSPListViewComplianceDetectsDrift();
+  await assertListViewComplianceAvoidsFieldReadsWhenFieldsAreNotDeclared();
+  await assertListViewComplianceHandlesMissingViewQueryValue();
+  await assertListViewComplianceReadsWrappedViewFieldItems();
+  await assertListViewComplianceReportsMissingFieldsAsDrift();
+  await assertListViewHandlersValidateFieldsBeforeWrites();
+  await assertCreateSPListViewHandlerAppliesFieldsBeforeScalars();
+  await assertCreateSPListViewSkipsExistingViewWithoutWrites();
+  await assertCreateSPListViewIgnoresPersonalViewsWithSameTitle();
+  await assertListViewFieldOnlyChangesDoNotSendEmptyScalarUpdates();
+  await assertModifySPListViewAppliesFieldAndScalarChanges();
+  await assertModifySPListViewAppliesScalarChangesWithoutFieldWrites();
+  await assertModifySPListViewSkipsWhenAlreadyCompliant();
+  await assertModifyAndDeleteListViewSkipMissingViewsWithoutWrites();
+  await assertListViewComplianceHandlesMissingAndDeleteTargets();
+  await assertDeleteSPListViewDefaultViewGuard();
+  await assertDeleteSPListViewRemovesNonDefaultView();
   await assertComplianceCancelContract();
   await assertCreateSPSiteColumnIgnoresStaleListScope();
   await assertSharePointGraphClientPreflight();

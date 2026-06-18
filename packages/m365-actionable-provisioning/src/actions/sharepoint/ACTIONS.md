@@ -33,6 +33,11 @@ actions/sharepoint/
       action.ts
       schema.ts
       index.ts
+  views/
+    <action>/
+      action.ts
+      schema.ts
+      index.ts
 ```
 
 ## Architecture
@@ -68,6 +73,59 @@ import {
 ## Adding Actions
 
 See `ADDING_ACTIONS.md`.
+
+## List Views V1
+
+SharePoint list/library view actions are list subactions only. In SharePoint and
+PnPjs, document libraries are lists, so the same parent list scope is used for
+both custom list views and library views. V1 exposes:
+
+- `createSPListView`
+- `modifySPListView`
+- `deleteSPListView`
+
+`createSPListView` is create-only. Existing views with the same title are
+skipped rather than updated; use `modifySPListView` for mutable view changes.
+Compliance still compares any mutable state declared on the create payload and
+reports drift when the existing public view differs.
+
+Create and modify payloads support:
+
+```ts
+{
+  verb: "createSPListView" | "modifySPListView";
+  title: string;
+  fields?: string[];
+  viewQuery?: string;
+  rowLimit?: number;
+  paged?: boolean;
+  defaultView?: true;
+}
+```
+
+`deleteSPListView` accepts only `title` plus the verb. V1 does not support
+root-level view actions, site subaction view actions, private views, formatted
+modern views, full `ViewXml`, or `defaultView: false`.
+
+Title lookup is restricted to public views (`PersonalView eq false`) so personal
+views with the same title are ignored by V1 actions.
+
+View actions are leaf actions. Non-empty `subactions` arrays are rejected.
+
+Requested fields are resolved to SharePoint internal names before comparison or
+write operations. During compliance, unresolved requested fields are reported as
+`drift` details; handlers still fail before modifying the view. Duplicate raw
+field references are rejected by the schema after trimming. Different
+references that resolve to the same internal name are also rejected before
+handler writes.
+
+`viewQuery` is a CAML query fragment, not a wrapped `<View>` or `<Query>`
+document. Wrapper payloads are rejected even when prefixed by XML declarations
+or leading XML comments:
+
+```xml
+<OrderBy><FieldRef Name="Modified" Ascending="FALSE" /></OrderBy>
+```
 
 ## Shared Utilities
 

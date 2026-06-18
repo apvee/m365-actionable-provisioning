@@ -14,9 +14,9 @@ This module provides a declarative approach to SharePoint provisioning through:
 
 SharePoint actions follow a deliberate create/modify/delete split:
 
-- `createSPSite`, `createSPList`, `addSPField`, `createSPSiteColumn`, and `createSPContentType` ensure that the target resource exists.
-- `modifySPSite`, `modifySPList`, `modifySPField`, `modifySPContentType`, and `modifySPContentTypeField` enforce mutable configuration on existing resources.
-- `deleteSPSite`, `deleteSPList`, `deleteSPField`, `deleteSPContentType`, and `removeSPFieldFromContentType` ensure absence.
+- `createSPSite`, `createSPList`, `createSPListView`, `addSPField`, `createSPSiteColumn`, and `createSPContentType` ensure that the target resource exists.
+- `modifySPSite`, `modifySPList`, `modifySPListView`, `modifySPField`, `modifySPContentType`, and `modifySPContentTypeField` enforce mutable configuration on existing resources.
+- `deleteSPSite`, `deleteSPList`, `deleteSPListView`, `deleteSPField`, `deleteSPContentType`, and `removeSPFieldFromContentType` ensure absence.
 
 Create actions do not reconcile mutable properties on already-existing resources. For example, an existing list with the requested `listName` but a different `Title` still satisfies the create action. Add a `modifySPList` action when the title must be enforced.
 
@@ -45,6 +45,7 @@ packages/m365-actionable-provisioning/src/actions/sharepoint/
 ├── _shared/          # Cross-action runtime/schema utilities
 ├── sites/            # Site action modules
 ├── lists/            # List action modules
+├── views/            # List/library view action modules
 ├── fields/           # Field action modules
 └── content-types/    # Graph-backed content type action modules
 ```
@@ -61,7 +62,7 @@ packages/m365-actionable-provisioning/src/actions/sharepoint/
 |--------|-------------|
 | utils/ | General utilities (error handling, web resolution) |
 | domains/ | SharePoint domain helpers used by action handlers |
-| sites/, lists/, fields/, content-types/ | Co-located action modules, definitions and schema |
+| sites/, lists/, views/, fields/, content-types/ | Co-located action modules, definitions and schema |
 | _composition/ | Parent/child action schema composition |
 | _shared/ | Cross-action runtime/schema utilities |
 

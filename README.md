@@ -23,8 +23,11 @@ npm run build
 ## Import Surface
 
 ```typescript
-import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning/core';
-import type { ProvisioningPlan } from '@apvee/m365-actionable-provisioning/sharepoint';
+import {
+  createLogger,
+  consoleSink,
+  type M365ProvisioningPlan,
+} from '@apvee/m365-actionable-provisioning';
 
 import {
   ProvisioningDialog,
@@ -35,4 +38,4 @@ import {
 
 ## Documentation
 
-The detailed documentation is in [docs](./docs). Some examples still describe SharePoint-specific behavior, now exposed through `@apvee/m365-actionable-provisioning/sharepoint`.
+The detailed documentation is in [docs](./docs). SharePoint action catalog notes live in [ACTIONS.md](./packages/m365-actionable-provisioning/src/actions/sharepoint/ACTIONS.md).

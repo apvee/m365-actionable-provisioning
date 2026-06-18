@@ -4,7 +4,7 @@
 
 Reintroduce SharePoint list/library view provisioning from a clean design after the previous implementation was removed.
 
-The V1 goal is deliberately narrow: support standard SharePoint list views as list-scoped provisioning subactions using `@pnp/sp/views`, with predictable create, modify, delete semantics and tenant-smoke validation before treating the behavior as stable.
+The V1 goal is deliberately narrow: support standard SharePoint list/library views as list-scoped provisioning subactions using `@pnp/sp/views`, with predictable create, modify, delete semantics and tenant-smoke validation before treating the behavior as stable. Document libraries use the same SharePoint list scope and PnPjs views API.
 
 ## Decisions
 
@@ -93,8 +93,9 @@ packages/m365-actionable-provisioning/src/actions/sharepoint/domains/views/
 
 Use `@pnp/sp/views` only through the standard list view APIs:
 
-- `list.views.getByTitle(title)`
-- `list.views.add(title, false, props)`
+- `list.views.filter("Title eq '...' and PersonalView eq false").top(1).select(...)` for public title lookup, with OData string escaping
+- `list.views.getById(id)` for the mutable view handle after lookup or creation
+- `list.views.add(title, false, {})` for minimal public view creation before field/scalar updates
 - `view.update(props)`
 - `view.delete()`
 - `view.fields()`
@@ -110,16 +111,16 @@ Reference: `https://pnp.github.io/pnpjs/sp/views/`
 Shared schema primitives:
 
 ```ts
-listViewTitleSchema = z.string().min(1).max(255)
-listViewFieldNameSchema = z.string().min(1).max(255)
-listViewFieldsSchema = z.array(listViewFieldNameSchema).min(1).optional()
-viewQuerySchema = z.string().refine(noViewOrQueryWrapper).optional()
+listViewTitleSchema = z.string().trim().min(1).max(255)
+listViewFieldNameSchema = z.string().trim().min(1).max(255)
+listViewFieldsSchema = z.array(listViewFieldNameSchema).min(1).refine(noDuplicateRefsAfterTrim).optional()
+viewQuerySchema = z.string().trim().min(1).refine(noViewOrQueryWrapperAfterLeadingXmlPreamble).optional()
 rowLimitSchema = z.number().int().min(1).max(50000).optional()
 pagedSchema = z.boolean().optional()
 defaultViewSchema = z.literal(true).optional()
 ```
 
-`viewQuery` is a CAML query fragment. It must not start with `<View` or `<Query` after trimming. Examples of valid fragments include:
+`viewQuery` is a CAML query fragment. It must not start with `<View` or `<Query` after trimming leading whitespace, XML declarations, and leading XML comments. Examples of valid fragments include:
 
 ```xml
 <OrderBy><FieldRef Name="Modified" Ascending="FALSE" /></OrderBy>
@@ -130,6 +131,8 @@ defaultViewSchema = z.literal(true).optional()
 ```
 
 The schema performs structural guardrails only. It does not parse full CAML semantics.
+
+Names with spaces are valid when SharePoint accepts them. The schema trims leading/trailing whitespace to prevent accidental distinct titles or field references, but it does not reject internal spaces such as `Customers by Code` or `Customer Email`.
 
 ## Action Contracts
 
@@ -159,8 +162,8 @@ Runtime behavior:
 2. Look up a view by `title`.
 3. If the view exists, return `actionSkipped(title, "already_exists", scopeDelta)`.
 4. Validate `fields`, if provided.
-5. Create the view with `list.views.add(title, false, minimalCreateProps)`.
-6. Resolve the created view handle by title or from the add result.
+5. Create the view with `list.views.add(title, false, {})`.
+6. Resolve the created view handle from the add result `Id`.
 7. If `fields` is provided, replace the field collection in declared order.
 8. Apply scalar props with `view.update(updateProps)`.
 9. Return `actionExecuted(title, scopeDelta)`.
@@ -169,8 +172,9 @@ Compliance behavior:
 
 - Missing `spfi` or `scopeIn.list`: `unverifiable`.
 - Missing view: `nonCompliant` with `not_found`.
-- Existing view: `compliant` if create-only structural expectations are satisfied.
-- If create payload includes mutable settings and the existing view differs, compliance should not require drift correction from create. A create action is satisfied by existence.
+- Existing view: compare supported mutable state from the create payload.
+- If the existing view differs from requested `fields`, `viewQuery`, `rowLimit`, `paged`, or `defaultView`, return `nonCompliant` with `drift`. The handler remains create-only and will not repair that drift; plans must use `modifySPListView` for mutable enforcement.
+- If requested fields cannot be resolved during compliance, return `nonCompliant` with `drift` and field-resolution mismatch details. Runtime handlers still fail before touching the view.
 
 ### modifySPListView
 
@@ -209,6 +213,7 @@ Compliance behavior:
 - Missing view: `nonCompliant` with `not_found`.
 - Drift in requested mutable state: `nonCompliant` with mismatch details.
 - No drift: `compliant`.
+- If requested fields cannot be resolved during compliance, return `nonCompliant` with `drift` and field-resolution mismatch details. Runtime handlers still fail before touching the view.
 
 ### deleteSPListView
 
@@ -253,20 +258,24 @@ Compliance behavior:
 
 ## Field Handling
 
-`fields` means the final ordered view field set.
+`fields` means the final ordered view field set. Payload entries may use a field internal name or display title, including titles with spaces.
 
 Validation:
 
-- reject duplicate field names before touching SharePoint;
-- verify every requested field exists on the target list before modifying view fields;
-- use existing field lookup helpers where possible so internal names and titles follow the repo's current field-resolution behavior.
+- normalize field references by trimming leading/trailing whitespace;
+- reject duplicate field references before touching SharePoint;
+- resolve every requested field through the existing `getFieldByNameOrTitle` helper;
+- fail before modifying the view if any requested field is missing;
+- reject duplicate resolved internal names, for example when a display title and internal name point to the same field;
+- convert resolved fields to `InternalName` before comparing or applying view fields.
 
 Application:
 
 1. Read current field names.
-2. If already equal in order, do nothing.
-3. Call `view.fields.removeAll()`.
-4. Add each field sequentially with `view.fields.add(fieldName)`.
+2. Resolve the requested field references to ordered SharePoint internal names.
+3. If the current internal-name order already matches, do nothing.
+4. Call `view.fields.removeAll()`.
+5. Add each field sequentially with `view.fields.add(internalName)`.
 
 Fields must be replaced before scalar updates when both are requested. Previous tenant smoke work showed SharePoint can reject a view when default/scalar promotion happens before the field set is valid.
 
@@ -297,6 +306,7 @@ Register view actions in:
 - `ACTIONS.md`
 
 Do not register view actions in site subactions or root-level schemas in V1.
+View actions are leaf actions; non-empty `subactions` arrays are rejected.
 
 ## Permissions
 
@@ -338,16 +348,22 @@ Add or update local smoke checks for:
 - list subaction schema accepts the three view verbs;
 - site subaction schema rejects view actions;
 - root action schema does not expose root-level view actions;
+- package-root and SharePoint barrel exports expose the three view action classes and schemas;
 - `defaultView` rejects `false`;
-- `viewQuery` rejects `<View>` and `<Query>` wrappers;
+- public title lookup uses the expected filter, `top(1)`, and selects all fields required by handlers/compliance;
+- `viewQuery` rejects `<View>` and `<Query>` wrappers, including wrapper payloads prefixed by whitespace, XML declarations, or leading XML comments;
 - duplicate fields are rejected by helper tests or smoke checks;
+- compliance prerequisite checks keep stable `missing_prerequisite` outcomes for missing `spfi` and missing list scope;
+- modify scalar-only updates do not read or rewrite view fields;
 - `deleteSPListView` default-view behavior is represented in compliance/result logic.
 
 Run at minimum:
 
 ```bash
-pnpm --filter @apvee/m365-actionable-provisioning build
-pnpm --filter @apvee/m365-actionable-provisioning smoke:m365-engine
+npm run build -w @apvee/m365-actionable-provisioning
+npm run smoke:m365-engine -w @apvee/m365-actionable-provisioning
+npm run build -w test-spfx
+git diff --check
 ```
 
 Tenant smoke validation is required before declaring the runtime behavior done. The smoke must specifically cover:
@@ -364,7 +380,7 @@ Tenant smoke validation is required before declaring the runtime behavior done. 
 - SharePoint view APIs are sensitive to update ordering.
 - `DefaultView` promotion may fail if fields or query state is invalid.
 - Field display names and internal names can be confused. Prefer the repo's existing field lookup convention and document examples accordingly.
-- Create-only semantics mean a changed `createSPListView` payload will not repair drift after the view already exists; plans must use `modifySPListView` for mutable enforcement.
+- Create-only handler semantics mean a changed `createSPListView` payload will not repair drift after the view already exists. Compliance still reports that drift, and plans must use `modifySPListView` for mutable enforcement.
 
 ## Acceptance Criteria
 

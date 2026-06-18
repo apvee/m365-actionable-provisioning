@@ -3,7 +3,7 @@ import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 /**
  * Provisioning template used by the TestProvisioning webpart.
  *
- * Creates two lists with a Lookup relationship:
+ * Creates two lists with a Lookup relationship and custom list views:
  * - customers
  * - orders (lookup -> customers)
  */
@@ -42,6 +42,15 @@ export const provisioningPlan: M365ProvisioningPlan = {
           displayName: 'Customer Email',
           required: false,
           addToDefaultView: true,
+        },
+        {
+          verb: 'createSPListView',
+          title: 'Customers by Code',
+          fields: ['Title', 'CustomerCode', 'CustomerEmail'],
+          viewQuery: '<OrderBy><FieldRef Name="CustomerCode" /></OrderBy>',
+          rowLimit: 100,
+          paged: true,
+          defaultView: true,
         },
       ],
     },
@@ -85,6 +94,15 @@ export const provisioningPlan: M365ProvisioningPlan = {
           dependentLookupFields: ['Title', 'CustomerEmail'],
           required: true,
           addToDefaultView: true,
+        },
+        {
+          verb: 'createSPListView',
+          title: 'Orders by Date',
+          fields: ['Title', 'OrderDate', 'OrderTotal', 'Customer'],
+          viewQuery: '<OrderBy><FieldRef Name="OrderDate" Ascending="FALSE" /></OrderBy>',
+          rowLimit: 100,
+          paged: true,
+          defaultView: true,
         },
       ],
     },

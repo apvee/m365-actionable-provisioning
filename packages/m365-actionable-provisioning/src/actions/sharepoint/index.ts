@@ -34,7 +34,7 @@ export { extractPnPjsHttpErrorDetails } from "./utils";
    ACTIONS (for advanced use cases)
    ======================================== */
 
-// Site actions - using direct imports
+// Site actions
 export { CreateSPSiteAction } from "./sites";
 export { createSPSiteSchema, type CreateSPSitePayload } from "./sites/create-sp-site";
 
@@ -44,7 +44,7 @@ export { modifySPSiteSchema, type ModifySPSitePayload } from "./sites/modify-sp-
 export { DeleteSPSiteAction } from "./sites";
 export { deleteSPSiteSchema, type DeleteSPSitePayload } from "./sites/delete-sp-site";
 
-// List actions - using direct imports
+// List actions
 export { CreateSPListAction } from "./lists";
 export { createSPListSchema, type CreateSPListPayload, DraftVersionVisibility } from "./lists/create-sp-list";
 
@@ -57,7 +57,18 @@ export { deleteSPListSchema, type DeleteSPListPayload } from "./lists/delete-sp-
 export { EnableSPListRatingAction } from "./lists";
 export { enableSPListRatingSchema, type EnableSPListRatingPayload } from "./lists/enable-sp-list-rating";
 
-// Content type actions - using direct imports
+// List view actions
+export { CreateSPListViewAction, ModifySPListViewAction, DeleteSPListViewAction } from "./views";
+export {
+  createSPListViewSchema,
+  type CreateSPListViewPayload,
+  modifySPListViewSchema,
+  type ModifySPListViewPayload,
+  deleteSPListViewSchema,
+  type DeleteSPListViewPayload,
+} from "./views";
+
+// Content type actions
 export { CreateSPContentTypeAction } from "./content-types";
 export { createSPContentTypeSchema, type CreateSPContentTypePayload } from "./content-types/create-sp-content-type";
 
@@ -82,7 +93,7 @@ export { addSPContentTypeToListSchema, type AddSPContentTypeToListPayload } from
 export { RemoveSPContentTypeFromListAction } from "./content-types";
 export { removeSPContentTypeFromListSchema, type RemoveSPContentTypeFromListPayload } from "./content-types/remove-sp-content-type-from-list";
 
-// Field actions - using direct imports
+// Field actions
 export { AddSPFieldAction } from "./fields";
 export { addSPFieldSchema, type AddSPFieldPayload } from "./fields/add-sp-field";
 
