@@ -79,6 +79,17 @@ export {
 } from "./views";
 
 export {
+  createSPNavigationNodeSchema,
+  modifySPNavigationNodeSchema,
+  deleteSPNavigationNodeSchema,
+  spNavigationLocationSchema,
+  type CreateSPNavigationNodePayload,
+  type ModifySPNavigationNodePayload,
+  type DeleteSPNavigationNodePayload,
+  type SPNavigationLocation,
+} from "./navigation";
+
+export {
   breakSPListRoleInheritanceSchema,
   breakSPSiteRoleInheritanceSchema,
   grantSPListRoleAssignmentSchema,

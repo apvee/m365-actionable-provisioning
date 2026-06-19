@@ -68,6 +68,19 @@ export {
   type DeleteSPListViewPayload,
 } from "./views";
 
+// Navigation actions
+export { CreateSPNavigationNodeAction, ModifySPNavigationNodeAction, DeleteSPNavigationNodeAction } from "./navigation";
+export {
+  createSPNavigationNodeSchema,
+  type CreateSPNavigationNodePayload,
+  modifySPNavigationNodeSchema,
+  type ModifySPNavigationNodePayload,
+  deleteSPNavigationNodeSchema,
+  type DeleteSPNavigationNodePayload,
+  spNavigationLocationSchema,
+  type SPNavigationLocation,
+} from "./navigation";
+
 // Permission actions
 export {
   BreakSPSiteRoleInheritanceAction,

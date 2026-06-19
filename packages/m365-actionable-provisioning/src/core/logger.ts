@@ -93,8 +93,8 @@ export type LogEvent = {
     /** Optional structured data payload */
     data?: LogData;
 
-    /** Optional error details with message and stack trace */
-    error?: { message: string; stack?: string };
+    /** Optional error details with message, stack trace, and structured diagnostics */
+    error?: { message: string; stack?: string; details?: unknown };
 };
 
 /**

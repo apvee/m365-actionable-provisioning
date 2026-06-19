@@ -1,10 +1,13 @@
 
 import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 
-export const examplePlan: M365ProvisioningPlan = {
+const CURRENT_USER_LOGIN_NAME_PARAMETER = "CurrentUserLoginName";
+
+export const createExamplePlan = (currentUserLoginName: string): M365ProvisioningPlan => ({
     schemaVersion: "1.0",
     parameters: [
         { key: "TenantUrl", value: "https://apveelabs.sharepoint.com" },
+        { key: CURRENT_USER_LOGIN_NAME_PARAMETER, value: currentUserLoginName },
         // { key: "TeamSiteAlias", value: "project-alpha-team-2" },
         // { key: "TeamSiteDisplayName", value: "Project Alpha Team" },
         // { key: "TeamSiteDescription", value: "Microsoft 365 Group-backed team site for Project Alpha collaboration" },
@@ -451,6 +454,12 @@ export const examplePlan: M365ProvisioningPlan = {
                     ],
                 },
                 {
+                    verb: "createSPNavigationNode",
+                    location: "quicklaunch",
+                    title: "Engineering Requests workspace",
+                    url: "{parameter:TenantUrl}/sites/{parameter:CommSiteName}/Lists/{parameter:EngineeringRequestsListName}/AllItems.aspx",
+                },
+                {
                     verb: "createSPSiteColumn",
                     fieldType: "Text",
                     fieldName: "EngineeringDocumentCode",
@@ -499,6 +508,15 @@ export const examplePlan: M365ProvisioningPlan = {
                             verb: "addSPContentTypeToList",
                             contentTypeName: "Engineering Document",
                         },
+                        {
+                            verb: "grantSPListRoleAssignment",
+                            principalType: "loginName",
+                            principal: "{parameter:CurrentUserLoginName}",
+                            roleType: "read",
+                            breakRoleInheritance: true,
+                            copyRoleAssignments: true,
+                            clearSubscopes: false,
+                        },
                     ],
                 },
                 {
@@ -521,6 +539,8 @@ export const examplePlan: M365ProvisioningPlan = {
             ],
         },
     ],
-};
+});
+
+export const examplePlan = createExamplePlan("i:0#.f|membership|user@contoso.com");
 
 export default examplePlan;

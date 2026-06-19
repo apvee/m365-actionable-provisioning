@@ -12,6 +12,11 @@ import { createSPListActionModule } from "../lists/create-sp-list";
 import { deleteSPListActionModule } from "../lists/delete-sp-list";
 import { modifySPListActionModule } from "../lists/modify-sp-list";
 import {
+  createSPNavigationNodeActionModule,
+  modifySPNavigationNodeActionModule,
+  deleteSPNavigationNodeActionModule,
+} from "../navigation";
+import {
   breakSPSiteRoleInheritanceActionModule,
   grantSPSiteRoleAssignmentActionModule,
   removeSPSiteRoleAssignmentActionModule,
@@ -22,6 +27,9 @@ const siteSubactionSchemas = [
   createSPListActionModule.schema,
   modifySPListActionModule.schema,
   deleteSPListActionModule.schema,
+  createSPNavigationNodeActionModule.schema,
+  modifySPNavigationNodeActionModule.schema,
+  deleteSPNavigationNodeActionModule.schema,
   breakSPSiteRoleInheritanceActionModule.schema,
   resetSPSiteRoleInheritanceActionModule.schema,
   grantSPSiteRoleAssignmentActionModule.schema,

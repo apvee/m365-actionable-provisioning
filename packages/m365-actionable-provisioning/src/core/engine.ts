@@ -863,8 +863,10 @@ export class ProvisioningEngine<
         const durationMs = item.startedAt ? Date.parse(endedAt) - Date.parse(item.startedAt) : undefined;
 
         const zodError = err && typeof err === 'object' && 'issues' in err ? err as z.ZodError : undefined;
-        const details = zodError && this.options.captureZodIssuesInTrace ? { issues: zodError.issues } : undefined;
         const errWithCode = err as Error & { code?: string; details?: unknown };
+        const details = zodError && this.options.captureZodIssuesInTrace
+            ? { issues: zodError.issues }
+            : errWithCode.details;
         const code =
             errWithCode.code === "FORBIDDEN" ? "FORBIDDEN" :
                 errWithCode.code === "MISSING_CLIENT" ? "MISSING_CLIENT" :

@@ -6,6 +6,7 @@ import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRunt
 import type { PermissionCheckResult } from "../../../../core/permissions";
 import type { M365ActionResult, M365Clients, M365RuntimeContext, M365Scope, ProvisioningResultLight } from "../../../../runtime";
 import { actionExecuted, actionSkipped, compliant, nonCompliant, unverifiable, unverifiableError } from "../../_shared/action-results";
+import { getListInfoByRootFolderName } from "../../domains/lists";
 import {
   addRoleAssignmentBinding,
   getSecurableHasUniqueRoleAssignments,
@@ -24,6 +25,7 @@ import {
 
 import "@pnp/sp/security/list";
 import "@pnp/sp/security/web";
+import "@pnp/sp/lists";
 
 type SharePointPermissionOperation = "break" | "reset" | "grant" | "remove";
 
@@ -62,6 +64,30 @@ type ResolvedRoleAssignmentIds = Readonly<{
   principalId: number;
   roleDefId: number;
 }>;
+
+type PermissionTargetDiagnostics = Readonly<{
+  kind: PermissionTargetKind;
+  resource: string;
+  webUrl?: string;
+  listName?: string;
+  targetUrl?: string;
+  list?: Readonly<{
+    Id?: string;
+    Title?: string;
+    HasUniqueRoleAssignments?: boolean;
+    RootFolder?: Readonly<{
+      Name?: string;
+      ServerRelativeUrl?: string;
+    }>;
+  }>;
+}>;
+
+const BREAK_ROLE_INHERITANCE_VERIFY_ATTEMPTS = 8;
+const BREAK_ROLE_INHERITANCE_VERIFY_DELAY_MS = 500;
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function getRoleReferenceResource(payload: RoleReference): string {
   if (payload.roleName !== undefined) return payload.roleName;
@@ -117,6 +143,67 @@ async function resolveRoleAssignmentIds(
     roleType: payload.roleType,
   });
   return { principalId, roleDefId };
+}
+
+async function waitForUniqueRoleAssignmentsAfterBreak(target: SecurableQueryable): Promise<boolean> {
+  for (let attempt = 0; attempt < BREAK_ROLE_INHERITANCE_VERIFY_ATTEMPTS; attempt++) {
+    if (attempt > 0) await delay(BREAK_ROLE_INHERITANCE_VERIFY_DELAY_MS);
+    if (await getSecurableHasUniqueRoleAssignments(target)) return true;
+  }
+
+  return false;
+}
+
+function getQueryableUrl(target: SecurableQueryable): string | undefined {
+  const queryable = target as unknown as { toUrl?: () => string };
+  if (typeof queryable.toUrl !== "function") return undefined;
+
+  try {
+    return queryable.toUrl();
+  } catch {
+    return undefined;
+  }
+}
+
+async function getPermissionTargetDiagnostics(target: PermissionSecurableTarget): Promise<PermissionTargetDiagnostics> {
+  const diagnostics: PermissionTargetDiagnostics = {
+    kind: target.kind,
+    resource: target.resource,
+    webUrl: typeof target.scopeDelta.webUrl === "string" ? target.scopeDelta.webUrl : undefined,
+    listName: typeof target.scopeDelta.listName === "string" ? target.scopeDelta.listName : undefined,
+    targetUrl: getQueryableUrl(target.target),
+  };
+
+  if (target.kind !== "list") return diagnostics;
+
+  try {
+    const list = await (target.target as unknown as {
+      expand: (field: string) => {
+        select: (...fields: string[]) => <T>() => Promise<T>;
+      };
+    })
+      .expand("RootFolder")
+      .select("Id", "Title", "HasUniqueRoleAssignments", "RootFolder/Name", "RootFolder/ServerRelativeUrl")<NonNullable<PermissionTargetDiagnostics["list"]>>();
+
+    return { ...diagnostics, list };
+  } catch (error) {
+    return { ...diagnostics, list: { Title: `diagnostics_unavailable: ${String(error)}` } };
+  }
+}
+
+async function getFreshPermissionMutationTarget(target: PermissionSecurableTarget): Promise<PermissionMutationTarget> {
+  if (target.kind !== "list") return getMutationTarget(target);
+
+  const listName = typeof target.scopeDelta.listName === "string" ? target.scopeDelta.listName : undefined;
+  if (!listName) return getMutationTarget(target);
+
+  const webWithLists = target.web as IWeb & { lists?: { getById?: (id: string) => unknown } };
+  if (typeof webWithLists.lists?.getById !== "function") return getMutationTarget(target);
+
+  const listInfo = await getListInfoByRootFolderName(target.web, listName);
+  if (!listInfo?.Id) return getMutationTarget(target);
+
+  return webWithLists.lists.getById(listInfo.Id) as PermissionMutationTarget;
 }
 
 export class SharePointPermissionAction<
@@ -231,18 +318,49 @@ export class SharePointPermissionAction<
           throw error;
         }
 
-        if (!hasUniqueRoleAssignments && this.operation === "grant" && payload.breakRoleInheritance === true) {
+        const didBreakRoleInheritance = !hasUniqueRoleAssignments && this.operation === "grant" && payload.breakRoleInheritance === true;
+        let activeRuntimeTarget = runtimeTarget;
+        if (didBreakRoleInheritance) {
           await runtimeTarget.breakRoleInheritance(payload.copyRoleAssignments ?? true, payload.clearSubscopes ?? false);
+          activeRuntimeTarget = await getFreshPermissionMutationTarget(target);
+          const hasUniqueRoleAssignmentsAfterBreak = await waitForUniqueRoleAssignmentsAfterBreak(activeRuntimeTarget);
+          if (!hasUniqueRoleAssignmentsAfterBreak) {
+            const diagnostics = await getPermissionTargetDiagnostics(target);
+            const error = new Error(`SharePoint ${this.targetKind} permission target still inherits permissions after breakRoleInheritance. target=${target.resource}`) as Error & {
+              details?: unknown;
+            };
+            error.details = {
+              target: diagnostics,
+              breakRoleInheritance: {
+                copyRoleAssignments: payload.copyRoleAssignments ?? true,
+                clearSubscopes: payload.clearSubscopes ?? false,
+                verifyAttempts: BREAK_ROLE_INHERITANCE_VERIFY_ATTEMPTS,
+                verifyDelayMs: BREAK_ROLE_INHERITANCE_VERIFY_DELAY_MS,
+              },
+              roleAssignment: {
+                principalType: payload.principalType,
+                principal: payload.principal,
+                principalId: ids.principalId,
+                role: getRoleReferenceResource(payload),
+                roleDefId: ids.roleDefId,
+              },
+            };
+            ctx.logger.warn("breakRoleInheritance did not persist on SharePoint permission target", error.details);
+            throw error;
+          }
         }
 
-        const hasBinding = await hasRoleAssignmentBinding(runtimeTarget.roleAssignments, ids.principalId, ids.roleDefId);
+        const hasBinding = await hasRoleAssignmentBinding(activeRuntimeTarget.roleAssignments, ids.principalId, ids.roleDefId);
 
         if (this.operation === "grant") {
           if (hasBinding) {
+            if (didBreakRoleInheritance) {
+              return actionExecuted(resource, target.scopeDelta);
+            }
             return actionSkipped(resource, "already_exists", target.scopeDelta);
           }
 
-          await addRoleAssignmentBinding(runtimeTarget.roleAssignments, ids.principalId, ids.roleDefId);
+          await addRoleAssignmentBinding(activeRuntimeTarget.roleAssignments, ids.principalId, ids.roleDefId);
           return actionExecuted(resource, target.scopeDelta);
         }
 
@@ -291,7 +409,12 @@ export class SharePointPermissionAction<
           const hasUniqueRoleAssignments = await getSecurableHasUniqueRoleAssignments(target.target);
           if (!hasUniqueRoleAssignments) {
             if (this.operation === "grant" && payload.breakRoleInheritance === true) {
-              return nonCompliant({ resource, reason: "inherited_permissions", scopeDelta: target.scopeDelta });
+              return nonCompliant({
+                resource,
+                reason: "inherited_permissions",
+                details: { target: await getPermissionTargetDiagnostics(target) },
+                scopeDelta: target.scopeDelta,
+              });
             }
 
             return unverifiable({
@@ -305,12 +428,12 @@ export class SharePointPermissionAction<
           let ids: ResolvedRoleAssignmentIds;
 
           try {
-            ids = await resolveRoleAssignmentIds(target.web, ctx.clients, payload, false);
+            ids = await resolveRoleAssignmentIds(target.web, ctx.clients, payload, this.operation === "grant");
           } catch (error) {
             if (isPermissionResolutionError(error)) {
               if (error.reason === "not_found") {
                 return this.operation === "grant"
-                  ? nonCompliant({ resource, reason: "not_found", scopeDelta: target.scopeDelta })
+                  ? nonCompliant({ resource, reason: "not_found", details: { principalType: payload.principalType, principal: payload.principal }, scopeDelta: target.scopeDelta })
                   : compliant({ resource, scopeDelta: target.scopeDelta });
               }
 
@@ -331,7 +454,19 @@ export class SharePointPermissionAction<
           if (this.operation === "grant") {
             return hasBinding
               ? compliant({ resource, scopeDelta: target.scopeDelta })
-              : nonCompliant({ resource, reason: "missing_binding", scopeDelta: target.scopeDelta });
+              : nonCompliant({
+                resource,
+                reason: "missing_binding",
+                details: {
+                  principalType: payload.principalType,
+                  principal: payload.principal,
+                  principalId: ids.principalId,
+                  role: getRoleReferenceResource(payload),
+                  roleDefId: ids.roleDefId,
+                  target: await getPermissionTargetDiagnostics(target),
+                },
+                scopeDelta: target.scopeDelta,
+              });
           }
 
           return hasBinding

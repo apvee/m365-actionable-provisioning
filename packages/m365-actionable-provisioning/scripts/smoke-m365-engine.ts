@@ -7,19 +7,31 @@ import { createProvisioningPlanSchema, type BaseProvisioningPlan } from "../src/
 import type { PermissionCheckResult } from "../src/core/permissions";
 import {
   CreateSPListViewAction as RootCreateSPListViewAction,
+  CreateSPNavigationNodeAction as RootCreateSPNavigationNodeAction,
   DeleteSPListViewAction as RootDeleteSPListViewAction,
+  DeleteSPNavigationNodeAction as RootDeleteSPNavigationNodeAction,
   ModifySPListViewAction as RootModifySPListViewAction,
+  ModifySPNavigationNodeAction as RootModifySPNavigationNodeAction,
   createSPListViewSchema as rootCreateSPListViewSchema,
+  createSPNavigationNodeSchema as rootCreateSPNavigationNodeSchema,
   deleteSPListViewSchema as rootDeleteSPListViewSchema,
+  deleteSPNavigationNodeSchema as rootDeleteSPNavigationNodeSchema,
   modifySPListViewSchema as rootModifySPListViewSchema,
+  modifySPNavigationNodeSchema as rootModifySPNavigationNodeSchema,
 } from "../src";
 import {
   CreateSPListViewAction as PublicCreateSPListViewAction,
+  CreateSPNavigationNodeAction as PublicCreateSPNavigationNodeAction,
   DeleteSPListViewAction as PublicDeleteSPListViewAction,
+  DeleteSPNavigationNodeAction as PublicDeleteSPNavigationNodeAction,
   ModifySPListViewAction as PublicModifySPListViewAction,
+  ModifySPNavigationNodeAction as PublicModifySPNavigationNodeAction,
   createSPListViewSchema as publicCreateSPListViewSchema,
+  createSPNavigationNodeSchema as publicCreateSPNavigationNodeSchema,
   deleteSPListViewSchema as publicDeleteSPListViewSchema,
+  deleteSPNavigationNodeSchema as publicDeleteSPNavigationNodeSchema,
   modifySPListViewSchema as publicModifySPListViewSchema,
+  modifySPNavigationNodeSchema as publicModifySPNavigationNodeSchema,
   sharePointActionDefinitions,
   sharePointActionsSchema,
 } from "../src/actions/sharepoint";
@@ -30,6 +42,14 @@ import { siteSubactionSchema } from "../src/actions/sharepoint/_composition/site
 import { CreateSPListViewAction, createSPListViewActionModule } from "../src/actions/sharepoint/views/create-sp-list-view";
 import { DeleteSPListViewAction, deleteSPListViewActionModule } from "../src/actions/sharepoint/views/delete-sp-list-view";
 import { ModifySPListViewAction, modifySPListViewActionModule } from "../src/actions/sharepoint/views/modify-sp-list-view";
+import { CreateSPNavigationNodeAction, createSPNavigationNodeActionModule } from "../src/actions/sharepoint/navigation/create-sp-navigation-node";
+import { DeleteSPNavigationNodeAction, deleteSPNavigationNodeActionModule } from "../src/actions/sharepoint/navigation/delete-sp-navigation-node";
+import { ModifySPNavigationNodeAction, modifySPNavigationNodeActionModule } from "../src/actions/sharepoint/navigation/modify-sp-navigation-node";
+import {
+  createSPNavigationNodeSchema,
+  deleteSPNavigationNodeSchema,
+  modifySPNavigationNodeSchema,
+} from "../src/actions/sharepoint/navigation";
 import {
   BreakSPListRoleInheritanceAction,
   BreakSPSiteRoleInheritanceAction,
@@ -71,6 +91,7 @@ import {
   resolveRoleDefinitionId,
 } from "../src/actions/sharepoint/domains/permissions";
 import { getPublicListViewInfoByTitle, resolveViewFieldInternalNames, type ListViewInfo } from "../src/actions/sharepoint/domains/views";
+import { areNavigationNodeUrlsEquivalent } from "../src/actions/sharepoint/domains/navigation";
 import type { M365Clients, M365Scope, ProvisioningResultLight } from "../src/runtime";
 
 type SmokeScope = {
@@ -215,23 +236,35 @@ function roleAssignmentsFrom(bindingsByPrincipal: Record<number, readonly number
 
 function permissionTargetFrom(options: {
   unique: boolean;
+  breakPersists?: boolean;
+  breakPersistsAfterChecks?: number;
   bindingsByPrincipal?: Record<number, readonly number[]>;
   onBreak?: (copyRoleAssignments: boolean, clearSubscopes: boolean) => void;
   onReset?: () => void;
   onAdd?: (principalId: number, roleDefId: number) => void;
   onRemove?: (principalId: number, roleDefId: number) => void;
 }) {
+  let unique = options.unique;
+  let breakCalled = false;
+  let postBreakChecks = 0;
   const bindingsByPrincipal = options.bindingsByPrincipal ?? {};
   return {
     select: (...fields: string[]) => async () => {
       assertStringArrayEqual(fields, ["HasUniqueRoleAssignments"], "Permission action should read HasUniqueRoleAssignments");
-      return { HasUniqueRoleAssignments: options.unique };
+      if (breakCalled && !unique && options.breakPersists !== false && options.breakPersistsAfterChecks !== undefined) {
+        postBreakChecks++;
+        if (postBreakChecks >= options.breakPersistsAfterChecks) unique = true;
+      }
+      return { HasUniqueRoleAssignments: unique };
     },
     breakRoleInheritance: async (copyRoleAssignments: boolean, clearSubscopes: boolean) => {
       options.onBreak?.(copyRoleAssignments, clearSubscopes);
+      breakCalled = true;
+      if (options.breakPersists !== false && options.breakPersistsAfterChecks === undefined) unique = true;
     },
     resetRoleInheritance: async () => {
       options.onReset?.();
+      unique = false;
     },
     roleAssignments: {
       ...roleAssignmentsFrom(bindingsByPrincipal),
@@ -609,6 +642,82 @@ function assertSharePointCatalogComposition(): void {
     ],
   });
   assert(nestedContentType.success, "SharePoint site subaction schema should accept content type actions with field subactions");
+
+  const siteCreatesNavigationNode = siteSubactionSchema.safeParse({
+    verb: "createSPNavigationNode",
+    location: "quicklaunch",
+    title: "Orders",
+    url: "/sites/demo/Lists/Orders/AllItems.aspx",
+  });
+  assert(siteCreatesNavigationNode.success, "SharePoint site subaction schema should accept createSPNavigationNode");
+
+  const siteModifiesNavigationNode = siteSubactionSchema.safeParse({
+    verb: "modifySPNavigationNode",
+    location: "topNavigationBar",
+    title: "Orders",
+    newTitle: "Customer Orders",
+    url: "/sites/demo/SitePages/Orders.aspx",
+    isVisible: false,
+  });
+  assert(siteModifiesNavigationNode.success, "SharePoint site subaction schema should accept modifySPNavigationNode");
+
+  const siteDeletesNavigationNode = siteSubactionSchema.safeParse({
+    verb: "deleteSPNavigationNode",
+    location: "quicklaunch",
+    title: "Orders",
+  });
+  assert(siteDeletesNavigationNode.success, "SharePoint site subaction schema should accept deleteSPNavigationNode");
+
+  assertStringArrayEqual(
+    createSPNavigationNodeActionModule.placements,
+    ["siteSubaction"],
+    "createSPNavigationNode action module should be site-subaction only"
+  );
+  assertStringArrayEqual(
+    modifySPNavigationNodeActionModule.placements,
+    ["siteSubaction"],
+    "modifySPNavigationNode action module should be site-subaction only"
+  );
+  assertStringArrayEqual(
+    deleteSPNavigationNodeActionModule.placements,
+    ["siteSubaction"],
+    "deleteSPNavigationNode action module should be site-subaction only"
+  );
+
+  const rootCreatesNavigationNode = sharePointActionsSchema.safeParse([
+    {
+      verb: "createSPNavigationNode",
+      location: "quicklaunch",
+      title: "Orders",
+      url: "/sites/demo/Lists/Orders/AllItems.aspx",
+    },
+  ]);
+  assert(!rootCreatesNavigationNode.success, "SharePoint root schema should reject navigation node actions");
+
+  const listCreatesNavigationNode = listSubactionSchema.safeParse({
+    verb: "createSPNavigationNode",
+    location: "quicklaunch",
+    title: "Orders",
+    url: "/sites/demo/Lists/Orders/AllItems.aspx",
+  });
+  assert(!listCreatesNavigationNode.success, "SharePoint list subaction schema should reject navigation node actions");
+
+  const footerNavigationNode = createSPNavigationNodeSchema.safeParse({
+    verb: "createSPNavigationNode",
+    location: "site-footer",
+    title: "Footer",
+    url: "/sites/demo",
+  });
+  assert(!footerNavigationNode.success, "SharePoint navigation schema should reject unsupported footer location");
+
+  const nestedNavigationNode = createSPNavigationNodeSchema.safeParse({
+    verb: "createSPNavigationNode",
+    location: "quicklaunch",
+    title: "Orders",
+    url: "/sites/demo",
+    subactions: [{ verb: "deleteSPList", name: "Orders" }],
+  });
+  assert(!nestedNavigationNode.success, "SharePoint navigation node actions should reject nested subactions");
 
   const listContentTypeBinding = listSubactionSchema.safeParse({
     verb: "addSPContentTypeToList",
@@ -1137,6 +1246,516 @@ function assertSharePointListViewPublicBarrelExports(): void {
   );
 }
 
+function assertSharePointNavigationPublicBarrelExports(): void {
+  assert(new RootCreateSPNavigationNodeAction().verb === "createSPNavigationNode", "Package root should export CreateSPNavigationNodeAction");
+  assert(new RootModifySPNavigationNodeAction().verb === "modifySPNavigationNode", "Package root should export ModifySPNavigationNodeAction");
+  assert(new RootDeleteSPNavigationNodeAction().verb === "deleteSPNavigationNode", "Package root should export DeleteSPNavigationNodeAction");
+  assert(
+    rootCreateSPNavigationNodeSchema.safeParse({
+      verb: "createSPNavigationNode",
+      location: "quicklaunch",
+      title: "Root Navigation",
+      url: "/sites/demo",
+    }).success,
+    "Package root should export createSPNavigationNodeSchema"
+  );
+  assert(
+    rootModifySPNavigationNodeSchema.safeParse({
+      verb: "modifySPNavigationNode",
+      location: "topNavigationBar",
+      title: "Root Navigation",
+      isVisible: false,
+    }).success,
+    "Package root should export modifySPNavigationNodeSchema"
+  );
+  assert(
+    rootDeleteSPNavigationNodeSchema.safeParse({
+      verb: "deleteSPNavigationNode",
+      location: "quicklaunch",
+      title: "Root Navigation",
+    }).success,
+    "Package root should export deleteSPNavigationNodeSchema"
+  );
+
+  assert(new PublicCreateSPNavigationNodeAction().verb === "createSPNavigationNode", "Public SharePoint barrel should export CreateSPNavigationNodeAction");
+  assert(new PublicModifySPNavigationNodeAction().verb === "modifySPNavigationNode", "Public SharePoint barrel should export ModifySPNavigationNodeAction");
+  assert(new PublicDeleteSPNavigationNodeAction().verb === "deleteSPNavigationNode", "Public SharePoint barrel should export DeleteSPNavigationNodeAction");
+
+  assert(
+    publicCreateSPNavigationNodeSchema.safeParse({
+      verb: "createSPNavigationNode",
+      location: "quicklaunch",
+      title: "Public Navigation",
+      url: "/sites/demo",
+    }).success,
+    "Public SharePoint barrel should export createSPNavigationNodeSchema"
+  );
+  assert(
+    publicModifySPNavigationNodeSchema.safeParse({
+      verb: "modifySPNavigationNode",
+      location: "topNavigationBar",
+      title: "Public Navigation",
+      isVisible: false,
+    }).success,
+    "Public SharePoint barrel should export modifySPNavigationNodeSchema"
+  );
+  assert(
+    publicDeleteSPNavigationNodeSchema.safeParse({
+      verb: "deleteSPNavigationNode",
+      location: "quicklaunch",
+      title: "Public Navigation",
+    }).success,
+    "Public SharePoint barrel should export deleteSPNavigationNodeSchema"
+  );
+}
+
+function navigationCollectionFrom(nodes: {
+  items: Array<{ Id: number; Title: string; Url?: string; IsVisible?: boolean }>;
+  onAdd?: (title: string, url: string, isVisible: boolean) => void;
+  onUpdate?: (id: number, props: Record<string, unknown>) => void;
+  onDelete?: (id: number) => void;
+}) {
+  const collection = Object.assign(
+    async () => nodes.items,
+    {
+      add: async (title: string, url: string, isVisible = true) => {
+        nodes.onAdd?.(title, url, isVisible);
+        return { Id: 999, Title: title, Url: url, IsVisible: isVisible };
+      },
+      getById: (id: number) => ({
+        update: async (props: Record<string, unknown>) => {
+          nodes.onUpdate?.(id, props);
+          return { data: props, node: {} };
+        },
+        delete: async () => {
+          nodes.onDelete?.(id);
+        },
+      }),
+    }
+  );
+  return collection;
+}
+
+function navigationWebFrom(options: {
+  quicklaunch?: Array<{ Id: number; Title: string; Url?: string; IsVisible?: boolean }>;
+  topNavigationBar?: Array<{ Id: number; Title: string; Url?: string; IsVisible?: boolean }>;
+  onQuicklaunchAdd?: (title: string, url: string, isVisible: boolean) => void;
+  onQuicklaunchUpdate?: (id: number, props: Record<string, unknown>) => void;
+  onQuicklaunchDelete?: (id: number) => void;
+  canManageWeb?: boolean;
+}) {
+  return {
+    currentUserHasPermissions: async () => options.canManageWeb ?? true,
+    navigation: {
+      quicklaunch: navigationCollectionFrom({
+        items: options.quicklaunch ?? [],
+        onAdd: options.onQuicklaunchAdd,
+        onUpdate: options.onQuicklaunchUpdate,
+        onDelete: options.onQuicklaunchDelete,
+      }),
+      topNavigationBar: navigationCollectionFrom({
+        items: options.topNavigationBar ?? [],
+      }),
+    },
+  };
+}
+
+async function assertCreateSPNavigationNodeAddsMissingNode(): Promise<void> {
+  let added: { title: string; url: string; isVisible: boolean } | undefined;
+  const web = navigationWebFrom({
+    quicklaunch: [],
+    onQuicklaunchAdd: (title, url, isVisible) => {
+      added = { title, url, isVisible };
+    },
+  });
+
+  const result = await new CreateSPNavigationNodeAction().handler({
+    scopeIn: { web } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    out: idleOut(),
+    action: {
+      path: "1/1",
+      verb: "createSPNavigationNode",
+      payload: {
+        verb: "createSPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        url: "/sites/demo/orders",
+        isVisible: false,
+      },
+    },
+  });
+
+  assert(result.result?.outcome === "executed", "createSPNavigationNode should execute when missing");
+  assert(added?.title === "Orders", "createSPNavigationNode should pass title to PnPjs add");
+  assert(added?.url === "/sites/demo/orders", "createSPNavigationNode should pass url to PnPjs add");
+  assert(added?.isVisible === false, "createSPNavigationNode should pass isVisible to PnPjs add");
+}
+
+async function assertCreateSPNavigationNodeSkipsExistingWithoutWrites(): Promise<void> {
+  let addCalled = false;
+  const web = navigationWebFrom({
+    quicklaunch: [{ Id: 7, Title: "Orders", Url: "/sites/demo/orders", IsVisible: true }],
+    onQuicklaunchAdd: () => {
+      addCalled = true;
+    },
+  });
+
+  const result = await new CreateSPNavigationNodeAction().handler({
+    scopeIn: { web } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    out: idleOut(),
+    action: {
+      path: "1/1",
+      verb: "createSPNavigationNode",
+      payload: {
+        verb: "createSPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        url: "/sites/demo/orders",
+      },
+    },
+  });
+
+  assert(result.result?.outcome === "skipped", "createSPNavigationNode should skip existing nodes");
+  assert(result.result?.outcome === "skipped" && result.result.reason === "already_exists", "createSPNavigationNode should report already_exists");
+  assert(!addCalled, "createSPNavigationNode should not add when title already exists");
+}
+
+async function assertModifySPNavigationNodeUpdatesChangedNode(): Promise<void> {
+  let updated: { id: number; props: Record<string, unknown> } | undefined;
+  const web = navigationWebFrom({
+    quicklaunch: [{ Id: 7, Title: "Orders", Url: "/sites/demo/orders", IsVisible: true }],
+    onQuicklaunchUpdate: (id, props) => {
+      updated = { id, props };
+    },
+  });
+
+  const result = await new ModifySPNavigationNodeAction().handler({
+    scopeIn: { web } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    out: idleOut(),
+    action: {
+      path: "1/1",
+      verb: "modifySPNavigationNode",
+      payload: {
+        verb: "modifySPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        newTitle: "Customer Orders",
+        url: "/sites/demo/customer-orders",
+        isVisible: false,
+      },
+    },
+  });
+
+  assert(result.result?.outcome === "executed", "modifySPNavigationNode should execute when mutable state differs");
+  assert(updated?.id === 7, "modifySPNavigationNode should update the matched node by Id");
+  assert(JSON.stringify(updated?.props) === JSON.stringify({
+    Title: "Customer Orders",
+    Url: "/sites/demo/customer-orders",
+    IsVisible: false,
+  }), "modifySPNavigationNode should send expected PnPjs update props");
+}
+
+async function assertModifySPNavigationNodeSkipsWhenAlreadyCompliant(): Promise<void> {
+  let updateCalled = false;
+  const web = navigationWebFrom({
+    quicklaunch: [{ Id: 7, Title: "Orders", Url: "/sites/demo/orders", IsVisible: true }],
+    onQuicklaunchUpdate: () => {
+      updateCalled = true;
+    },
+  });
+
+  const result = await new ModifySPNavigationNodeAction().handler({
+    scopeIn: { web } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    out: idleOut(),
+    action: {
+      path: "1/1",
+      verb: "modifySPNavigationNode",
+      payload: {
+        verb: "modifySPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        url: "/sites/demo/orders",
+        isVisible: true,
+      },
+    },
+  });
+
+  assert(result.result?.outcome === "skipped", "modifySPNavigationNode should skip already-compliant nodes");
+  assert(result.result?.outcome === "skipped" && result.result.reason === "no_changes", "modifySPNavigationNode should report no_changes");
+  assert(!updateCalled, "modifySPNavigationNode should not update when state already matches");
+}
+
+async function assertModifySPNavigationNodeSkipsEquivalentUrls(): Promise<void> {
+  let updateCalled = false;
+  const web = navigationWebFrom({
+    quicklaunch: [{ Id: 7, Title: "Orders", Url: "/sites/demo/Lists/orders/AllItems.aspx", IsVisible: true }],
+    onQuicklaunchUpdate: () => {
+      updateCalled = true;
+    },
+  });
+
+  const result = await new ModifySPNavigationNodeAction().handler({
+    scopeIn: {
+      web,
+      webUrl: "https://contoso.sharepoint.com/sites/demo",
+    } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    out: idleOut(),
+    action: {
+      path: "1/1",
+      verb: "modifySPNavigationNode",
+      payload: {
+        verb: "modifySPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        url: "https://contoso.sharepoint.com/sites/demo/Lists/orders/AllItems.aspx",
+        isVisible: true,
+      },
+    },
+  });
+
+  assert(result.result?.outcome === "skipped", "modifySPNavigationNode should skip equivalent absolute/server-relative URLs");
+  assert(result.result?.outcome === "skipped" && result.result.reason === "no_changes", "modifySPNavigationNode should report no_changes for equivalent URLs");
+  assert(!updateCalled, "modifySPNavigationNode should not update when only URL representation differs");
+}
+
+async function assertDeleteSPNavigationNodeDeletesMatchedNode(): Promise<void> {
+  let deletedId: number | undefined;
+  const web = navigationWebFrom({
+    quicklaunch: [{ Id: 7, Title: "Orders", Url: "/sites/demo/orders", IsVisible: true }],
+    onQuicklaunchDelete: (id) => {
+      deletedId = id;
+    },
+  });
+
+  const result = await new DeleteSPNavigationNodeAction().handler({
+    scopeIn: { web } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    out: idleOut(),
+    action: {
+      path: "1/1",
+      verb: "deleteSPNavigationNode",
+      payload: {
+        verb: "deleteSPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+      },
+    },
+  });
+
+  assert(result.result?.outcome === "executed", "deleteSPNavigationNode should execute when one matching node exists");
+  assert(deletedId === 7, "deleteSPNavigationNode should delete the matched node by Id");
+}
+
+async function assertNavigationHandlersSkipAmbiguousDuplicateTitles(): Promise<void> {
+  const web = navigationWebFrom({
+    quicklaunch: [
+      { Id: 7, Title: "Orders", Url: "/sites/demo/orders-a", IsVisible: true },
+      { Id: 8, Title: "Orders", Url: "/sites/demo/orders-b", IsVisible: true },
+    ],
+  });
+
+  const createResult = await new CreateSPNavigationNodeAction().handler({
+    scopeIn: { web } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    out: idleOut(),
+    action: {
+      path: "1/1",
+      verb: "createSPNavigationNode",
+      payload: {
+        verb: "createSPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        url: "/sites/demo/orders",
+      },
+    },
+  });
+
+  const modifyResult = await new ModifySPNavigationNodeAction().handler({
+    scopeIn: { web } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    out: idleOut(),
+    action: {
+      path: "1/2",
+      verb: "modifySPNavigationNode",
+      payload: {
+        verb: "modifySPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        isVisible: false,
+      },
+    },
+  });
+
+  const deleteResult = await new DeleteSPNavigationNodeAction().handler({
+    scopeIn: { web } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    out: idleOut(),
+    action: {
+      path: "1/3",
+      verb: "deleteSPNavigationNode",
+      payload: {
+        verb: "deleteSPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+      },
+    },
+  });
+
+  for (const result of [createResult, modifyResult, deleteResult]) {
+    assert(result.result?.outcome === "skipped", "navigation action should skip ambiguous duplicate titles");
+    assert(result.result?.outcome === "skipped" && result.result.reason === "unsupported", "navigation action should report unsupported for ambiguous duplicate titles");
+    assert(
+      result.result?.warnings?.[0]?.code === "NAVIGATION_NODE_AMBIGUOUS_TITLE",
+      "navigation action should emit an ambiguous-title warning"
+    );
+  }
+}
+
+async function assertNavigationCompliancePrerequisites(): Promise<void> {
+  const compliance = await new CreateSPNavigationNodeAction().checkCompliance({
+    scopeIn: {},
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    action: {
+      path: "1/1",
+      verb: "createSPNavigationNode",
+      payload: {
+        verb: "createSPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        url: "/sites/demo/orders",
+      },
+    },
+  });
+
+  assert(compliance.outcome === "unverifiable", "navigation compliance should be unverifiable without web scope");
+  assert(compliance.reason === "missing_prerequisite", "navigation compliance should report missing web prerequisite");
+}
+
+async function assertNavigationComplianceDetectsDrift(): Promise<void> {
+  const web = navigationWebFrom({
+    quicklaunch: [{ Id: 7, Title: "Orders", Url: "/sites/demo/old-orders", IsVisible: true }],
+  });
+
+  const compliance = await new CreateSPNavigationNodeAction().checkCompliance({
+    scopeIn: { web } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    action: {
+      path: "1/1",
+      verb: "createSPNavigationNode",
+      payload: {
+        verb: "createSPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        url: "/sites/demo/orders",
+      },
+    },
+  });
+
+  assert(compliance.outcome === "non_compliant", "navigation compliance should detect drift");
+  assert(compliance.reason === "drift", "navigation compliance should report drift when URL differs");
+}
+
+async function assertNavigationComplianceTreatsEquivalentUrlsAsCompliant(): Promise<void> {
+  const web = navigationWebFrom({
+    quicklaunch: [{ Id: 7, Title: "Orders", Url: "/sites/demo/Lists/orders/AllItems.aspx", IsVisible: true }],
+  });
+
+  const compliance = await new CreateSPNavigationNodeAction().checkCompliance({
+    scopeIn: {
+      web,
+      webUrl: "https://contoso.sharepoint.com/sites/demo",
+    } as unknown as M365Scope,
+    clients: { spfi: { marker: "spfi" } } as unknown as M365Clients,
+    logger: createLogger({ sinks: [] }),
+    action: {
+      path: "1/1",
+      verb: "createSPNavigationNode",
+      payload: {
+        verb: "createSPNavigationNode",
+        location: "quicklaunch",
+        title: "Orders",
+        url: "https://contoso.sharepoint.com/sites/demo/Lists/orders/AllItems.aspx",
+      },
+    },
+  });
+
+  assert(compliance.outcome === "compliant", "navigation compliance should treat equivalent absolute and server-relative URLs as compliant");
+}
+
+function assertNavigationUrlEquivalencePreservesExternalOrigins(): void {
+  assert(
+    areNavigationNodeUrlsEquivalent(
+      "https://contoso.sharepoint.com/sites/demo/Lists/orders/AllItems.aspx",
+      "/sites/demo/Lists/orders/AllItems.aspx",
+      { webUrl: "https://contoso.sharepoint.com/sites/demo" }
+    ),
+    "navigation URL comparison should treat same-origin absolute and server-relative URLs as equivalent"
+  );
+  assert(
+    areNavigationNodeUrlsEquivalent(
+      "https://contoso.sharepoint.com/sites/other/Lists/orders/AllItems.aspx",
+      "/sites/other/Lists/orders/AllItems.aspx",
+      { webUrl: "https://contoso.sharepoint.com/sites/demo" }
+    ),
+    "navigation URL comparison should treat same-tenant cross-site absolute and server-relative URLs as equivalent"
+  );
+  assert(
+    areNavigationNodeUrlsEquivalent(
+      "Lists/orders/AllItems.aspx",
+      "https://contoso.sharepoint.com/sites/demo/Lists/orders/AllItems.aspx",
+      { webUrl: "https://contoso.sharepoint.com/sites/demo" }
+    ),
+    "navigation URL comparison should resolve web-relative URLs against the current web"
+  );
+  assert(
+    !areNavigationNodeUrlsEquivalent(
+      "https://contoso.sharepoint.com/sites/other/Lists/orders/AllItems.aspx",
+      "Lists/orders/AllItems.aspx",
+      { webUrl: "https://contoso.sharepoint.com/sites/demo" }
+    ),
+    "navigation URL comparison should not confuse cross-site links with current-web relative links"
+  );
+  assert(
+    !areNavigationNodeUrlsEquivalent(
+      "https://contoso.sharepoint.com/sites/demo/Lists/orders/AllItems.aspx",
+      "/sites/demo/Lists/orders/AllItems.aspx"
+    ),
+    "navigation URL comparison should not equate absolute and server-relative URLs without a known webUrl"
+  );
+  assert(
+    !areNavigationNodeUrlsEquivalent(
+      "https://contoso.sharepoint.com/sites/demo/Lists/orders/AllItems.aspx",
+      "https://fabrikam.sharepoint.com/sites/demo/Lists/orders/AllItems.aspx",
+      { webUrl: "https://contoso.sharepoint.com/sites/demo" }
+    ),
+    "navigation URL comparison should not treat different tenant origins as equivalent"
+  );
+  assert(
+    !areNavigationNodeUrlsEquivalent(
+      "https://docs.contoso.com/help?token=ABC",
+      "https://docs.contoso.com/help?token=abc",
+      { webUrl: "https://contoso.sharepoint.com/sites/demo" }
+    ),
+    "navigation URL comparison should preserve case-sensitive external query values"
+  );
+}
+
 async function assertSharePointPermissionDomainHelpers(): Promise<void> {
   assert(getRoleTypeKind("read") === 2, "read roleType should map to RoleTypeKind.Reader");
   assert(getRoleTypeKind("contribute") === 3, "contribute roleType should map to RoleTypeKind.Contributor");
@@ -1383,6 +2002,90 @@ async function assertSharePointPermissionActionRuntime(): Promise<void> {
     (breakArgs ?? []).map(String),
     ["true", "false"],
     "grantSPListRoleAssignment should use safe breakRoleInheritance defaults"
+  );
+
+  let copiedBindingBreakCalled = false;
+  let copiedBindingAddCalled = false;
+  const inheritedListWithCopiedBinding = permissionTargetFrom({
+    unique: false,
+    bindingsByPrincipal: { 77: [1073741827] },
+    onBreak: () => {
+      copiedBindingBreakCalled = true;
+    },
+    onAdd: () => {
+      copiedBindingAddCalled = true;
+    },
+  }) as unknown as NonNullable<M365Scope["list"]>;
+
+  const grantWithBreakAndCopiedBinding = await new GrantSPListRoleAssignmentAction().handler({
+    scopeIn: { web, list: inheritedListWithCopiedBinding, listName: "documents" },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPListRoleAssignment",
+      payload: {
+        verb: "grantSPListRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+        breakRoleInheritance: true,
+        copyRoleAssignments: true,
+      },
+    },
+  } as Parameters<GrantSPListRoleAssignmentAction["handler"]>[0]);
+  assert(copiedBindingBreakCalled, "grantSPListRoleAssignment should break inheritance before treating copied bindings as satisfied");
+  assert(!copiedBindingAddCalled, "grantSPListRoleAssignment should not add a binding already copied by breakRoleInheritance");
+  assert(grantWithBreakAndCopiedBinding.result?.outcome === "executed", "grantSPListRoleAssignment should report executed when breakRoleInheritance changed the target even if the copied binding already exists");
+
+  const delayedBreakResult = await new GrantSPListRoleAssignmentAction().handler({
+    scopeIn: {
+      web,
+      list: permissionTargetFrom({ unique: false, breakPersistsAfterChecks: 3 }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    out: idleOut(),
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPListRoleAssignment",
+      payload: {
+        verb: "grantSPListRoleAssignment",
+        principalType: "spGroupName",
+        principal: "Project Members",
+        roleType: "contribute",
+        breakRoleInheritance: true,
+      },
+    },
+  } as Parameters<GrantSPListRoleAssignmentAction["handler"]>[0]);
+  assert(delayedBreakResult.result?.outcome === "executed", "grantSPListRoleAssignment should tolerate delayed HasUniqueRoleAssignments updates after breakRoleInheritance");
+
+  await assertRejectsWithMessage(
+    () => new GrantSPListRoleAssignmentAction().handler({
+      scopeIn: {
+        web,
+        list: permissionTargetFrom({ unique: false, breakPersists: false }) as unknown as NonNullable<M365Scope["list"]>,
+        listName: "documents",
+      },
+      clients: { spfi: {} },
+      out: idleOut(),
+      logger,
+      action: {
+        path: "1",
+        verb: "grantSPListRoleAssignment",
+        payload: {
+          verb: "grantSPListRoleAssignment",
+          principalType: "spGroupName",
+          principal: "Project Members",
+          roleType: "contribute",
+          breakRoleInheritance: true,
+        },
+      },
+    } as Parameters<GrantSPListRoleAssignmentAction["handler"]>[0]),
+    "still inherits permissions after breakRoleInheritance",
+    "grantSPListRoleAssignment should fail clearly when breakRoleInheritance does not persist"
   );
 
   let skippedBreakCalled = false;
@@ -1673,16 +2376,27 @@ async function assertSharePointPermissionActionRuntime(): Promise<void> {
 async function assertSharePointPermissionCompliance(): Promise<void> {
   const web = {
     ...permissionTargetFrom({ unique: true, bindingsByPrincipal: { 77: [1073741827] } }),
-    roleDefinitions: roleDefinitionsFrom([{ Id: 1073741827, Name: "Contribute", RoleTypeKind: 3 }]),
+    roleDefinitions: roleDefinitionsFrom([
+      { Id: 1073741826, Name: "Read", RoleTypeKind: 2 },
+      { Id: 1073741827, Name: "Contribute", RoleTypeKind: 3 },
+    ]),
     siteUsers: {
       getByLoginName: () => async () => ({ Id: 77 }),
     },
-    ensureUser: async () => {
-      throw new Error("Compliance should not call ensureUser");
-    },
+    ensureUser: async () => ({ Id: 77 }),
     siteGroups: {
       getByName: () => async () => ({ Id: 77 }),
     },
+  } as unknown as NonNullable<M365Scope["web"]>;
+
+  const loginWeb = {
+    ...web,
+    siteUsers: {
+      getByLoginName: () => async () => {
+        throw new Error("grantSPListRoleAssignment compliance should not use siteUsers.getByLoginName for loginName principals");
+      },
+    },
+    ensureUser: async () => ({ Id: 77 }),
   } as unknown as NonNullable<M365Scope["web"]>;
 
   const grantCompliance = await new GrantSPSiteRoleAssignmentAction().checkCompliance({
@@ -1705,6 +2419,27 @@ async function assertSharePointPermissionCompliance(): Promise<void> {
     grantCompliance.resource === "Project Members -> contribute",
     "grantSPSiteRoleAssignment compliance should report assignment-specific resources"
   );
+
+  const loginGrantCompliance = await new GrantSPListRoleAssignmentAction().checkCompliance({
+    scopeIn: {
+      web: loginWeb,
+      list: permissionTargetFrom({ unique: true, bindingsByPrincipal: { 77: [1073741826] } }) as unknown as NonNullable<M365Scope["list"]>,
+      listName: "documents",
+    },
+    clients: { spfi: {} },
+    logger,
+    action: {
+      path: "1",
+      verb: "grantSPListRoleAssignment",
+      payload: {
+        verb: "grantSPListRoleAssignment",
+        principalType: "loginName",
+        principal: "fabio@apveelabs.onmicrosoft.com",
+        roleType: "read",
+      },
+    },
+  } as Parameters<GrantSPListRoleAssignmentAction["checkCompliance"]>[0]);
+  assert(loginGrantCompliance.outcome === "compliant", "grantSPListRoleAssignment compliance should resolve loginName principals consistently with provisioning");
 
   const removeCompliance = await new RemoveSPSiteRoleAssignmentAction().checkCompliance({
     scopeIn: { web, webUrl: "https://contoso.sharepoint.com/sites/project" },
@@ -3322,8 +4057,10 @@ function assertLoggerContract(): void {
     omitted: undefined,
   });
 
+  const detailedError = new Error("boom") as Error & { details?: unknown };
+  detailedError.details = { target: "documents" };
   logger.error("structured error", {
-    error: new Error("boom"),
+    error: detailedError,
     data: { status: 500 },
   });
 
@@ -3339,6 +4076,7 @@ function assertLoggerContract(): void {
   const cyclicPayload = payload.cyclic as Record<string, unknown>;
   assert(cyclicPayload.self === "[Circular]", "Logger should sanitize circular references");
   assert(primaryEvents[1].error?.message === "boom", "Logger should normalize error context");
+  assert((primaryEvents[1].error?.details as Record<string, unknown> | undefined)?.target === "documents", "Logger should preserve structured error details");
   assert((primaryEvents[1].data as Record<string, unknown>).status === 500, "Logger should keep JSON-safe error data");
 }
 
@@ -3506,12 +4244,24 @@ async function main(): Promise<void> {
   assertSharePointCatalogComposition();
   assertSharePointPermissionsCatalogComposition();
   assertSharePointListViewPublicBarrelExports();
+  assertSharePointNavigationPublicBarrelExports();
   assertContentTypeFieldReferenceScopeResolution();
   assertFieldStructuralCompatibility();
   assertListStructuralCompatibility();
   assertJsonResultContract();
   assertLoggerContract();
   await assertSharePointPermissionDomainHelpers();
+  await assertCreateSPNavigationNodeAddsMissingNode();
+  await assertCreateSPNavigationNodeSkipsExistingWithoutWrites();
+  await assertModifySPNavigationNodeUpdatesChangedNode();
+  await assertModifySPNavigationNodeSkipsWhenAlreadyCompliant();
+  await assertModifySPNavigationNodeSkipsEquivalentUrls();
+  await assertDeleteSPNavigationNodeDeletesMatchedNode();
+  await assertNavigationHandlersSkipAmbiguousDuplicateTitles();
+  await assertNavigationCompliancePrerequisites();
+  await assertNavigationComplianceDetectsDrift();
+  await assertNavigationComplianceTreatsEquivalentUrlsAsCompliant();
+  assertNavigationUrlEquivalencePreservesExternalOrigins();
   await assertListViewFieldResolutionGuards();
   await assertListViewLookupUsesFilteredTopOneQuery();
   await assertListViewPermissionChecks();

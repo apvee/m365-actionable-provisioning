@@ -88,7 +88,7 @@ export const deepMerge = <T>(base: T, delta: unknown): T => {
  * 
  * @public
  */
-export const normalizeError = (err: unknown): { message: string; stack?: string } => {
+export const normalizeError = (err: unknown): { message: string; stack?: string; details?: unknown } => {
     const safeToString = (v: unknown): string => {
         if (typeof v === "string") return v;
         try {
@@ -99,13 +99,22 @@ export const normalizeError = (err: unknown): { message: string; stack?: string 
     };
 
     if (err instanceof Error) {
-        return { message: err.message, stack: err.stack };
+        const details = (err as Error & { details?: unknown }).details;
+        return {
+            message: err.message,
+            stack: err.stack,
+            ...(details !== undefined ? { details } : {}),
+        };
     }
 
     if (isPlainObject(err) && "message" in err) {
         const obj = err as Record<string, unknown>;
         const stack = typeof obj.stack === "string" ? obj.stack : undefined;
-        return { message: safeToString(obj.message), stack };
+        return {
+            message: safeToString(obj.message),
+            stack,
+            ...(obj.details !== undefined ? { details: obj.details } : {}),
+        };
     }
 
     return { message: safeToString(err) };

@@ -106,6 +106,17 @@ export const provisioningPlan: M365ProvisioningPlan = {
         },
       ],
     },
+    {
+      verb: 'modifySPSite',
+      subactions: [
+        {
+          verb: 'createSPNavigationNode',
+          location: 'quicklaunch',
+          title: '{parameter:OrdersTitle} workspace',
+          url: 'Lists/{parameter:OrdersListName}/AllItems.aspx',
+        },
+      ],
+    },
   ],
 };
 
@@ -119,8 +130,19 @@ export const deprovisioningPlan: M365ProvisioningPlan = {
   parameters: [
     { key: 'CustomersListName', value: 'customers' },
     { key: 'OrdersListName', value: 'orders' },
+    { key: 'OrdersTitle', value: 'Orders' },
   ],
   actions: [
+    {
+      verb: 'modifySPSite',
+      subactions: [
+        {
+          verb: 'deleteSPNavigationNode',
+          location: 'quicklaunch',
+          title: '{parameter:OrdersTitle} workspace',
+        },
+      ],
+    },
     {
       verb: 'deleteSPList',
       listName: '{parameter:OrdersListName}',

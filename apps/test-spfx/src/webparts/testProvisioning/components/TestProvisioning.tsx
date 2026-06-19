@@ -3,10 +3,10 @@ import { Button, Card, CardHeader, Text, Title3, makeStyles, tokens } from '@flu
 
 import type { ITestProvisioningProps } from './ITestProvisioningProps';
 
-import { createLogger, consoleSink } from '@apvee/m365-actionable-provisioning';
+import { createLogger, consoleSink, type M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 import { ProvisioningDialog, SPFxFluentProvider } from '@apvee/spfx-m365-actionable-provisioning';
 import type { ProvisioningCompletedEvent } from '@apvee/spfx-m365-actionable-provisioning';
-import examplePlan from '../test-plans/complete-plan';
+import { createExamplePlan } from '../test-plans/complete-plan';
 
 const useStyles = makeStyles({
   stack: {
@@ -24,6 +24,12 @@ const TestProvisioning: React.FC<ITestProvisioningProps> = (props) => {
   const logger = React.useMemo(() => {
     return createLogger({ level: 'debug', sink: consoleSink });
   }, []);
+
+  const planTemplate = React.useMemo<M365ProvisioningPlan>(() => {
+    const currentUserLoginName = props.context.pageContext.user.loginName || props.context.pageContext.user.email;
+
+    return createExamplePlan(currentUserLoginName);
+  }, [props.context.pageContext.user.email, props.context.pageContext.user.loginName]);
 
   const handleProvisioningCompleted = React.useCallback(
     (ev: ProvisioningCompletedEvent) => {
@@ -68,7 +74,7 @@ const TestProvisioning: React.FC<ITestProvisioningProps> = (props) => {
             onClose={() => setOpen(false)}
             onProvisioningCompleted={handleProvisioningCompleted}
             context={props.context}
-            planTemplate={examplePlan}
+            planTemplate={planTemplate}
             logger={logger}
             targetSiteUrl={props.provisioningSiteUrl}
             enableComplianceCheck={true}
@@ -78,7 +84,7 @@ const TestProvisioning: React.FC<ITestProvisioningProps> = (props) => {
             open={complianceOpen}
             onClose={() => setComplianceOpen(false)}
             context={props.context}
-            planTemplate={examplePlan}
+            planTemplate={planTemplate}
             logger={logger}
             initialMode="compliance"
             complianceAutoRunOnOpen={true}

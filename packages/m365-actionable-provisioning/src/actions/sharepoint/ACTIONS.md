@@ -127,6 +127,34 @@ or leading XML comments:
 <OrderBy><FieldRef Name="Modified" Ascending="FALSE" /></OrderBy>
 ```
 
+## Navigation V1
+
+SharePoint navigation node actions are site subactions only. They run under
+`createSPSite` or `modifySPSite` and use the target web propagated by the parent
+site action. V1 exposes:
+
+- `createSPNavigationNode`
+- `modifySPNavigationNode`
+- `deleteSPNavigationNode`
+
+The `location` field uses PnPjs web navigation collection names:
+
+- `quicklaunch`
+- `topNavigationBar`
+
+Use an absolute URL or a server-relative URL that includes the target site path.
+For example, use `/sites/demo/Lists/orders/AllItems.aspx` rather than
+`/Lists/orders/AllItems.aspx`; the latter is resolved from the tenant root.
+
+Navigation node actions are leaf actions. Non-empty `subactions` arrays are
+rejected.
+
+V1 supports root navigation nodes only. It does not support root-level
+navigation actions, list-level navigation actions, footer navigation, child
+nodes, ordering, audience targeting, or duplicate-title mutation. If multiple
+nodes in the selected location have the same title, handlers skip with an
+`unsupported` result and emit a `NAVIGATION_NODE_AMBIGUOUS_TITLE` warning.
+
 ## Permissions V1
 
 Permission actions are subactions only.
