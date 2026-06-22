@@ -1,6 +1,6 @@
 {
   "name": "@apvee/spfx-m365-actionable-provisioning",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Reusable SPFx UI, hooks, and property pane controls for M365 actionable provisioning.",
   "keywords": [
     "spfx",
@@ -10,6 +10,9 @@
     "fluentui"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
@@ -34,7 +37,7 @@
     "tslib": "2.3.1"
   },
   "peerDependencies": {
-    "@apvee/m365-actionable-provisioning": "0.0.1",
+    "@apvee/m365-actionable-provisioning": "1.0.0",
     "@apvee/react-layout-kit": "^1.2.0",
     "@fluentui/react": "^8.106.4",
     "@fluentui/react-components": "^9.72.9",
@@ -51,7 +54,7 @@
     "react-dom": "17.0.1"
   },
   "devDependencies": {
-    "@apvee/m365-actionable-provisioning": "0.0.1",
+    "@apvee/m365-actionable-provisioning": "1.0.0",
     "@apvee/react-layout-kit": "^1.2.0",
     "@fluentui/react": "^8.106.4",
     "@fluentui/react-components": "^9.72.9",

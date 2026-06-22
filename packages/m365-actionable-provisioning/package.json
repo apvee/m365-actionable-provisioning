@@ -1,6 +1,6 @@
 {
   "name": "@apvee/m365-actionable-provisioning",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Schema-first actionable provisioning engine for Microsoft 365, starting with SharePoint actions.",
   "keywords": [
     "m365",
@@ -11,6 +11,9 @@
     "automation"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [

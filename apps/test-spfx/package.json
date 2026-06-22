@@ -1,6 +1,6 @@
 {
   "name": "test-spfx",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "SPFx demo app for Apvee M365 actionable provisioning.",
   "scripts": {
@@ -12,9 +12,9 @@
     "test": "gulp test"
   },
   "dependencies": {
-    "@apvee/m365-actionable-provisioning": "0.0.1",
+    "@apvee/m365-actionable-provisioning": "1.0.0",
     "@apvee/react-layout-kit": "^1.2.0",
-    "@apvee/spfx-m365-actionable-provisioning": "0.0.1",
+    "@apvee/spfx-m365-actionable-provisioning": "1.0.0",
     "@fluentui/react": "^8.106.4",
     "@fluentui/react-components": "^9.72.9",
     "@fluentui/react-icons": "^2.0.316",
