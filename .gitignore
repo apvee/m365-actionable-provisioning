@@ -18,6 +18,9 @@ temp
 # Coverage directory used by tools like istanbul
 coverage
 
+# Local planning artifacts
+docs/superpowers/
+
 # OSX
 .DS_Store
 

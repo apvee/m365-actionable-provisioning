@@ -1,114 +1,58 @@
-# @apvee/spfx-actionable-provisioning
+# Apvee M365 Actionable Provisioning
 
-Schema-first provisioning engine for SPFx, built on PnPjs and Zod.
+Monorepo for Apvee Microsoft 365 actionable provisioning packages and the SPFx demo app.
 
-The repository contains:
-- A generic provisioning engine (DFS execution + tracing + permissions preflight)
-- A SharePoint action catalog (sites, lists, fields) designed to run from SPFx
+## Workspaces
 
-![@apvee/spfx-actionable-provisioning demo](./docs/demo.gif)
+| Workspace | Package | Purpose |
+| --- | --- | --- |
+| `packages/m365-actionable-provisioning` | `@apvee/m365-actionable-provisioning` | Schema-first Microsoft 365 provisioning engine, runtime contracts, built-in M365 catalog, and SharePoint action catalog. |
+| `packages/spfx-m365-actionable-provisioning` | `@apvee/spfx-m365-actionable-provisioning` | SPFx React UI, hooks, property pane fields, theme bridge, localization, and activity utilities for the core package. |
+| `apps/test-spfx` | `test-spfx` | Private SPFx demo app that consumes both packages through npm workspaces. |
 
-## Documentation
+## Requirements
 
-Comprehensive documentation is available in the [docs](./docs) folder:
+- Node.js `>=22.14.0 <23.0.0`
+- npm workspaces
+- SPFx 1.21 for the demo app and SPFx package consumers
 
-| Document | Description |
-|----------|-------------|
-| [Introduction](./docs/introduction.md) | Getting started guide, installation, and quick start |
-| [Provisioning Schema](./docs/provisioning-schema.md) | Complete reference for plan structure and action types |
-| [SPFx Engine](./docs/spfx-engine.md) | Engine API, execution model, and error handling |
-| [ProvisioningDialog](./docs/provisioning-dialog.md) | Dialog component props, events, and customization |
-| [Property Pane Fields](./docs/property-pane-fields.md) | PropertyPaneProvisioningField and PropertyPaneSiteSelectorField |
-
-### Quick Start
-
-```typescript
-import { ProvisioningDialog } from '@apvee/spfx-actionable-provisioning/provisioning-ui';
-import { createLogger, consoleSink } from '@apvee/spfx-actionable-provisioning/core';
-
-// In your React component
-<ProvisioningDialog
-  open={isDialogOpen}
-  onClose={() => setOpen(false)}
-  context={this.context}
-  planTemplate={myPlan}
-  logger={createLogger({ level: 'debug', sink: consoleSink })}
-  targetSiteUrl="https://contoso.sharepoint.com/sites/project"
-/>
-```
-
-See the [Introduction](./docs/introduction.md) for complete setup instructions.
-
-## Core concepts
-
-### Plans are schema-governed
-Each action is validated by a Zod schema before execution. Actions may contain `subactions`, which execute with a derived scope.
-
-### Scope is an in-memory execution context
-The engine passes a `scopeIn` into each action and merges an action-produced `scopeDelta` into `scopeOut`.
-
-For SharePoint provisioning, the scope is intentionally **handle-based**:
-- `spfi`: configured SPFI instance (auth + behaviors)
-- `site?`: PnPjs `ISite` handle
-- `web?`: PnPjs `IWeb` handle
-- `list?`: PnPjs `IList` handle
-
-Parent actions (e.g. `createSPList`) set `web`/`list` in `scopeDelta`, and subactions reuse these handles.
-This avoids repeated resolution calls (no more storing `siteUrl`, `webUrl`, `listId`, `listName` in scope).
-
-### Merge semantics (important)
-Scope merging is **instance-safe**:
-- Only "plain objects" are deep-merged
-- Non-plain objects (including PnPjs handles) are treated as atomic values ("last wins")
-
-This is what allows PnPjs instances to live inside scope safely.
-
-## SharePoint actions
-
-The main SharePoint catalog is defined in `src/provisioning/catalogs/sp-catalog.ts`.
-Supported patterns:
-- Site actions can contain list + site-field subactions
-- List actions can contain list-field subactions
-- Field actions route automatically based on scope:
-  - if `scopeIn.list` exists → operate on list fields and allow view/form flags
-  - otherwise → operate on root-web (site columns) and ignore list-only flags
-
-## Example plan
-
-See `src/webparts/testProvisioning/examplePlan.ts` for a full example. A minimal sketch:
-
-```ts
-[
-  {
-    verb: "modifySPSite",
-    siteUrl: "https://tenant.sharepoint.com/sites/engineering",
-    title: "Engineering",
-    subactions: [
-      {
-        verb: "createSPList",
-        listName: "engineeringRequests",
-        title: "Engineering Requests",
-        template: 100,
-        subactions: [
-          {
-            verb: "createSPField",
-            fieldType: "Text",
-            fieldName: "RequestTitle",
-            displayName: "Request Title",
-            required: true,
-            addToDefaultView: true,
-          },
-        ],
-      },
-    ],
-  },
-]
-```
-
-## Dev commands
+## Common Commands
 
 ```bash
 npm install
+npm run build:m365
+npm run build:spfx
+npm run build:test-spfx
 npm run build
-gulp serve
+npm run smoke:m365-engine -w @apvee/m365-actionable-provisioning
 ```
+
+## Import Surface
+
+```typescript
+import {
+  createLogger,
+  createM365ProvisioningEngine,
+  consoleSink,
+  type M365ProvisioningPlan,
+} from '@apvee/m365-actionable-provisioning';
+
+import {
+  PropertyPaneProvisioningField,
+  PropertyPaneSiteSelectorField,
+  ProvisioningDialog,
+  SPFxFluentProvider,
+} from '@apvee/spfx-m365-actionable-provisioning';
+```
+
+## Documentation
+
+| Document | Purpose |
+| --- | --- |
+| [`docs/introduction.md`](./docs/introduction.md) | Product and integration overview. |
+| [`docs/core/engine.md`](./docs/core/engine.md) | Generic core engine usage for Node, SPFx, and other TypeScript hosts. |
+| [`docs/core/provisioning-schema.md`](./docs/core/provisioning-schema.md) | Provisioning plan and SharePoint action schema reference. |
+| [`docs/spfx/integration.md`](./docs/spfx/integration.md) | SPFx integration package setup, hook runtime, localization, and Graph permissions. |
+| [`docs/spfx/provisioning-dialog.md`](./docs/spfx/provisioning-dialog.md) | `ProvisioningDialog` reference. |
+| [`docs/spfx/property-pane-fields.md`](./docs/spfx/property-pane-fields.md) | SPFx property pane field reference. |
+| [`packages/m365-actionable-provisioning/src/actions/sharepoint/ACTIONS.md`](./packages/m365-actionable-provisioning/src/actions/sharepoint/ACTIONS.md) | SharePoint action catalog implementation notes. |

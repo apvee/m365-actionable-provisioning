@@ -1,0 +1,46 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "m365-actionable-provisioning-client-side-solution",
+    "id": "509c84f6-67ba-4255-a343-f077d8193176",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.21.1"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "M365 actionable provisioning demo solution"
+      },
+      "longDescription": {
+        "default": "M365 actionable provisioning demo solution"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "M365 Actionable Provisioning Feature",
+        "description": "The feature that activates elements of the M365 actionable provisioning demo solution.",
+        "id": "af467ffc-b03c-451d-b0df-bed592040d03",
+        "version": "1.0.0.0"
+      }
+    ],
+    "webApiPermissionRequests": [
+      {
+        "resource": "Microsoft Graph",
+        "scope": "Sites.Manage.All"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/m365-actionable-provisioning.sppkg"
+  }
+}

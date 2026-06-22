@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "test-provisioning-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/testProvisioning/TestProvisioningWebPart.js",
+          "manifest": "./src/webparts/testProvisioning/TestProvisioningWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "SPFxProvisioningUIStrings": "../../packages/spfx-m365-actionable-provisioning/lib/loc/{locale}.js"
+  }
+}

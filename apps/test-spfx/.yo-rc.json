@@ -1,0 +1,18 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.14.0",
+    "sdksVersions": {},
+    "version": "1.21.1",
+    "libraryName": "m365-actionable-provisioning",
+    "libraryId": "509c84f6-67ba-4255-a343-f077d8193176",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "m365-actionable-provisioning",
+    "solutionShortDescription": "M365 actionable provisioning demo solution",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

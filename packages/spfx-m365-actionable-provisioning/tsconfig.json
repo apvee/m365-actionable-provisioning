@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib",
+    "types": [
+      "webpack-env"
+    ],
+    "typeRoots": [
+      "../../node_modules/@types",
+      "../../node_modules/@microsoft"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts"
+  ],
+  "exclude": [
+    "lib",
+    "node_modules"
+  ]
+}
