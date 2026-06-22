@@ -2,7 +2,7 @@
 
 Reusable SPFx UI, hooks, property pane fields, theme bridge, localization, and activity utilities for `@apvee/m365-actionable-provisioning`.
 
-![@apvee/spfx-m365-actionable-provisioning](../../docs/spfx-m365-actionable-provisioning.jpeg)
+![@apvee/spfx-m365-actionable-provisioning](https://raw.githubusercontent.com/apvee/m365-actionable-provisioning/refs/heads/main/docs/spfx-m365-actionable-provisioning.jpeg)
 
 This package does not implement provisioning actions. It adapts the core M365 provisioning engine to SharePoint Framework applications.
 
