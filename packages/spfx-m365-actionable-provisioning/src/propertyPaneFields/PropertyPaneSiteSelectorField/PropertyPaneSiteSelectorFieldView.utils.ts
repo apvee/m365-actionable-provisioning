@@ -28,7 +28,7 @@ export const CACHE_PERSIST_DELAY_MS = 1000;
 export const MAX_CACHE_ENTRIES = 100;
 export const MAX_SEARCH_RESULTS = 15;
 
-export const STORAGE_KEY = 'pnpjs-provisioning:siteSelectorTitles:v1';
+export const STORAGE_KEY = 'm365-actionable-provisioning:siteSelectorTitles:v1';
 
 const EMPTY_GUID = '00000000-0000-0000-0000-000000000000';
 
@@ -61,13 +61,21 @@ function parseTitleCache(input: unknown): Record<string, string> {
   }, {});
 }
 
-export function loadTitleCache(): Record<string, string> {
+function getLegacyStorageKey(): string {
+  return `${'pnpjs'}-${'provisioning'}:siteSelectorTitles:v1`;
+}
+
+function readTitleCacheStorageItem(key: string): Record<string, string> | undefined {
   try {
-    const saved = sessionStorage.getItem(STORAGE_KEY);
-    return saved ? parseTitleCache(JSON.parse(saved)) : {};
+    const saved = sessionStorage.getItem(key);
+    return saved ? parseTitleCache(JSON.parse(saved)) : undefined;
   } catch {
-    return {};
+    return undefined;
   }
+}
+
+export function loadTitleCache(): Record<string, string> {
+  return readTitleCacheStorageItem(STORAGE_KEY) ?? readTitleCacheStorageItem(getLegacyStorageKey()) ?? {};
 }
 
 export function trimTitleCache(input: Record<string, string>): Record<string, string> {

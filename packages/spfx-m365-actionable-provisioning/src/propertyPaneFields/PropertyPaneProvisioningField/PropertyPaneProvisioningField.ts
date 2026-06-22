@@ -97,7 +97,7 @@ export function PropertyPaneProvisioningField(
 
   function renderTo(elem: HTMLElement): void {
     const v9Theme = themeController.getFluentV9Theme();
-    const idPrefix = `pnpjs-provisioning-pp-${targetProperty}-`;
+    const idPrefix = `m365-actionable-provisioning-pp-${targetProperty}-`;
 
     const enableComplianceCheck = props.enableComplianceCheck ?? true;
     const complianceAutoRunOnOpen = props.complianceAutoRunOnOpen ?? true;

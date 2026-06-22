@@ -39,7 +39,7 @@ const TestProvisioning: React.FC<ITestProvisioningProps> = (props) => {
   );
 
   return (
-    <SPFxFluentProvider context={props.context} idPrefix="pnpjs-provisioning-">
+    <SPFxFluentProvider context={props.context} idPrefix="m365-actionable-provisioning-">
       <Card>
         <CardHeader
           header={<Title3>SharePoint Provisioning</Title3>}

@@ -98,7 +98,7 @@ export function PropertyPaneSiteSelectorField(
 
   function renderTo(elem: HTMLElement): void {
     const v9Theme = themeController.getFluentV9Theme();
-    const idPrefix = `pnpjs-provisioning-pp-${targetProperty}-`;
+    const idPrefix = `m365-actionable-provisioning-pp-${targetProperty}-`;
 
     const inner = React.createElement(PropertyPaneSiteSelectorFieldView, {
       label: props.label,

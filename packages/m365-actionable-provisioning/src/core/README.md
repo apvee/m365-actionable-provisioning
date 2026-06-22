@@ -995,4 +995,4 @@ Specialized engines can override these hooks to validate injected runtime contex
 
 ## License
 
-Part of the pnpjs-provisioning project.
+Part of the @apvee/m365-actionable-provisioning package.

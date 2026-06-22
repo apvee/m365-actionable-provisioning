@@ -1,5 +1,5 @@
 {
-  "name": "spfx-actionable-provisioning-monorepo",
+  "name": "m365-actionable-provisioning-monorepo",
   "version": "0.0.1",
   "private": true,
   "description": "Monorepo for Apvee M365 actionable provisioning packages and the SPFx demo app.",
