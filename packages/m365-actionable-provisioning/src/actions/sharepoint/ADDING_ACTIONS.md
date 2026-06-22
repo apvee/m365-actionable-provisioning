@@ -1,8 +1,6 @@
 # Adding New SharePoint Provisioning Actions
 
-SharePoint actions are owned by action modules. A module keeps the action schema,
-handler and catalog metadata in one folder, while shared SharePoint domain logic
-stays in `_shared` folders.
+SharePoint actions are owned by action modules. A module keeps the action schema, handler, compliance logic, permission checks, and catalog metadata together. Shared SharePoint domain logic belongs in `_shared` or `domains` folders.
 
 ## Folder Shape
 
@@ -21,7 +19,7 @@ Use shared code only for behavior that is genuinely reused:
 _shared/schemas/                # shared Zod primitives
 _composition/                   # root/subaction schema composition
 <domain>/_shared/               # domain-local helpers
-domains/                        # SharePoint lookup/permission helpers
+domains/                        # SharePoint and Graph lookup/permission helpers
 _shared/                        # cross-domain action utilities
 ```
 
@@ -29,128 +27,170 @@ _shared/                        # cross-domain action utilities
 
 Define the full action schema in the action folder.
 
-```ts
+```typescript
 // content-types/create-sp-content-type/schema.ts
-import { z } from "zod";
-import { leafSubactionsSchema } from "../../_shared/schemas/action-schemas";
+import { z } from 'zod';
+import { subactionsOf } from '../../_shared/schemas/action-schemas';
+import { contentTypeSubactionSchema } from '../../_composition/content-type-subactions-schema';
+import { graphTargetSchema } from '../_shared/reference-schema';
 
-export const createSPContentTypeSchema = z.object({
-  verb: z.literal("createSPContentType"),
+export const createSPContentTypeSchema = graphTargetSchema.extend({
+  verb: z.literal('createSPContentType'),
   name: z.string().min(1),
-  parentId: z.string().optional(),
+  parentId: z.string().min(1),
   description: z.string().optional(),
   group: z.string().optional(),
-  webUrl: z.string().url().optional(),
-  subactions: leafSubactionsSchema,
+  subactions: subactionsOf(contentTypeSubactionSchema),
 });
 
 export type CreateSPContentTypePayload = z.infer<typeof createSPContentTypeSchema>;
 ```
 
+Use placement-specific schema variants only when the same verb needs a different payload shape depending on where it appears.
+
 ## 2. Handler
 
-Implement the concrete `ActionDefinition` next to its schema.
+Implement the concrete `ActionDefinition` next to its schema. This Graph-backed content type example reflects the current content type action contract:
 
-```ts
+```typescript
 // content-types/create-sp-content-type/action.ts
-import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from "../../../../core/action";
-import type { PermissionCheckResult } from "../../../../core/permissions";
-import type { M365ActionResult, M365Clients, M365RuntimeContext, M365Scope, ProvisioningResultLight } from "../../../../runtime";
-import { resolveTargetWeb } from "../../utils/sp-utils";
-import { probeManageListsPermission } from "../../domains/lists";
+import { ActionDefinition, type ComplianceActionCheckResult, type ComplianceRuntimeContext } from '../../../../core/action';
+import type { PermissionCheckResult } from '../../../../core/permissions';
+import type { M365ActionResult, M365Clients, M365RuntimeContext, M365Scope, ProvisioningResultLight } from '../../../../runtime';
+import { actionExecuted, actionSkipped, compliant, nonCompliant, unverifiable } from '../../_shared/action-results';
+import { graphContentTypePermissionCheck, resolveGraphSiteTarget, resolveSiteContentType } from '../../domains/content-types';
 
-import { createSPContentTypeSchema, type CreateSPContentTypePayload } from "./schema";
+import { createSPContentTypeSchema, type CreateSPContentTypePayload } from './schema';
+
+import '@pnp/graph/sites';
+import '@pnp/graph/content-types';
 
 export class CreateSPContentTypeAction extends ActionDefinition<
-  "createSPContentType",
+  'createSPContentType',
   typeof createSPContentTypeSchema,
   M365Scope,
   ProvisioningResultLight,
   M365Clients
 > {
-  readonly verb = "createSPContentType";
+  readonly verb = 'createSPContentType';
   readonly actionSchema = createSPContentTypeSchema;
-  readonly requiredClients = ["spfi"] as const;
+  readonly requiredClients = ['graphClient'] as const;
 
-  async checkPermissions(ctx: M365RuntimeContext<CreateSPContentTypePayload>): Promise<PermissionCheckResult> {
-    const spfi = ctx.clients.spfi;
-    if (!spfi) return { decision: "deny", message: "SPFI instance not available in scope" };
-
-    const { web, effectiveWebUrl } = await resolveTargetWeb({
-      spfi,
-      scopeWeb: ctx.scopeIn.web,
-      webUrl: ctx.action.payload.webUrl,
-    });
-
-    return probeManageListsPermission(web, effectiveWebUrl);
+  async checkPermissions(): Promise<PermissionCheckResult> {
+    return graphContentTypePermissionCheck();
   }
 
   async handler(ctx: M365RuntimeContext<CreateSPContentTypePayload>): Promise<M365ActionResult> {
-    const spfi = ctx.clients.spfi;
-    if (!spfi) throw new Error("SPFI instance not available in scope");
+    const graphClient = ctx.clients.graphClient;
+    if (!graphClient) throw new Error('GraphFI instance not available in scope');
 
-    return {
-      result: {
-        outcome: "executed",
-        resource: ctx.action.payload.name,
-      },
-    };
+    const payload = ctx.action.payload;
+    const target = await resolveGraphSiteTarget(graphClient, ctx.scopeIn, payload);
+    const existing = await resolveSiteContentType(graphClient, target.graphSiteId, { contentTypeName: payload.name });
+
+    if (existing) {
+      return actionSkipped(payload.name, 'already_exists', {
+        contentType: existing.handle,
+        contentTypeId: existing.info.id,
+        contentTypeName: existing.info.name ?? payload.name,
+        graphSiteId: target.graphSiteId,
+      });
+    }
+
+    const created = await graphClient.sites.getById(target.graphSiteId).contentTypes.add({
+      name: payload.name,
+      description: payload.description,
+      group: payload.group,
+      base: { id: payload.parentId },
+    });
+
+    return actionExecuted(payload.name, {
+      contentType: created.contentType,
+      contentTypeId: created.data.id,
+      contentTypeName: created.data.name ?? payload.name,
+      graphSiteId: target.graphSiteId,
+    });
   }
 
   async checkCompliance(
     ctx: ComplianceRuntimeContext<M365Scope, CreateSPContentTypePayload, M365Clients>
   ): Promise<ComplianceActionCheckResult<M365Scope>> {
-    return { outcome: "unverifiable", resource: ctx.action.payload.name, reason: "not_supported" };
+    const graphClient = ctx.clients.graphClient;
+    if (!graphClient) {
+      return unverifiable({
+        resource: ctx.action.payload.name,
+        reason: 'missing_prerequisite',
+        message: 'GraphFI instance not available in scope',
+      });
+    }
+
+    const payload = ctx.action.payload;
+    const target = await resolveGraphSiteTarget(graphClient, ctx.scopeIn, payload);
+    const resolved = await resolveSiteContentType(graphClient, target.graphSiteId, { contentTypeName: payload.name });
+
+    if (!resolved) return nonCompliant({ resource: payload.name, reason: 'not_found' });
+
+    return compliant({
+      resource: payload.name,
+      scopeDelta: {
+        contentType: resolved.handle,
+        contentTypeId: resolved.info.id,
+        contentTypeName: resolved.info.name ?? payload.name,
+        graphSiteId: target.graphSiteId,
+      },
+    });
   }
 }
 ```
 
+For SharePoint REST-backed actions, declare `requiredClients = ['spfi'] as const` and use the relevant SharePoint domain permission probe. For Graph-backed actions, declare `requiredClients = ['graphClient'] as const`; content type actions should use Graph content type permission helpers.
+
 ## 3. Action Module
 
-Export schema, handler and placement metadata from `index.ts`.
+Export schema, handler, and placement metadata from `index.ts`.
 
-```ts
+```typescript
 // content-types/create-sp-content-type/index.ts
-import { defineSharePointActionModule } from "../../action-module";
+import { defineSharePointActionModule } from '../../action-module';
 
-import { CreateSPContentTypeAction } from "./action";
-import { createSPContentTypeSchema } from "./schema";
+import { CreateSPContentTypeAction } from './action';
+import { createSPContentTypeSchema } from './schema';
 
-export { CreateSPContentTypeAction } from "./action";
-export { createSPContentTypeSchema, type CreateSPContentTypePayload } from "./schema";
+export { CreateSPContentTypeAction } from './action';
+export { createSPContentTypeSchema, type CreateSPContentTypePayload } from './schema';
 
 export const createSPContentTypeActionModule = defineSharePointActionModule({
-  verb: "createSPContentType",
+  verb: 'createSPContentType',
   schema: createSPContentTypeSchema,
   definition: new CreateSPContentTypeAction(),
-  placements: ["root"] as const,
+  placements: ['root', 'siteSubaction'] as const,
 });
 ```
 
-If a placement needs a stricter schema variant, add `schemasByPlacement` and use it
-from the relevant composition file.
+If a placement needs a stricter schema variant, add `schemasByPlacement` to the module and use it from the relevant composition file.
 
 ## 4. Composition
 
-Add the module to:
+Add the module to the correct runtime and schema composition files:
 
-- `actions/action-modules.ts` for runtime definitions
-- `provisioning-schema.ts` if it is allowed at root
-- `_composition/site-subactions-schema.ts` if it is allowed under site actions
-- `_composition/list-subactions-schema.ts` if it is allowed under list actions
+- `actions/sharepoint/action-modules.ts` for runtime definitions.
+- `actions/sharepoint/provisioning-schema.ts` if the action is allowed at the plan root.
+- `actions/sharepoint/_composition/site-subactions-schema.ts` if it is allowed under site actions.
+- `actions/sharepoint/_composition/list-subactions-schema.ts` if it is allowed under list actions.
+- `actions/sharepoint/_composition/content-type-subactions-schema.ts` if it is allowed under content type actions.
 
-The public schema facade in `catalogs/schemas.ts` should re-export public schemas
-only; it should not own implementation logic.
+Public SharePoint schema exports live in `actions/sharepoint/schemas.ts`. The full M365 plan schema lives in `catalog/provisioning-schema.ts`.
 
 ## Checklist
 
-- [ ] Folder created under `actions/<domain>/<action-name>/`
-- [ ] `schema.ts` exports the Zod schema and payload type
-- [ ] `action.ts` extends `ActionDefinition`
-- [ ] `requiredClients` declares `spfi` or `graphClient` when needed
-- [ ] Handler is idempotent where the SharePoint operation allows it
-- [ ] Compliance uses the same expected-state semantics as execution
-- [ ] `index.ts` exports an action module via `defineSharePointActionModule`
-- [ ] Composition files include the action in the correct placement
-- [ ] Public schema facade exports any public schema/type
-- [ ] Smoke/build validation passes
+- [ ] Folder created under the correct action domain.
+- [ ] `schema.ts` exports the Zod schema and payload type.
+- [ ] `action.ts` extends `ActionDefinition`.
+- [ ] `requiredClients` declares `spfi` or `graphClient` when needed.
+- [ ] Permission checks match the backing API.
+- [ ] Handler is idempotent where the SharePoint or Graph operation allows it.
+- [ ] Compliance uses the same expected-state semantics as execution.
+- [ ] `index.ts` exports an action module via `defineSharePointActionModule`.
+- [ ] Composition files include the action in the correct placement.
+- [ ] Public schema/type exports are added intentionally.
+- [ ] Smoke/build validation passes.

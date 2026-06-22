@@ -667,7 +667,8 @@ export default MyWebPart;
 
 ## Related Documentation
 
-- [Introduction](./introduction.md) - Getting started guide
-- [Provisioning Schema](./provisioning-schema.md) - Plan structure and actions
-- [SPFx Engine](./spfx-engine.md) - Engine API for programmatic use
-- [Property Pane Fields](./property-pane-fields.md) - Property pane integration
+- [Introduction](../introduction.md) - Package split and documentation map
+- [Core engine](../core/engine.md) - Generic engine API and execution model
+- [Provisioning schema](../core/provisioning-schema.md) - Plan structure and actions
+- [SPFx integration](./integration.md) - SPFx package setup and hook runtime
+- [Property pane fields](./property-pane-fields.md) - Property pane integration

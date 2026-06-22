@@ -1,14 +1,16 @@
-# Provisioning Module
+# SharePoint Provisioning Actions
 
-A schema-driven provisioning framework for SharePoint Online using PnPjs v4.
+Schema-driven SharePoint Online action catalog for `@apvee/m365-actionable-provisioning`.
 
 ## Purpose
 
-This module provides a declarative approach to SharePoint provisioning through:
-- **Schema-first validation** using Zod for type-safe action definitions
-- **Hierarchical execution** with scope propagation between parent and child actions
-- **Real-time tracing** for monitoring provisioning progress
-- **Compliance checking** to detect drift between desired and actual state
+This module provides:
+
+- Zod schemas for SharePoint provisioning action payloads.
+- Co-located action definitions and handlers.
+- Root, site, list, and content-type subaction composition.
+- Permission checks and compliance checks.
+- Runtime scope propagation for SharePoint and Graph handles.
 
 ## Action Semantics
 
@@ -21,6 +23,17 @@ SharePoint actions follow a deliberate create/modify/delete split:
 Create actions do not reconcile mutable properties on already-existing resources. For example, an existing list with the requested `listName` but a different `Title` still satisfies the create action. Add a `modifySPList` action when the title must be enforced.
 
 `listName` identifies lists by stable root/name (`RootFolder/Name` in SharePoint REST and `name` in Microsoft Graph). Do not use mutable `Title` or Graph `displayName` as list identity.
+
+## Action Placement
+
+| Placement | Verbs |
+| --- | --- |
+| Root | `createSPSite`, `modifySPSite`, `deleteSPSite`, `createSPList`, `modifySPList`, `deleteSPList`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType` |
+| Site subaction | `createSPList`, `modifySPList`, `deleteSPList`, `createSPNavigationNode`, `modifySPNavigationNode`, `deleteSPNavigationNode`, `breakSPSiteRoleInheritance`, `resetSPSiteRoleInheritance`, `grantSPSiteRoleAssignment`, `removeSPSiteRoleAssignment`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType`, `createSPSiteColumn`, `modifySPField`, `deleteSPField` |
+| List subaction | `addSPField`, `modifySPField`, `deleteSPField`, `enableSPListRating`, `createSPListView`, `modifySPListView`, `deleteSPListView`, `breakSPListRoleInheritance`, `resetSPListRoleInheritance`, `grantSPListRoleAssignment`, `removeSPListRoleAssignment`, `addSPContentTypeToList`, `removeSPContentTypeFromList` |
+| Content type subaction | `addSPFieldToContentType`, `modifySPContentTypeField`, `removeSPFieldFromContentType` |
+
+Use `addSPField` for list fields and `createSPSiteColumn` for site columns.
 
 ## Content Types
 
@@ -36,56 +49,53 @@ Compliance for create actions checks existence and structural compatibility. It 
 
 ## Architecture
 
-```
+```text
 packages/m365-actionable-provisioning/src/actions/sharepoint/
 ├── index.ts          # Public API barrel export
-├── utils/            # General utilities (error handling, web resolution)
-├── domains/          # SharePoint domain helpers
+├── schemas.ts        # Public SharePoint schema exports
+├── provisioning-schema.ts
+├── action-modules.ts
+├── utils/            # General utilities
+├── domains/          # SharePoint and Graph domain helpers
 ├── _composition/     # Site/list/content-type subaction schema composition
 ├── _shared/          # Cross-action runtime/schema utilities
 ├── sites/            # Site action modules
 ├── lists/            # List action modules
 ├── views/            # List/library view action modules
 ├── fields/           # Field action modules
+├── permissions/      # Site/list role inheritance and assignment modules
+├── navigation/       # Site navigation modules
 └── content-types/    # Graph-backed content type action modules
 ```
-
-## Files
-
-| File | Description |
-|------|-------------|
-| index.ts | Main entry point and public API exports |
-
-## Subfolders
-
-| Folder | Description |
-|--------|-------------|
-| utils/ | General utilities (error handling, web resolution) |
-| domains/ | SharePoint domain helpers used by action handlers |
-| sites/, lists/, views/, fields/, content-types/ | Co-located action modules, definitions and schema |
-| _composition/ | Parent/child action schema composition |
-| _shared/ | Cross-action runtime/schema utilities |
 
 ## Usage
 
 ```typescript
-import { ProvisioningEngine, createLogger, consoleSink } from "@apvee/m365-actionable-provisioning";
-import { m365ActionDefinitions, m365ProvisioningPlanSchema, type M365Scope } from "@apvee/m365-actionable-provisioning";
+import {
+  createLogger,
+  createM365ProvisioningEngine,
+  consoleSink,
+} from '@apvee/m365-actionable-provisioning';
 
-const engine = new ProvisioningEngine<M365Scope>({
-  clients: { spfi: rootSPFI },
-  initialScope: { web: targetWeb },
+const engine = createM365ProvisioningEngine({
+  clients: { spfi: rootSPFI, graphClient },
+  initialScope: {
+    web: targetWeb,
+    siteUrl: targetSiteUrl,
+    webUrl: targetSiteUrl,
+  },
   planTemplate: provisioningPlan,
-  logger: createLogger({ level: "info", sink: consoleSink }),
-  definitions: m365ActionDefinitions,
-  provisioningSchema: m365ProvisioningPlanSchema,
+  logger: createLogger({ level: 'info', sink: consoleSink }),
 });
 
-const result = await engine.run();
+const snapshot = await engine.run();
 ```
+
+`graphClient` is required when the plan includes content type actions. SharePoint-only plans can run with `spfi` alone.
 
 ## Adding New Features
 
-- **New action types**: See [ADDING_ACTIONS.md](ADDING_ACTIONS.md)
-- **Shared utilities**: Add to `domains/`, `_shared/`, or domain-local `_shared/` folders
-- **Public M365 types**: Add to `runtime/` or `catalog/` and re-export intentionally from the package root
+- New action types: see [ADDING_ACTIONS.md](ADDING_ACTIONS.md).
+- Shared utilities: add to `domains/`, `_shared/`, or domain-local `_shared/` folders.
+- Public M365 runtime/catalog types: add to `runtime/` or `catalog/` and re-export intentionally from the package root.
+- Public SharePoint action schemas: export from `actions/sharepoint/schemas.ts`.

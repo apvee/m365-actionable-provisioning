@@ -1310,6 +1310,7 @@ export const projectTeamPlan: M365ProvisioningPlan = {
 
 ## Related Documentation
 
-- [SPFx Engine](./spfx-engine.md) - Engine API and execution model
-- [ProvisioningDialog](./provisioning-dialog.md) - Dialog component for provisioning UI
-- [Property Pane Fields](./property-pane-fields.md) - SPFx property pane integration
+- [Core engine](./engine.md) - Generic engine API and execution model
+- [SPFx integration](../spfx/integration.md) - SPFx package setup and hook runtime
+- [ProvisioningDialog](../spfx/provisioning-dialog.md) - Dialog component for SPFx provisioning UI
+- [Property pane fields](../spfx/property-pane-fields.md) - SPFx property pane integration
