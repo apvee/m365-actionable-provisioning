@@ -19,7 +19,7 @@ temp
 coverage
 
 # Local planning artifacts
-docs/superpowers/
+docs/superpowers
 
 # OSX
 .DS_Store
