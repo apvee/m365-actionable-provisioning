@@ -2,7 +2,7 @@
 
 Schema-first actionable provisioning engine for Microsoft 365, starting with SharePoint actions.
 
-![@apvee/m365-actionable-provisioning](../../docs/m365-actionable-provisioning.jpeg)
+![@apvee/m365-actionable-provisioning](https://raw.githubusercontent.com/apvee/m365-actionable-provisioning/refs/heads/main/docs/m365-actionable-provisioning.jpeg)
 
 This package contains the core runtime, the built-in Microsoft 365 provisioning catalog, Zod schemas, logging utilities, compliance checks, and SharePoint action definitions. It does not contain SPFx React UI. Use `@apvee/spfx-m365-actionable-provisioning` for SPFx components, hooks, property pane fields, and localization.
 
