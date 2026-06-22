@@ -5,9 +5,12 @@ This document provides a complete reference for the `@apvee/m365-actionable-prov
 ## Table of Contents
 
 - [Plan Structure](#plan-structure)
+- [Action Placement Matrix](#action-placement-matrix)
 - [Parameters](#parameters)
 - [Site Actions](#site-actions)
+- [Navigation Actions](#navigation-actions)
 - [List Actions](#list-actions)
+- [List View Actions](#list-view-actions)
 - [Permission Actions](#permission-actions)
 - [Field Actions](#field-actions)
 - [Content Type Actions](#content-type-actions)
@@ -50,6 +53,55 @@ Create compliance still detects structural collisions when possible. For example
 List identity uses `listName`, the stable list root/name. Mutable list display values such as SharePoint `Title` or Microsoft Graph `displayName` are not used to identify lists.
 
 A provisioning plan is a JSON object validated by Zod schemas. The root structure includes metadata and an array of actions.
+
+## Action Placement Matrix
+
+The schema controls where every action can appear. Root actions are allowed directly in `plan.actions`; subactions are allowed only inside the matching parent action scope.
+
+| Placement | Allowed verbs |
+| --- | --- |
+| Root `actions[]` | `createSPSite`, `modifySPSite`, `deleteSPSite`, `createSPList`, `modifySPList`, `deleteSPList`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType` |
+| Site subactions | `createSPList`, `modifySPList`, `deleteSPList`, `createSPNavigationNode`, `modifySPNavigationNode`, `deleteSPNavigationNode`, `breakSPSiteRoleInheritance`, `resetSPSiteRoleInheritance`, `grantSPSiteRoleAssignment`, `removeSPSiteRoleAssignment`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType`, `createSPSiteColumn`, `modifySPField`, `deleteSPField` |
+| List subactions | `addSPField`, `modifySPField`, `deleteSPField`, `enableSPListRating`, `createSPListView`, `modifySPListView`, `deleteSPListView`, `breakSPListRoleInheritance`, `resetSPListRoleInheritance`, `grantSPListRoleAssignment`, `removeSPListRoleAssignment`, `addSPContentTypeToList`, `removeSPContentTypeFromList` |
+| Content type subactions | `addSPFieldToContentType`, `modifySPContentTypeField`, `removeSPFieldFromContentType` |
+
+The registered SharePoint action catalog is:
+
+| Verb | Placement(s) | Summary |
+| --- | --- | --- |
+| `createSPSite` | Root | Creates a communication site or team site. |
+| `modifySPSite` | Root | Updates site mutable state and hosts site subactions. |
+| `deleteSPSite` | Root | Deletes a site collection. |
+| `createSPList` | Root, site subaction | Creates a list or library. |
+| `modifySPList` | Root, site subaction | Updates list/library mutable state and hosts list subactions. |
+| `deleteSPList` | Root, site subaction | Deletes or recycles a list/library. |
+| `createSPNavigationNode` | Site subaction | Creates a Quick Launch or top navigation node. |
+| `modifySPNavigationNode` | Site subaction | Updates a navigation node by title/location. |
+| `deleteSPNavigationNode` | Site subaction | Deletes a navigation node by title/location. |
+| `breakSPSiteRoleInheritance` | Site subaction | Breaks site permission inheritance. |
+| `resetSPSiteRoleInheritance` | Site subaction | Resets site permissions to inherited. |
+| `grantSPSiteRoleAssignment` | Site subaction | Adds a site principal/role binding. |
+| `removeSPSiteRoleAssignment` | Site subaction | Removes a site principal/role binding. |
+| `breakSPListRoleInheritance` | List subaction | Breaks list/library permission inheritance. |
+| `resetSPListRoleInheritance` | List subaction | Resets list/library permissions to inherited. |
+| `grantSPListRoleAssignment` | List subaction | Adds a list/library principal/role binding. |
+| `removeSPListRoleAssignment` | List subaction | Removes a list/library principal/role binding. |
+| `addSPField` | List subaction | Creates a list field. |
+| `createSPSiteColumn` | Site subaction | Creates a reusable site column. |
+| `modifySPField` | Site subaction, list subaction | Updates a field in the current site or list scope. |
+| `deleteSPField` | Site subaction, list subaction | Deletes a field in the current site or list scope. |
+| `enableSPListRating` | List subaction | Enables list/library likes or star ratings. |
+| `createSPListView` | List subaction | Creates a public list/library view. |
+| `modifySPListView` | List subaction | Updates mutable view settings. |
+| `deleteSPListView` | List subaction | Deletes a non-default public view. |
+| `createSPContentType` | Root, site subaction | Creates a site content type through Microsoft Graph. |
+| `modifySPContentType` | Root, site subaction | Updates a site content type through Microsoft Graph. |
+| `deleteSPContentType` | Root, site subaction | Deletes a site content type through Microsoft Graph. |
+| `addSPContentTypeToList` | List subaction | Adds a site content type to a list/library. |
+| `removeSPContentTypeFromList` | List subaction | Removes a content type from a list/library. |
+| `addSPFieldToContentType` | Content type subaction | Adds an existing site column to a content type. |
+| `modifySPContentTypeField` | Content type subaction | Updates field settings on a content type. |
+| `removeSPFieldFromContentType` | Content type subaction | Removes a field from a content type. |
 
 ### Schema Definition
 
@@ -150,6 +202,17 @@ Content type actions use Microsoft Graph. Runtime clients must include `graphCli
 
 `createSPContentType` does not accept a custom content type id. Provide `name` and `parentId`; Microsoft Graph returns the generated id. Reference actions accept `contentTypeId` or `contentTypeName`; `contentTypeId` wins when both are supplied.
 
+| Verb | Placement | Required identity | Mutable payload |
+| --- | --- | --- | --- |
+| `createSPContentType` | Root, site subaction | `name`, `parentId` | `description`, `group`, `subactions` |
+| `modifySPContentType` | Root, site subaction | `contentTypeId` or `contentTypeName` | `name`, `description`, `group` |
+| `deleteSPContentType` | Root, site subaction | `contentTypeId` or `contentTypeName` | - |
+| `addSPContentTypeToList` | List subaction | `contentTypeId` or `contentTypeName` | - |
+| `removeSPContentTypeFromList` | List subaction | `contentTypeId` or `contentTypeName` | - |
+| `addSPFieldToContentType` | Content type subaction | `fieldId` or `fieldName` | `required`, `hidden`, `readOnly`, `displayName` |
+| `modifySPContentTypeField` | Content type subaction | `fieldId` or `fieldName` | `required`, `hidden`, `readOnly`, `displayName` |
+| `removeSPFieldFromContentType` | Content type subaction | `fieldId` or `fieldName` | - |
+
 Field-to-content-type actions require existing site columns. Create the site column first, then attach it to the content type:
 
 ```typescript
@@ -194,6 +257,106 @@ Bind a site content type to a list or document library through a list subaction:
 ```
 
 `setSPListDefaultContentType` is not registered in V1. Default content type ordering remains spike-gated until a reliable implementation path is proven.
+
+### createSPContentType
+
+```typescript
+{
+  verb: "createSPContentType",
+  webUrl?: string,
+  siteUrl?: string,
+  name: string,
+  parentId: string,
+  description?: string,
+  group?: string,
+  subactions?: Action[]
+}
+```
+
+### modifySPContentType
+
+```typescript
+{
+  verb: "modifySPContentType",
+  webUrl?: string,
+  siteUrl?: string,
+  contentTypeId?: string,
+  contentTypeName?: string,
+  name?: string,
+  description?: string,
+  group?: string
+}
+```
+
+### deleteSPContentType
+
+```typescript
+{
+  verb: "deleteSPContentType",
+  webUrl?: string,
+  siteUrl?: string,
+  contentTypeId?: string,
+  contentTypeName?: string
+}
+```
+
+### addSPContentTypeToList
+
+```typescript
+{
+  verb: "addSPContentTypeToList",
+  contentTypeId?: string,
+  contentTypeName?: string
+}
+```
+
+### removeSPContentTypeFromList
+
+```typescript
+{
+  verb: "removeSPContentTypeFromList",
+  contentTypeId?: string,
+  contentTypeName?: string
+}
+```
+
+### addSPFieldToContentType
+
+```typescript
+{
+  verb: "addSPFieldToContentType",
+  fieldId?: string,
+  fieldName?: string,
+  required?: boolean,
+  hidden?: boolean,
+  readOnly?: boolean,
+  displayName?: string
+}
+```
+
+### modifySPContentTypeField
+
+```typescript
+{
+  verb: "modifySPContentTypeField",
+  fieldId?: string,
+  fieldName?: string,
+  required?: boolean,
+  hidden?: boolean,
+  readOnly?: boolean,
+  displayName?: string
+}
+```
+
+### removeSPFieldFromContentType
+
+```typescript
+{
+  verb: "removeSPFieldFromContentType",
+  fieldId?: string,
+  fieldName?: string
+}
+```
 
 ---
 
@@ -344,6 +507,41 @@ Deletes a SharePoint site collection.
 ```
 
 > **Warning**: This action permanently deletes the site. Use with caution.
+
+---
+
+## Navigation Actions
+
+Navigation actions are site subactions. They operate on the current site/web scope and target either Quick Launch or top navigation.
+
+| Verb | Required fields | Optional fields | Notes |
+| --- | --- | --- | --- |
+| `createSPNavigationNode` | `location`, `title`, `url` | `isVisible` | Skips when the node already exists. |
+| `modifySPNavigationNode` | `location`, `title` | `newTitle`, `url`, `isVisible` | Finds an existing node by `location` and `title`. |
+| `deleteSPNavigationNode` | `location`, `title` | - | Ensures the navigation node is absent. |
+
+```typescript
+{
+  verb: "modifySPSite",
+  siteUrl: "https://contoso.sharepoint.com/sites/project",
+  subactions: [
+    {
+      verb: "createSPNavigationNode",
+      location: "QuickLaunch",
+      title: "Requests",
+      url: "/sites/project/Lists/Requests",
+      isVisible: true
+    },
+    {
+      verb: "modifySPNavigationNode",
+      location: "QuickLaunch",
+      title: "Requests",
+      newTitle: "Project Requests",
+      isVisible: true
+    }
+  ]
+}
+```
 
 ---
 
@@ -525,6 +723,49 @@ Enables ratings on a list (subaction within `createSPList` or `modifySPList`).
     {
       verb: "enableSPListRating",
       ratingType: "Likes"
+    }
+  ]
+}
+```
+
+---
+
+## List View Actions
+
+List view actions are list subactions under `createSPList` or `modifySPList`. They manage public views in the current list/library scope.
+
+| Verb | Required fields | Optional fields | Notes |
+| --- | --- | --- | --- |
+| `createSPListView` | `title` | `fields`, `viewQuery`, `rowLimit`, `paged`, `setAsDefaultView` | Creates a public view and skips if one already exists with the same title. |
+| `modifySPListView` | `title` | `fields`, `viewQuery`, `rowLimit`, `paged`, `setAsDefaultView` | Enforces mutable state on an existing public view. |
+| `deleteSPListView` | `title` | - | Deletes a non-default public view; default view deletion is blocked/skipped. |
+
+Use `viewQuery` as a CAML query fragment, not a full `<View>` or `<Query>` document.
+
+```typescript
+{
+  verb: "createSPList",
+  listName: "requests",
+  title: "Requests",
+  template: 100,
+  subactions: [
+    {
+      verb: "createSPListView",
+      title: "Open Requests",
+      fields: ["LinkTitle", "Status", "DueDate"],
+      viewQuery: "<Where><Neq><FieldRef Name=\"Status\" /><Value Type=\"Text\">Closed</Value></Neq></Where>",
+      rowLimit: 30,
+      paged: true,
+      setAsDefaultView: true
+    },
+    {
+      verb: "modifySPListView",
+      title: "Open Requests",
+      rowLimit: 50
+    },
+    {
+      verb: "deleteSPListView",
+      title: "Legacy View"
     }
   ]
 }
@@ -1017,7 +1258,9 @@ Use `modifySPField` after creation when a plan must enforce mutable field settin
 
 ### Modifying Fields
 
-Use `modifySPField` to update existing field properties:
+### modifySPField
+
+Use `modifySPField` to update existing field properties. The same verb is valid as a site subaction or list subaction; site placement forbids list-only view/form properties.
 
 ```typescript
 {
@@ -1026,6 +1269,17 @@ Use `modifySPField` to update existing field properties:
   fieldName: "ProjectCode",      // Internal name to find
   displayName: "Project Code (Updated)",
   maxLength: 50
+}
+```
+
+### deleteSPField
+
+Use `deleteSPField` to remove an existing site column or list field from the current scope. Provide either `fieldName` or `fieldId`.
+
+```typescript
+{
+  verb: "deleteSPField",
+  fieldName: "LegacyCode"
 }
 ```
 
@@ -1107,12 +1361,28 @@ import {
   ModifySPListAction,
   DeleteSPListAction,
   EnableSPListRatingAction,
+  CreateSPListViewAction,
+  ModifySPListViewAction,
+  DeleteSPListViewAction,
+  CreateSPNavigationNodeAction,
+  ModifySPNavigationNodeAction,
+  DeleteSPNavigationNodeAction,
   
   // Field actions
   AddSPFieldAction,
   CreateSPSiteColumnAction,
   ModifySPFieldAction,
   DeleteSPFieldAction,
+
+  // Content type actions
+  CreateSPContentTypeAction,
+  ModifySPContentTypeAction,
+  DeleteSPContentTypeAction,
+  AddSPContentTypeToListAction,
+  RemoveSPContentTypeFromListAction,
+  AddSPFieldToContentTypeAction,
+  ModifySPContentTypeFieldAction,
+  RemoveSPFieldFromContentTypeAction,
 } from '@apvee/m365-actionable-provisioning';
 ```
 
@@ -1128,10 +1398,24 @@ import {
   createSPListSchema,
   modifySPListSchema,
   deleteSPListSchema,
+  createSPListViewSchema,
+  modifySPListViewSchema,
+  deleteSPListViewSchema,
+  createSPNavigationNodeSchema,
+  modifySPNavigationNodeSchema,
+  deleteSPNavigationNodeSchema,
   addSPFieldSchema,
   createSPSiteColumnSchema,
   modifySPFieldSchema,
   deleteSPFieldSchema,
+  createSPContentTypeSchema,
+  modifySPContentTypeSchema,
+  deleteSPContentTypeSchema,
+  addSPContentTypeToListSchema,
+  removeSPContentTypeFromListSchema,
+  addSPFieldToContentTypeSchema,
+  modifySPContentTypeFieldSchema,
+  removeSPFieldFromContentTypeSchema,
 } from '@apvee/m365-actionable-provisioning';
 ```
 
