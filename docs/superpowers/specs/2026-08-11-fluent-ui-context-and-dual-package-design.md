@@ -1,6 +1,6 @@
 # Fluent UI Context Ownership and Dual-Package Design
 
-**Status:** Approved design, awaiting written-spec review
+**Status:** Approved for implementation planning
 
 **Target package:** `@apvee/spfx-m365-actionable-provisioning`
 
