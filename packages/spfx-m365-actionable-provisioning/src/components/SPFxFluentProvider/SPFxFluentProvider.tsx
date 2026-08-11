@@ -19,7 +19,7 @@ import {
     IdPrefixProvider,
 } from '@fluentui/react-components';
 
-import { createFluentV9ThemeFromSPFxTheme } from '../../utils/spfx-theme';
+import { createFluentV9ThemeFromSPFxTheme } from '../../internal/theme/createFluentV9ThemeFromSPFxTheme';
 import type { SPFxFluentProviderProps } from './SPFxFluentProvider.types';
 
 function readSPFxTheme(context: BaseComponentContext): IReadonlyTheme | undefined {

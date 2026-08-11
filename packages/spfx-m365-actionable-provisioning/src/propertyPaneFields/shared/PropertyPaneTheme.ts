@@ -17,7 +17,7 @@ import {
     type Theme,
 } from '@fluentui/react-components';
 
-import { createFluentV9ThemeFromSPFxTheme } from '../../utils/spfx-theme';
+import { createFluentV9ThemeFromSPFxTheme } from '../../internal/theme/createFluentV9ThemeFromSPFxTheme';
 
 export type PropertyPaneThemeController = Readonly<{
     ensureInitialized: () => void;
