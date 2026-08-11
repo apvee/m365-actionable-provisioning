@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "lib",
     "types": [
       "webpack-env"
     ],
@@ -17,7 +16,9 @@
     "src/**/*.d.ts"
   ],
   "exclude": [
+    "dist",
     "lib",
-    "node_modules"
+    "node_modules",
+    "test"
   ]
 }

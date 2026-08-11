@@ -3,7 +3,8 @@ const path = require("path");
 
 const packageName = "@apvee/spfx-m365-actionable-provisioning";
 const resourceName = "SPFxProvisioningUIStrings";
-const resourcePath = "node_modules/@apvee/spfx-m365-actionable-provisioning/lib/loc/{locale}.js";
+const legacyResourcePath = "node_modules/@apvee/spfx-m365-actionable-provisioning/lib/loc/{locale}.js";
+const resourcePath = "node_modules/@apvee/spfx-m365-actionable-provisioning/dist/loc/{locale}.js";
 
 const candidateRoots = [
   process.env.INIT_CWD,
@@ -29,12 +30,14 @@ try {
   const contents = JSON.parse(fs.readFileSync(configPath, "utf8"));
   contents.localizedResources = contents.localizedResources || {};
 
-  if (contents.localizedResources[resourceName] === resourcePath) {
+  const currentResourcePath = contents.localizedResources[resourceName];
+
+  if (currentResourcePath === resourcePath) {
     console.info(`[${packageName}] Localized resource already configured.`);
     return;
   }
 
-  if (contents.localizedResources[resourceName]) {
+  if (currentResourcePath && currentResourcePath !== legacyResourcePath) {
     console.warn(
       `[${packageName}] ${resourceName} already exists with a different path; leaving it unchanged.`
     );
@@ -43,7 +46,8 @@ try {
 
   contents.localizedResources[resourceName] = resourcePath;
   fs.writeFileSync(configPath, `${JSON.stringify(contents, null, 2)}\n`);
-  console.info(`[${packageName}] Added ${resourceName} to ${configPath}.`);
+  const action = currentResourcePath === legacyResourcePath ? "Migrated" : "Added";
+  console.info(`[${packageName}] ${action} ${resourceName} in ${configPath}.`);
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   console.warn(`[${packageName}] Unable to update SPFx localized resources: ${message}`);

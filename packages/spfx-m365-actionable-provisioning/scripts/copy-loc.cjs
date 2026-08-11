@@ -3,7 +3,7 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const sourceDir = path.join(root, "src", "loc");
-const targetDir = path.join(root, "lib", "loc");
+const targetDir = path.join(root, "dist", "loc");
 
 fs.mkdirSync(targetDir, { recursive: true });
 
