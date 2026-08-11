@@ -4,12 +4,12 @@ import {
     DialogSurface,
 } from '@fluentui/react-components';
 
-import { useProvisioningDialogStyles } from './ProvisioningDialog.styles';
+import { useProvisioningDialogStyles } from './ProvisioningDialog.styles.js';
 import type {
     ProvisioningDialogProps,
     ProvisioningDialogStrings,
-} from './ProvisioningDialog.types';
-import { ProvisioningDialogSession } from './ProvisioningDialogSession';
+} from './ProvisioningDialog.types.js';
+import { ProvisioningDialogSession } from './ProvisioningDialogSession.js';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
 
@@ -19,7 +19,7 @@ export type {
     ProvisioningDialogProps,
     ProvisioningDialogStrings,
     ProvisioningRunOutcome,
-} from './ProvisioningDialog.types';
+} from './ProvisioningDialog.types.js';
 
 const DEFAULT_STRINGS: ProvisioningDialogStrings = {
     defaultTitle: locStrings.ProvisioningDialog.DefaultTitle,

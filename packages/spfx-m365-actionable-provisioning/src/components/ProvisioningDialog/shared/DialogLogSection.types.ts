@@ -3,9 +3,9 @@ import type {
     ProvisioningActivityEntryStrings,
     ComplianceLogPanelStrings,
     ComplianceActivityEntryStrings,
-} from '../../LogPanel/LogPanel.types';
-import type { ProvisioningActivityEntry } from '../../../models';
-import type { ComplianceActivityEntry } from '../../../models';
+} from '../../LogPanel/LogPanel.types.js';
+import type { ProvisioningActivityEntry } from '../../../models/index.js';
+import type { ComplianceActivityEntry } from '../../../models/index.js';
 
 /**
  * Props for the DialogLogSection component.

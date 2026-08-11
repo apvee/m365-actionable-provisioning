@@ -2,30 +2,30 @@ import * as React from 'react';
 import { Button } from '@fluentui/react-components';
 import { AppsColor, ShieldCheckmarkColor } from '@fluentui/react-icons';
 
-import { useProvisioningDerivedState } from '../../hooks/useProvisioningDerivedState/useProvisioningDerivedState';
-import { useNavigationGuard } from '../../hooks/useNavigationGuard/useNavigationGuard';
-import { useSPFxProvisioningEngine } from '../../hooks/useSPFxProvisioningEngine/useSPFxProvisioningEngine';
-import { buildComplianceActivityEntriesFromReport, buildComplianceActivityEntriesFromTrace } from '../../utils/compliance-to-activity';
-import { normalizeUrl } from '../../utils/url';
-import type { ComplianceActivityEntry } from '../../models';
-import { ConfirmationDialog } from '../shared/ConfirmationDialog/ConfirmationDialog';
+import { useProvisioningDerivedState } from '../../hooks/useProvisioningDerivedState/useProvisioningDerivedState.js';
+import { useNavigationGuard } from '../../hooks/useNavigationGuard/useNavigationGuard.js';
+import { useSPFxProvisioningEngine } from '../../hooks/useSPFxProvisioningEngine/useSPFxProvisioningEngine.js';
+import { buildComplianceActivityEntriesFromReport, buildComplianceActivityEntriesFromTrace } from '../../utils/compliance-to-activity.js';
+import { normalizeUrl } from '../../utils/url.js';
+import type { ComplianceActivityEntry } from '../../models/index.js';
+import { ConfirmationDialog } from '../shared/ConfirmationDialog/ConfirmationDialog.js';
 import type {
     ProvisioningDialogMode,
     ProvisioningDialogSessionProps,
     ProvisioningDialogStrings,
     ProvisioningRunOutcome,
-} from './ProvisioningDialog.types';
-import { ProvisioningDialogShell } from './shared/ProvisioningDialogShell';
-import { ProvisioningRunView } from './views/ProvisioningRunView';
-import type { ProvisioningRunViewStrings } from './views/ProvisioningRunView.types';
-import { ComplianceCheckView } from './views/ComplianceCheckView';
-import type { ComplianceCheckViewStrings } from './views/ComplianceCheckView.types';
+} from './ProvisioningDialog.types.js';
+import { ProvisioningDialogShell } from './shared/ProvisioningDialogShell.js';
+import { ProvisioningRunView } from './views/ProvisioningRunView.js';
+import type { ProvisioningRunViewStrings } from './views/ProvisioningRunView.types.js';
+import { ComplianceCheckView } from './views/ComplianceCheckView.js';
+import type { ComplianceCheckViewStrings } from './views/ComplianceCheckView.types.js';
 import {
     buildInitialProvisioningDialogSessionState,
     getComplianceFooterModel,
     provisioningDialogSessionReducer,
-} from './ProvisioningDialogSession.state';
-import { useProvisioningDialogActions } from './hooks/useProvisioningDialogActions';
+} from './ProvisioningDialogSession.state.js';
+import { useProvisioningDialogActions } from './hooks/useProvisioningDialogActions.js';
 
 export const ProvisioningDialogSession: React.FC<ProvisioningDialogSessionProps> = (props) => {
     const {

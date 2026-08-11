@@ -1,9 +1,9 @@
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
-import type { ProvisioningActivityEntry } from '../../../models';
-import type { ProvisioningUiSummary } from '../../../utils/trace-to-activity';
-import type { LogPanelStrings, ProvisioningActivityEntryStrings } from '../../LogPanel/LogPanel.types';
-import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
+import type { ProvisioningActivityEntry } from '../../../models/index.js';
+import type { ProvisioningUiSummary } from '../../../utils/trace-to-activity.js';
+import type { LogPanelStrings, ProvisioningActivityEntryStrings } from '../../LogPanel/LogPanel.types.js';
+import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state.js';
 
 /**
  * Localized strings for the ProvisioningRunView component.

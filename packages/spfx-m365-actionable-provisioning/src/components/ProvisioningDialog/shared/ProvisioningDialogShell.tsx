@@ -13,8 +13,8 @@ import {
 import { DismissRegular } from '@fluentui/react-icons';
 import { Flex, Stack } from '@apvee/react-layout-kit';
 
-import { ProvisioningDialogErrorBoundary } from './ProvisioningDialogErrorBoundary';
-import type { ProvisioningDialogShellProps } from './ProvisioningDialogShell.types';
+import { ProvisioningDialogErrorBoundary } from './ProvisioningDialogErrorBoundary.js';
+import type { ProvisioningDialogShellProps } from './ProvisioningDialogShell.types.js';
 
 const useStyles = makeStyles({
     // Layout styles removed - now using @apvee/react-layout-kit components

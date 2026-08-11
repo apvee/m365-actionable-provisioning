@@ -8,12 +8,12 @@ import { useMemo } from 'react';
 
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
-import type { ProvisioningActivityEntry } from '../../models';
+import type { ProvisioningActivityEntry } from '../../models/index.js';
 import {
   buildProvisioningActivityEntriesFromSnapshot,
   buildProvisioningUiSummary,
   type ProvisioningUiSummary,
-} from '../../utils/trace-to-activity';
+} from '../../utils/trace-to-activity.js';
 
 /**
  * Derived state from a provisioning engine snapshot.

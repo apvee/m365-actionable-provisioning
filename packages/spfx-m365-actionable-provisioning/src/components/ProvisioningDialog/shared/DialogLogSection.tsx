@@ -10,14 +10,14 @@ import {
 } from '@fluentui/react-components';
 import { Flex } from '@apvee/react-layout-kit';
 
-import { LogPanel } from '../../LogPanel/LogPanel';
-import type { DialogLogSectionProps } from './DialogLogSection.types';
+import { LogPanel } from '../../LogPanel/LogPanel.js';
+import type { DialogLogSectionProps } from './DialogLogSection.types.js';
 import type {
     LogPanelStrings,
     ProvisioningActivityEntryStrings,
     ComplianceLogPanelStrings,
     ComplianceActivityEntryStrings,
-} from '../../LogPanel/LogPanel.types';
+} from '../../LogPanel/LogPanel.types.js';
 
 export type { DialogLogSectionProps };
 

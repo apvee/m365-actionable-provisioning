@@ -15,8 +15,8 @@ import type {
     OperationInspectorProps,
     OperationInspectorStatusTone,
     OperationInspectorSummaryCard,
-} from './OperationInspector.types';
-import { useOperationInspectorStyles } from './OperationInspector.styles';
+} from './OperationInspector.types.js';
+import { useOperationInspectorStyles } from './OperationInspector.styles.js';
 
 const toneToBadgeColor = (tone: OperationInspectorStatusTone): BadgeProps['color'] => {
     switch (tone) {

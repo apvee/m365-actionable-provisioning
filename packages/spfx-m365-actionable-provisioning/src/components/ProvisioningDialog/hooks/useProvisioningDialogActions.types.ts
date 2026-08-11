@@ -3,8 +3,8 @@ import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { CompliancePolicy, ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
 import type { Logger } from '@apvee/m365-actionable-provisioning';
-import type { ProvisioningDialogSessionAction, ProvisioningDialogSessionState } from '../ProvisioningDialogSession.state';
-import type { ProvisioningCompletedEvent } from '../ProvisioningDialog.types';
+import type { ProvisioningDialogSessionAction, ProvisioningDialogSessionState } from '../ProvisioningDialogSession.state.js';
+import type { ProvisioningCompletedEvent } from '../ProvisioningDialog.types.js';
 
 /**
  * Options for the useProvisioningDialogActions hook.

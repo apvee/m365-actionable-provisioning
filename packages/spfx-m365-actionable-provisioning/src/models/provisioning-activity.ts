@@ -7,7 +7,7 @@
 import type { ActionPath } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
 
-import type { BaseActivityEntry } from './activity-entry';
+import type { BaseActivityEntry } from './activity-entry.js';
 
 /**
  * Status of a provisioning activity entry.

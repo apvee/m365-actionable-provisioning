@@ -7,19 +7,19 @@
 
 import type { SPFI } from '@pnp/sp';
 
-import '@pnp/sp/search';
-import '@pnp/sp/sites';
-import '@pnp/sp/webs';
-import '@pnp/sp/hubsites';
-import { Web } from '@pnp/sp/webs';
+import '@pnp/sp/search/index.js';
+import '@pnp/sp/sites/index.js';
+import '@pnp/sp/webs/index.js';
+import '@pnp/sp/hubsites/index.js';
+import { Web } from '@pnp/sp/webs/index.js';
 
-import { normalizeUrl } from '../../utils/url';
+import { normalizeUrl } from '../../utils/url.js';
 
 import type {
   SiteSearchResult,
   SiteSelectionMode,
   SiteSelectorFieldStrings,
-} from './PropertyPaneSiteSelectorFieldView.types';
+} from './PropertyPaneSiteSelectorFieldView.types.js';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
 

@@ -1,9 +1,9 @@
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
-import type { ComplianceActivityEntry } from '../../../models';
-import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
-import type { ComplianceLogPanelStrings, ComplianceActivityEntryStrings } from '../../LogPanel/LogPanel.types';
+import type { ComplianceActivityEntry } from '../../../models/index.js';
+import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state.js';
+import type { ComplianceLogPanelStrings, ComplianceActivityEntryStrings } from '../../LogPanel/LogPanel.types.js';
 
 /**
  * Localized strings for the ComplianceCheckView component.

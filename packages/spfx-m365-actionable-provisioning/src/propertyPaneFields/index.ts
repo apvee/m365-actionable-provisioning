@@ -1,2 +1,2 @@
-export * from './PropertyPaneSiteSelectorField/PropertyPaneSiteSelectorField';
-export * from './PropertyPaneProvisioningField/PropertyPaneProvisioningField';
+export * from './PropertyPaneSiteSelectorField/PropertyPaneSiteSelectorField.js';
+export * from './PropertyPaneProvisioningField/PropertyPaneProvisioningField.js';

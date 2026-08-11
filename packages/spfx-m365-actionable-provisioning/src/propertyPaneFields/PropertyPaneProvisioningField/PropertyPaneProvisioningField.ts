@@ -18,11 +18,11 @@ import {
 
 import { consoleSink, createLogger, type Logger } from '@apvee/m365-actionable-provisioning';
 
-import type { TemplateAppliedState } from '../../models';
+import type { TemplateAppliedState } from '../../models/index.js';
 
-import { PropertyPaneProvisioningFieldView } from './PropertyPaneProvisioningFieldView';
-import type { PropertyPaneProvisioningFieldProps, PropertyPaneProvisioningFieldStrings } from './types';
-import { createPropertyPaneThemeController } from '../shared/PropertyPaneTheme';
+import { PropertyPaneProvisioningFieldView } from './PropertyPaneProvisioningFieldView.js';
+import type { PropertyPaneProvisioningFieldProps, PropertyPaneProvisioningFieldStrings } from './types.js';
+import { createPropertyPaneThemeController } from '../shared/PropertyPaneTheme.js';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
 

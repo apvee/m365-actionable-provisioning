@@ -4,16 +4,16 @@ import {
 } from '@fluentui/react-components';
 import { Stack } from '@apvee/react-layout-kit';
 
-import type { ProvisioningRunOutcome } from '../ProvisioningDialog.types';
-import type { ProvisioningRunViewProps, ProvisioningRunViewStrings } from './ProvisioningRunView.types';
-import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
-import { DialogLogSection } from '../shared/DialogLogSection';
-import { DialogErrorMessage } from '../shared/DialogErrorMessage';
-import { OperationInspector } from '../shared/OperationInspector';
+import type { ProvisioningRunOutcome } from '../ProvisioningDialog.types.js';
+import type { ProvisioningRunViewProps, ProvisioningRunViewStrings } from './ProvisioningRunView.types.js';
+import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state.js';
+import { DialogLogSection } from '../shared/DialogLogSection.js';
+import { DialogErrorMessage } from '../shared/DialogErrorMessage.js';
+import { OperationInspector } from '../shared/OperationInspector.js';
 import type {
     OperationInspectorStatus,
     OperationInspectorSummaryCard,
-} from '../shared/OperationInspector.types';
+} from '../shared/OperationInspector.types.js';
 
 export type { ProvisioningRunViewProps, ProvisioningRunViewStrings };
 

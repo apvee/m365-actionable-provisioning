@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { graphfi } from '@pnp/graph';
-import { SPFx as GraphSPFx } from '@pnp/graph/behaviors/spfx';
-import { Web } from '@pnp/sp/webs';
-import '@pnp/sp/webs';
+import { SPFx as GraphSPFx } from '@pnp/graph/behaviors/spfx.js';
+import { Web } from '@pnp/sp/webs/index.js';
+import '@pnp/sp/webs/index.js';
 
 import type { EngineSnapshotTyped, ProvisioningEngine } from '@apvee/m365-actionable-provisioning';
 import {
@@ -12,15 +12,15 @@ import {
   type ProvisioningResultLight,
 } from '@apvee/m365-actionable-provisioning';
 import { extractPnPjsHttpErrorDetails } from '@apvee/m365-actionable-provisioning';
-import { normalizeUrl } from '../../utils/url';
+import { normalizeUrl } from '../../utils/url.js';
 
-import { useSPInstance } from '../useSPInstance/useSPInstance';
+import { useSPInstance } from '../useSPInstance/useSPInstance.js';
 
 import type {
   UseSPFxProvisioningEngineOptions,
   UseSPFxProvisioningEngineReturn,
-} from './useSPFxProvisioningEngine.types';
-import { scheduleInAnimationFrame } from './useSPFxProvisioningEngine.utils';
+} from './useSPFxProvisioningEngine.types.js';
+import { scheduleInAnimationFrame } from './useSPFxProvisioningEngine.utils.js';
 
 /**
  * Base UI hook that owns the provisioning engine lifecycle.

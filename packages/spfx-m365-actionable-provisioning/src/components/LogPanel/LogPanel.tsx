@@ -18,12 +18,12 @@ import {
 } from '@fluentui/react-icons';
 import { Center, Stack } from '@apvee/react-layout-kit';
 
-import type { ComplianceActivityEntry, ProvisioningActivityEntry } from '../../models';
+import type { ComplianceActivityEntry, ProvisioningActivityEntry } from '../../models/index.js';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
 
-import { LogItem } from './LogItem/LogItem';
-import type { LogItemBadgeSpec, LogItemRenderers, LogItemStyles } from './LogItem/LogItem.types';
+import { LogItem } from './LogItem/LogItem.js';
+import type { LogItemBadgeSpec, LogItemRenderers, LogItemStyles } from './LogItem/LogItem.types.js';
 
 import type {
   ComplianceActivityEntryStrings,
@@ -31,8 +31,8 @@ import type {
   LogPanelProps,
   LogPanelStrings,
   ProvisioningActivityEntryStrings,
-} from './LogPanel.types';
-import { prunePendingComplianceEntries, prunePendingEntries } from './LogPanel.utils';
+} from './LogPanel.types.js';
+import { prunePendingComplianceEntries, prunePendingEntries } from './LogPanel.utils.js';
 
 const useInternalLogScrollPanelStyles = makeStyles({
   emptyState: {

@@ -11,8 +11,8 @@ import type { EngineStatus } from '@apvee/m365-actionable-provisioning';
 import type { Logger } from '@apvee/m365-actionable-provisioning';
 import type { CompliancePolicy } from '@apvee/m365-actionable-provisioning';
 
-import type { ConfirmationDialogStrings } from '../shared/ConfirmationDialog/ConfirmationDialog.types';
-import type { LogPanelStrings, ProvisioningActivityEntryStrings } from '../LogPanel/LogPanel.types';
+import type { ConfirmationDialogStrings } from '../shared/ConfirmationDialog/ConfirmationDialog.types.js';
+import type { LogPanelStrings, ProvisioningActivityEntryStrings } from '../LogPanel/LogPanel.types.js';
 
 /**
  * Localized strings for the provisioning dialog.

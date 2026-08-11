@@ -21,13 +21,13 @@ import {
 
 import {
   PropertyPaneSiteSelectorFieldView,
-} from './PropertyPaneSiteSelectorFieldView';
+} from './PropertyPaneSiteSelectorFieldView.js';
 import type {
   SiteSelectorFieldStrings,
-} from './PropertyPaneSiteSelectorFieldView.types';
+} from './PropertyPaneSiteSelectorFieldView.types.js';
 
-import { normalizeUrl } from '../../utils/url';
-import { createPropertyPaneThemeController } from '../shared/PropertyPaneTheme';
+import { normalizeUrl } from '../../utils/url.js';
+import { createPropertyPaneThemeController } from '../shared/PropertyPaneTheme.js';
 
 export type PropertyPaneSiteSelectorFieldProps = Readonly<{
   /** Field label. */

@@ -6,15 +6,15 @@ import { Stack } from '@apvee/react-layout-kit';
 
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import { computeComplianceOverall } from '@apvee/m365-actionable-provisioning';
-import type { ComplianceCheckViewProps, ComplianceCheckViewStrings } from './ComplianceCheckView.types';
-import { DialogLogSection } from '../shared/DialogLogSection';
-import { DialogErrorMessage } from '../shared/DialogErrorMessage';
-import { OperationInspector } from '../shared/OperationInspector';
+import type { ComplianceCheckViewProps, ComplianceCheckViewStrings } from './ComplianceCheckView.types.js';
+import { DialogLogSection } from '../shared/DialogLogSection.js';
+import { DialogErrorMessage } from '../shared/DialogErrorMessage.js';
+import { OperationInspector } from '../shared/OperationInspector.js';
 import type {
     OperationInspectorStatus,
     OperationInspectorStatusTone,
     OperationInspectorSummaryCard,
-} from '../shared/OperationInspector.types';
+} from '../shared/OperationInspector.types.js';
 
 export type { ComplianceCheckViewProps, ComplianceCheckViewStrings };
 

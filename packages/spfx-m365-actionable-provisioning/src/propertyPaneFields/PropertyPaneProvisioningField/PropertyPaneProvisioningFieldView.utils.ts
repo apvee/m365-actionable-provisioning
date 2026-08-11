@@ -6,8 +6,8 @@
  */
 
 import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
-import type { ProvisioningDialogMode, ProvisioningDialogStrings } from '../../components';
-import type { PropertyPaneProvisioningFieldStrings } from './types';
+import type { ProvisioningDialogMode, ProvisioningDialogStrings } from '../../components/index.js';
+import type { PropertyPaneProvisioningFieldStrings } from './types.js';
 
 export type PropertyPaneProvisioningDialogIntent = 'provision' | 'deprovision' | 'compliance';
 

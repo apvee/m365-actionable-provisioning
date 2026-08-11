@@ -1,6 +1,6 @@
 import type { ComplianceCheckStatus, ComplianceReport } from '@apvee/m365-actionable-provisioning';
 
-import type { ProvisioningDialogMode } from './ProvisioningDialog.types';
+import type { ProvisioningDialogMode } from './ProvisioningDialog.types.js';
 
 /**
  * Represents a user-facing error message with title and message content.

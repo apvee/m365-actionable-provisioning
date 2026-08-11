@@ -4,7 +4,7 @@
  * @module
  */
 
-export type { ActivityEntryKind, BaseActivityEntry } from "./activity-entry";
-export type { ComplianceActivityEntry } from "./compliance-activity";
-export type { ProvisioningActivityEntry, ProvisioningActivityStatus } from "./provisioning-activity";
-export type { TemplateAppliedState } from "./template-applied-state";
+export type { ActivityEntryKind, BaseActivityEntry } from "./activity-entry.js";
+export type { ComplianceActivityEntry } from "./compliance-activity.js";
+export type { ProvisioningActivityEntry, ProvisioningActivityStatus } from "./provisioning-activity.js";
+export type { TemplateAppliedState } from "./template-applied-state.js";

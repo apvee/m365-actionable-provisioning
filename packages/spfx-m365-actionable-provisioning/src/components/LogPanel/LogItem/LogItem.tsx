@@ -3,8 +3,8 @@ import { InfoLabel } from '@fluentui/react-components';
 import { Fade } from '@fluentui/react-motion-components-preview';
 import { Box, Flex, Stack } from '@apvee/react-layout-kit';
 
-import { useLogItemStyles } from './LogItem.styles';
-import type { LogItemProps } from './LogItem.types';
+import { useLogItemStyles } from './LogItem.styles.js';
+import type { LogItemProps } from './LogItem.types.js';
 
 export function LogItem<TEntry>({ entry, renderers }: LogItemProps<TEntry>): JSX.Element {
   const styles = useLogItemStyles();

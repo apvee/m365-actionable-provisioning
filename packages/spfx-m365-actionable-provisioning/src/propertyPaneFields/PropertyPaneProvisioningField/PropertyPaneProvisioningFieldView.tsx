@@ -23,17 +23,17 @@ import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import {
   ProvisioningDialog,
   type ProvisioningDialogProps,
-} from '../../components';
-import type { TemplateAppliedState } from '../../models';
-import { normalizeUrl } from '../../utils/url';
-import { useSPFxProvisioningEngine } from '../../hooks/useSPFxProvisioningEngine/useSPFxProvisioningEngine';
+} from '../../components/index.js';
+import type { TemplateAppliedState } from '../../models/index.js';
+import { normalizeUrl } from '../../utils/url.js';
+import { useSPFxProvisioningEngine } from '../../hooks/useSPFxProvisioningEngine/useSPFxProvisioningEngine.js';
 
-import type { PropertyPaneProvisioningFieldStrings, PropertyPaneProvisioningFieldViewProps } from './types';
-import { useStyles } from './PropertyPaneProvisioningFieldView.styles';
+import type { PropertyPaneProvisioningFieldStrings, PropertyPaneProvisioningFieldViewProps } from './types.js';
+import { useStyles } from './PropertyPaneProvisioningFieldView.styles.js';
 import {
   getProvisioningFieldDialogConfig,
   type PropertyPaneProvisioningDialogIntent,
-} from './PropertyPaneProvisioningFieldView.utils';
+} from './PropertyPaneProvisioningFieldView.utils.js';
 
 const AppliedStateBadge: React.FC<{ state?: TemplateAppliedState; strings: PropertyPaneProvisioningFieldStrings }> = ({
   state,

@@ -1,4 +1,4 @@
-import type { ComplianceActivityEntry, ProvisioningActivityEntry } from '../../models';
+import type { ComplianceActivityEntry, ProvisioningActivityEntry } from '../../models/index.js';
 import type { SkipReason } from '@apvee/m365-actionable-provisioning';
 
 export type ProvisioningActivityEntryStrings = Readonly<{

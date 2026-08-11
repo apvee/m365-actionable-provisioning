@@ -25,15 +25,15 @@ import {
 } from '@fluentui/react-components';
 import * as React from 'react';
 
-import { normalizeUrl } from '../../utils/url';
+import { normalizeUrl } from '../../utils/url.js';
 
-import { useStyles } from './PropertyPaneSiteSelectorFieldView.styles';
+import { useStyles } from './PropertyPaneSiteSelectorFieldView.styles.js';
 import type {
   PropertyPaneSiteSelectorFieldViewProps,
   SiteSelectionMode,
   SiteSearchResult,
   SiteSelectorFieldStrings,
-} from './PropertyPaneSiteSelectorFieldView.types';
+} from './PropertyPaneSiteSelectorFieldView.types.js';
 import {
   CACHE_PERSIST_DELAY_MS,
   DEFAULT_STRINGS,
@@ -47,9 +47,9 @@ import {
   persistTitleCache,
   resolveHub,
   searchSites,
-} from './PropertyPaneSiteSelectorFieldView.utils';
-import { useDebounce } from '../../hooks/useDebounce/useDebounce';
-import { useSPInstance } from '../../hooks/useSPInstance/useSPInstance';
+} from './PropertyPaneSiteSelectorFieldView.utils.js';
+import { useDebounce } from '../../hooks/useDebounce/useDebounce.js';
+import { useSPInstance } from '../../hooks/useSPInstance/useSPInstance.js';
 
 export const PropertyPaneSiteSelectorFieldView: React.FC<PropertyPaneSiteSelectorFieldViewProps> = ({
   label,

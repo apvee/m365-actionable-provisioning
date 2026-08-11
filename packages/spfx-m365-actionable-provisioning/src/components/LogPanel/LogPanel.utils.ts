@@ -1,4 +1,4 @@
-import type { ComplianceActivityEntry, ProvisioningActivityEntry } from '../../models';
+import type { ComplianceActivityEntry, ProvisioningActivityEntry } from '../../models/index.js';
 
 export const prunePendingEntries = (
   entries: ReadonlyArray<ProvisioningActivityEntry>

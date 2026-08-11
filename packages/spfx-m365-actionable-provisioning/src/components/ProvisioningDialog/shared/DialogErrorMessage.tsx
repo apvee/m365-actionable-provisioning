@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { MessageBar, MessageBarBody, MessageBarTitle } from '@fluentui/react-components';
 
-import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state';
+import type { ProvisioningDialogUiError } from '../ProvisioningDialogSession.state.js';
 
 export type DialogErrorMessageProps = Readonly<{
     error: ProvisioningDialogUiError | undefined;

@@ -8,8 +8,8 @@
 import type { ActionPath } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceReport } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceTrace } from '@apvee/m365-actionable-provisioning';
-import type { ComplianceActivityEntry } from '../models';
-import { buildActivityTree, calculateDepth, compareActionPaths, isSubactionPath } from './activity-tree';
+import type { ComplianceActivityEntry } from '../models/index.js';
+import { buildActivityTree, calculateDepth, compareActionPaths, isSubactionPath } from './activity-tree.js';
 
 export function buildComplianceActivityEntriesFromReport(
   report: ComplianceReport | undefined

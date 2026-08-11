@@ -8,8 +8,8 @@ import type { BaseComponentContext } from '@microsoft/sp-component-base';
 
 import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
 import type { Logger } from '@apvee/m365-actionable-provisioning';
-import type { ProvisioningDialogStrings } from '../../components';
-import type { TemplateAppliedState } from '../../models';
+import type { ProvisioningDialogStrings } from '../../components/index.js';
+import type { TemplateAppliedState } from '../../models/index.js';
 
 /**
  * Configuration options for PropertyPaneProvisioningField.

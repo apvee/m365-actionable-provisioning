@@ -8,7 +8,7 @@ import {
 import type { ISPEventObserver } from '@microsoft/sp-core-library';
 import * as React from 'react';
 
-import { createFluentV9ThemeFromSPFxTheme } from '../../internal/theme/createFluentV9ThemeFromSPFxTheme';
+import { createFluentV9ThemeFromSPFxTheme } from '../../internal/theme/createFluentV9ThemeFromSPFxTheme.js';
 
 function readTheme(context: BaseComponentContext): IReadonlyTheme | undefined {
   return context.serviceScope.consume(ThemeProvider.serviceKey).tryGetTheme();

@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from '@fluentui/react-components';
 
-import type { ConfirmationDialogProps, ConfirmationDialogStrings } from './ConfirmationDialog.types';
+import type { ConfirmationDialogProps, ConfirmationDialogStrings } from './ConfirmationDialog.types.js';
 
 import * as locStrings from 'SPFxProvisioningUIStrings';
 

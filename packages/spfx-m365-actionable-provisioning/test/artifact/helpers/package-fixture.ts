@@ -119,6 +119,8 @@ export function createPackageFixture(): PackageFixture {
       '@types/react-dom@17.0.17',
       'react@17.0.1',
       'react-dom@17.0.1',
+      'scheduler@0.20.2',
+      'stylis@4.3.6',
     ], {
       cwd: fixtureRoot,
       env: npmEnvironment,

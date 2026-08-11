@@ -2,9 +2,9 @@ import * as React from 'react';
 
 import type { EngineSnapshotTyped } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
-import type { ProvisioningRunOutcome } from '../ProvisioningDialog.types';
-import { shouldCancelComplianceOnClose } from '../ProvisioningDialogSession.state';
-import type { ProvisioningDialogActionsOptions, ProvisioningDialogActionsReturn } from './useProvisioningDialogActions.types';
+import type { ProvisioningRunOutcome } from '../ProvisioningDialog.types.js';
+import { shouldCancelComplianceOnClose } from '../ProvisioningDialogSession.state.js';
+import type { ProvisioningDialogActionsOptions, ProvisioningDialogActionsReturn } from './useProvisioningDialogActions.types.js';
 
 // Re-export types
 export type { ProvisioningDialogActionsOptions, ProvisioningDialogActionsReturn };

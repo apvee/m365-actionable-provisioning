@@ -8,8 +8,8 @@
 import type { EngineSnapshotTyped, EngineStatus } from '@apvee/m365-actionable-provisioning';
 import type { EngineTrace, ActionStatus } from '@apvee/m365-actionable-provisioning';
 import type { ProvisioningResultLight } from '@apvee/m365-actionable-provisioning';
-import type { ProvisioningActivityEntry, ProvisioningActivityStatus } from '../models';
-import { buildActivityTree, calculateDepth, isSubactionPath } from './activity-tree';
+import type { ProvisioningActivityEntry, ProvisioningActivityStatus } from '../models/index.js';
+import { buildActivityTree, calculateDepth, isSubactionPath } from './activity-tree.js';
 
 export type ProvisioningUiProgress = Readonly<{
   completed: number;

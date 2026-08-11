@@ -4,6 +4,6 @@
  * @module
  */
 
-export { buildComplianceActivityEntriesFromReport, buildComplianceActivityEntriesFromTrace } from "./compliance-to-activity";
-export { buildProvisioningActivityEntriesFromSnapshot, buildProvisioningUiSummary } from "./trace-to-activity";
-export type { ProvisioningUiProgress, ProvisioningUiSummary } from "./trace-to-activity";
+export { buildComplianceActivityEntriesFromReport, buildComplianceActivityEntriesFromTrace } from "./compliance-to-activity.js";
+export { buildProvisioningActivityEntriesFromSnapshot, buildProvisioningUiSummary } from "./trace-to-activity.js";
+export type { ProvisioningUiProgress, ProvisioningUiSummary } from "./trace-to-activity.js";

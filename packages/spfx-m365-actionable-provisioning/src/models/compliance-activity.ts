@@ -7,7 +7,7 @@
 import type { ActionPath } from '@apvee/m365-actionable-provisioning';
 import type { ComplianceOutcome } from '@apvee/m365-actionable-provisioning';
 
-import type { BaseActivityEntry } from './activity-entry';
+import type { BaseActivityEntry } from './activity-entry.js';
 
 /**
  * Status for completed compliance checks.
