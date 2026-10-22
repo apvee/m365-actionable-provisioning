@@ -45,6 +45,11 @@ Provisioning prepares the two groups and updates their descriptions, grants
 site read access, then creates `customers` and `orders` with their fields,
 views, lookup relationship and group grants. Navigation is added afterwards.
 
+Both site grants also use `breakRoleInheritance: true`,
+`copyRoleAssignments: true` and `clearSubscopes: false` so an inherited
+subweb selected as the target can receive the bindings while preserving
+existing assignments and child scopes.
+
 Cleanup removes navigation, recycles `orders` before its lookup source
 `customers`, removes the two explicit site read bindings, and finally deletes
 the two demo groups. Recycling retains the lists in the SharePoint recycle bin;

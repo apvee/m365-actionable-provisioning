@@ -73,6 +73,9 @@ function assertPropertyPanePlans(): void {
     assert.equal(typeof actions[modified].description, 'string');
     assert.equal(actions[granted].principalType, 'spGroupName');
     assert.equal(actions[granted].roleType, 'read');
+    assert.equal(actions[granted].breakRoleInheritance, true, 'Site grants must support inherited selected webs');
+    assert.equal(actions[granted].copyRoleAssignments, true, 'Site grants must preserve existing assignments');
+    assert.equal(actions[granted].clearSubscopes, false, 'Site grants must preserve child scopes');
     const revoked = position(removals, 'removeSPSiteRoleAssignment', 'principal', name);
     const deleted = position(removals, 'deleteSPGroup', 'groupName', name);
     assert.ok(revoked < deleted, 'Revoke the site binding before deleting the group');
