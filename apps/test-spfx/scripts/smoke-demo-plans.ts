@@ -5,6 +5,7 @@ import {
   resolveProvisioningPlanPlaceholders,
 } from '../../../packages/m365-actionable-provisioning/src/core/provisioning-plan';
 import { provisioningPlan, deprovisioningPlan } from '../src/webparts/testProvisioning/test-plans/demo-plans';
+import { createExamplePlan, examplePlan } from '../src/webparts/testProvisioning/test-plans/complete-plan';
 
 type DemoAction = { verb: string; subactions?: readonly DemoAction[]; [key: string]: unknown };
 
@@ -92,8 +93,58 @@ function assertPropertyPanePlans(): void {
   assert.equal(actions.filter((action) => action.verb === 'createSPListView').length, 2);
 }
 
+function assertCompletePlan(template: M365ProvisioningPlan, currentUserLoginName: string): void {
+  const plan = expand(template);
+  const actions = flatten(plan.actions);
+  const siteCreation = plan.actions.find((action) => action.verb === 'createSPSite');
+  const siteGroups = siteCreation?.subactions ?? [];
+  const firstList = actions.findIndex((action) => action.verb === 'createSPList');
+  for (const name of ['Engineering Demo Readers', 'Engineering Demo Contributors']) {
+    assert.ok(siteGroups.some((action) => action.verb === 'createSPGroup' && action.title === name), `Site creation must ensure ${name}`);
+    const created = position(actions, 'createSPGroup', 'title', name);
+    const modified = position(actions, 'modifySPGroup', 'groupName', name);
+    const granted = position(actions, 'grantSPSiteRoleAssignment', 'principal', name);
+    assert.ok(created < modified && modified < granted && granted < firstList);
+    assert.equal(typeof actions[modified].description, 'string');
+    assert.notEqual(actions[created].description, actions[modified].description);
+    assert.equal(actions[granted].principalType, 'spGroupName');
+    assert.equal(actions[granted].roleType, 'read');
+  }
+  assertGroupOrder(actions);
+  assertListGroupGrants(actions, 'Engineering Demo Readers', 'Engineering Demo Contributors');
+  assert.deepEqual(actions.filter((action) => action.verb === 'createSPList' || action.verb === 'modifySPList')
+    .map((action) => `${action.verb}:${action.listName}`), [
+    'createSPList:requestCategories',
+    'createSPList:engineeringRequests',
+    'modifySPList:engineeringRequests',
+    'createSPList:engineeringDocuments',
+    'createSPList:tempToRecycle',
+  ]);
+  const temporary = 'Engineering Demo Temporary';
+  const created = position(actions, 'createSPGroup', 'title', temporary);
+  const modified = position(actions, 'modifySPGroup', 'groupName', temporary);
+  const deleted = position(actions, 'deleteSPGroup', 'groupName', temporary);
+  assert.ok(created < modified && modified < deleted);
+  assert.deepEqual(actions.filter((action) => action.verb === 'deleteSPGroup').map((action) => action.groupName), [temporary]);
+  assert.equal(actions.some((action) => action.principal === temporary), false, 'The disposable group must not receive a role');
+  const userGrants = actions.filter((action) => action.verb === 'grantSPListRoleAssignment' && action.principalType === 'loginName');
+  assert.equal(userGrants.length, 1);
+  assert.equal(userGrants[0].principal, currentUserLoginName);
+  assert.equal(userGrants[0].roleType, 'read');
+  assert.equal(userGrants[0].copyRoleAssignments, true);
+  assert.equal(actions.find((action) => action.verb === 'addSPField' && action.fieldName === 'RequestCategory')?.lookupListName, 'requestCategories');
+  assert.deepEqual(actions.filter((action) => action.verb === 'enableSPListRating').map((action) => action.ratingType), ['Likes', 'Stars']);
+  assert.equal(actions.some((action) => action.verb === 'createSPContentType' && action.name === 'Engineering Document'), true);
+  assert.equal(actions.some((action) => action.verb === 'addSPContentTypeToList' && action.contentTypeName === 'Engineering Document'), true);
+  assert.equal(actions.some((action) => action.verb === 'deleteSPList' || action.verb === 'deleteSPField'), false, 'Commented deletion examples must stay inactive');
+}
+
 try {
   assertPropertyPanePlans();
+  assertCompletePlan(examplePlan, 'i:0#.f|membership|user@contoso.com');
+  for (const login of ['i:0#.f|membership|first@contoso.com', 'i:0#.f|membership|second@contoso.com']) {
+    assertCompletePlan(createExamplePlan(login), login);
+  }
   console.log('SPFx demo plans smoke passed');
 } catch (error) {
   console.error(error);

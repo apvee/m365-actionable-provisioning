@@ -1,5 +1,6 @@
 
 import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
+import { createDemoListGroupGrants } from './group-demo-actions';
 
 const CURRENT_USER_LOGIN_NAME_PARAMETER = "CurrentUserLoginName";
 
@@ -17,6 +18,9 @@ export const createExamplePlan = (currentUserLoginName: string): M365Provisionin
         { key: "RequestCategoriesListName", value: "requestCategories" },
         { key: "EngineeringRequestsListName", value: "engineeringRequests" },
         { key: "EngineeringDocumentsListName", value: "engineeringDocuments" },
+        { key: "EngineeringReadersGroupName", value: "Engineering Demo Readers" },
+        { key: "EngineeringContributorsGroupName", value: "Engineering Demo Contributors" },
+        { key: "EngineeringTemporaryGroupName", value: "Engineering Demo Temporary" },
     ],
     actions: [
         // {
@@ -37,6 +41,18 @@ export const createExamplePlan = (currentUserLoginName: string): M365Provisionin
             description: "{parameter:CommSiteDescription}",
             lcid: 1033,
             webTemplate: "SITEPAGEPUBLISHING#0",
+            subactions: [
+                {
+                    verb: "createSPGroup",
+                    title: "{parameter:EngineeringReadersGroupName}",
+                    description: "Readers group created with the engineering site",
+                },
+                {
+                    verb: "createSPGroup",
+                    title: "{parameter:EngineeringContributorsGroupName}",
+                    description: "Contributors group created with the engineering site",
+                },
+            ],
         },
         {
             verb: "modifySPSite",
@@ -44,6 +60,43 @@ export const createExamplePlan = (currentUserLoginName: string): M365Provisionin
             title: "{parameter:CommSiteTitle} (Updated)",
             description: "Updated: {parameter:CommSiteDescription}",
             subactions: [
+                {
+                    verb: "modifySPGroup",
+                    groupName: "{parameter:EngineeringReadersGroupName}",
+                    description: "Read access to the engineering portal, lists and document library",
+                },
+                {
+                    verb: "modifySPGroup",
+                    groupName: "{parameter:EngineeringContributorsGroupName}",
+                    description: "Read access to the engineering portal and contribute access to its lists and library",
+                },
+                {
+                    verb: "grantSPSiteRoleAssignment",
+                    principalType: "spGroupName",
+                    principal: "{parameter:EngineeringReadersGroupName}",
+                    roleType: "read",
+                },
+                {
+                    verb: "grantSPSiteRoleAssignment",
+                    principalType: "spGroupName",
+                    principal: "{parameter:EngineeringContributorsGroupName}",
+                    roleType: "read",
+                },
+                // This group demonstrates the lifecycle only; persistent list groups stay available.
+                {
+                    verb: "createSPGroup",
+                    title: "{parameter:EngineeringTemporaryGroupName}",
+                    description: "Temporary group for the lifecycle demonstration",
+                },
+                {
+                    verb: "modifySPGroup",
+                    groupName: "{parameter:EngineeringTemporaryGroupName}",
+                    description: "Updated temporary group, ready for deletion",
+                },
+                {
+                    verb: "deleteSPGroup",
+                    groupName: "{parameter:EngineeringTemporaryGroupName}",
+                },
                 {
                     verb: "createSPSiteColumn",
                     fieldType: "Text",
@@ -174,6 +227,10 @@ export const createExamplePlan = (currentUserLoginName: string): M365Provisionin
                     writeSecurity: 1,
                     noCrawl: false,
                     enableModeration: false,
+                    subactions: createDemoListGroupGrants(
+                        "{parameter:EngineeringReadersGroupName}",
+                        "{parameter:EngineeringContributorsGroupName}"
+                    ),
                 },
                 {
                     verb: "createSPList",
@@ -436,6 +493,10 @@ export const createExamplePlan = (currentUserLoginName: string): M365Provisionin
                         //     verb: "deleteSPField",
                         //     fieldName: "ObsoleteField",
                         // },
+                        ...createDemoListGroupGrants(
+                            "{parameter:EngineeringReadersGroupName}",
+                            "{parameter:EngineeringContributorsGroupName}"
+                        ),
                     ],
                 },
                 {
@@ -451,6 +512,10 @@ export const createExamplePlan = (currentUserLoginName: string): M365Provisionin
                             verb: "enableSPListRating",
                             ratingType: "Stars",
                         },
+                        ...createDemoListGroupGrants(
+                            "{parameter:EngineeringReadersGroupName}",
+                            "{parameter:EngineeringContributorsGroupName}"
+                        ),
                     ],
                 },
                 {
@@ -517,6 +582,10 @@ export const createExamplePlan = (currentUserLoginName: string): M365Provisionin
                             copyRoleAssignments: true,
                             clearSubscopes: false,
                         },
+                        ...createDemoListGroupGrants(
+                            "{parameter:EngineeringReadersGroupName}",
+                            "{parameter:EngineeringContributorsGroupName}"
+                        ),
                     ],
                 },
                 {
@@ -526,6 +595,10 @@ export const createExamplePlan = (currentUserLoginName: string): M365Provisionin
                     desc: "Temporary list created only to demonstrate deleteSPList with recycle",
                     template: 100,
                     enableVersioning: false,
+                    subactions: createDemoListGroupGrants(
+                        "{parameter:EngineeringReadersGroupName}",
+                        "{parameter:EngineeringContributorsGroupName}"
+                    ),
                 },
                 // {
                 //     verb: "deleteSPList",
