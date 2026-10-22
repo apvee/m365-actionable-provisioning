@@ -213,6 +213,47 @@ async function assertSPGroupRenameIdentity(): Promise<void> {
   assert.equal(fixture.groups.get(42)?.Title, "Renamed");
 }
 
+async function assertDeleteSPGroupRuntimeAndCompliance(): Promise<void> {
+  const { DeleteSPGroupAction } = await import("../../src/actions/sharepoint/groups/delete-sp-group");
+  const action = new DeleteSPGroupAction();
+  for (const reference of [{ groupId: 42 }, { groupName: "O'Brien" }]) {
+    const fixture = createGroupFixture([{ Id: 42, Title: "O'Brien" }, { Id: 77, Title: "Keep" }]);
+    const ctx = groupContext({ verb: "deleteSPGroup" as const, ...reference }, fixture);
+    fixture.settings.forbidWrites = true;
+    assert.equal((await action.checkCompliance(ctx)).reason, "exists");
+    assert.deepEqual(fixture.writes, []);
+    fixture.settings.forbidWrites = false;
+    assert.equal((await action.handler(ctx)).result?.outcome, "executed");
+    assert.deepEqual(fixture.writes, [{ operation: "remove", id: 42 }]);
+    assert.equal(fixture.groups.has(42), false);
+    assert.equal(fixture.groups.has(77), true);
+    fixture.settings.forbidWrites = true;
+    assert.equal((await action.checkCompliance(ctx)).outcome, "compliant");
+    assert.equal((await action.handler(ctx)).result?.outcome, "skipped");
+    assert.equal(fixture.writes.length, 1);
+    assert.equal((await action.handler({ ...ctx, scopeIn: {} })).result?.outcome, "skipped");
+    for (const change of [{ scopeIn: {} }, { clients: {} }]) {
+      assert.equal((await action.checkCompliance({ ...ctx, ...change })).outcome, "unverifiable");
+    }
+    for (const status of [401, 403, 404, 429, 500, undefined]) {
+      fixture.settings.readError = Object.assign(new Error("Read failed"), { status });
+      await assert.rejects(action.handler(ctx), /Read failed/);
+      assert.equal((await action.checkCompliance(ctx)).outcome, "unverifiable");
+    }
+    fixture.settings.readError = undefined;
+    fixture.settings.overrideResponse = true;
+    for (const response of [{}, [{ Id: 42, Title: "A" }, { Id: 77, Title: "B" }]]) {
+      fixture.settings.response = response;
+      await assert.rejects(action.handler(ctx));
+      assert.equal((await action.checkCompliance(ctx)).outcome, "unverifiable");
+    }
+  }
+  const fixture = createGroupFixture([{ Id: 42, Title: "Keep" }]);
+  fixture.settings.writeError = new Error("Removal failed");
+  await assert.rejects(action.handler(groupContext({ verb: "deleteSPGroup", groupId: 42 }, fixture)), /Removal failed/);
+  assert.equal(fixture.groups.has(42), true);
+}
+
 export async function runSharePointGroupSmoke(): Promise<void> {
   await assertSPGroupSchemas();
   await assertSPGroupLookup();
@@ -221,4 +262,5 @@ export async function runSharePointGroupSmoke(): Promise<void> {
   await assertCreateSPGroupRuntimeAndCompliance();
   await assertModifySPGroupRuntimeAndCompliance();
   await assertSPGroupRenameIdentity();
+  await assertDeleteSPGroupRuntimeAndCompliance();
 }
