@@ -1,0 +1,101 @@
+import { strict as assert } from 'assert';
+import { m365ProvisioningPlanSchema, type M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
+import {
+  buildProvisioningPlanParameterMap,
+  resolveProvisioningPlanPlaceholders,
+} from '../../../packages/m365-actionable-provisioning/src/core/provisioning-plan';
+import { provisioningPlan, deprovisioningPlan } from '../src/webparts/testProvisioning/test-plans/demo-plans';
+
+type DemoAction = { verb: string; subactions?: readonly DemoAction[]; [key: string]: unknown };
+
+function expand(plan: M365ProvisioningPlan): M365ProvisioningPlan {
+  const parameters = buildProvisioningPlanParameterMap(plan.parameters);
+  return m365ProvisioningPlanSchema.parse({
+    ...plan,
+    actions: resolveProvisioningPlanPlaceholders(plan.actions, parameters),
+  });
+}
+
+function flatten(actions: readonly DemoAction[]): DemoAction[] {
+  return actions.flatMap((action) => [action, ...flatten(action.subactions ?? [])]);
+}
+
+function position(actions: readonly DemoAction[], verb: string, key: string, value: string): number {
+  const index = actions.findIndex((action) => action.verb === verb && action[key] === value);
+  assert.ok(index >= 0, `Missing ${verb} for ${value}`);
+  return index;
+}
+
+function assertGroupOrder(actions: readonly DemoAction[]): void {
+  const available = new Set<string>();
+  for (const action of actions) {
+    if (action.verb === 'createSPGroup') available.add(String(action.title));
+    if (action.verb === 'modifySPGroup') {
+      assert.ok(available.has(String(action.groupName)), `Group modified before creation: ${action.groupName}`);
+      assert.equal(action.title, undefined, 'Demo group references must remain stable');
+    }
+    if (action.principalType === 'spGroupName') {
+      assert.ok(available.has(String(action.principal)), `Grant references an unavailable group: ${action.principal}`);
+    }
+    if (action.verb === 'deleteSPGroup') available.delete(String(action.groupName));
+  }
+}
+
+function assertListGroupGrants(actions: readonly DemoAction[], readers: string, contributors: string): void {
+  const lists = actions.filter((action) => action.verb === 'createSPList' || action.verb === 'modifySPList');
+  assert.ok(lists.length > 0, 'Demo must exercise list grants');
+  for (const list of lists) {
+    const grants = (list.subactions ?? []).filter((action) => action.verb === 'grantSPListRoleAssignment' && action.principalType === 'spGroupName');
+    assert.equal(grants.length, 2, `${list.verb} ${list.listName} needs both group grants`);
+    for (const [principal, roleType] of [[readers, 'read'], [contributors, 'contribute']]) {
+      const grant = grants.find((action) => action.principal === principal);
+      assert.ok(grant, `Missing ${roleType} group grant on ${list.listName}`);
+      assert.equal(grant.roleType, roleType);
+      assert.equal(grant.breakRoleInheritance, true);
+      assert.equal(grant.copyRoleAssignments, true);
+      assert.equal(grant.clearSubscopes, false);
+    }
+  }
+}
+
+function assertPropertyPanePlans(): void {
+  const provision = expand(provisioningPlan);
+  const cleanup = expand(deprovisioningPlan);
+  const actions = flatten(provision.actions);
+  const removals = flatten(cleanup.actions);
+  const firstList = actions.findIndex((action) => action.verb === 'createSPList');
+  for (const name of ['M365 Demo Readers', 'M365 Demo Contributors']) {
+    const created = position(actions, 'createSPGroup', 'title', name);
+    const modified = position(actions, 'modifySPGroup', 'groupName', name);
+    const granted = position(actions, 'grantSPSiteRoleAssignment', 'principal', name);
+    assert.ok(created < modified && modified < granted && granted < firstList, 'Groups and site grants must precede lists');
+    assert.equal(typeof actions[modified].description, 'string');
+    assert.equal(actions[granted].principalType, 'spGroupName');
+    assert.equal(actions[granted].roleType, 'read');
+    const revoked = position(removals, 'removeSPSiteRoleAssignment', 'principal', name);
+    const deleted = position(removals, 'deleteSPGroup', 'groupName', name);
+    assert.ok(revoked < deleted, 'Revoke the site binding before deleting the group');
+    assert.ok(position(removals, 'deleteSPList', 'listName', 'customers') < revoked);
+  }
+  assertGroupOrder(actions);
+  assertListGroupGrants(actions, 'M365 Demo Readers', 'M365 Demo Contributors');
+  const parameters = buildProvisioningPlanParameterMap(provision.parameters);
+  const cleanupParameters = buildProvisioningPlanParameterMap(cleanup.parameters);
+  for (const key of ['DemoReadersGroupName', 'DemoContributorsGroupName']) {
+    assert.equal(parameters[key], cleanupParameters[key]);
+  }
+  assert.ok(position(removals, 'deleteSPNavigationNode', 'title', 'Orders workspace') < position(removals, 'deleteSPList', 'listName', 'orders'));
+  assert.ok(position(removals, 'deleteSPList', 'listName', 'orders') < position(removals, 'deleteSPList', 'listName', 'customers'));
+  const lookup = actions.find((action) => action.verb === 'addSPField' && action.fieldName === 'Customer');
+  assert.equal(lookup?.lookupListName, 'customers');
+  assert.equal(lookup?.relationshipDeleteBehavior, 'Restrict');
+  assert.equal(actions.filter((action) => action.verb === 'createSPListView').length, 2);
+}
+
+try {
+  assertPropertyPanePlans();
+  console.log('SPFx demo plans smoke passed');
+} catch (error) {
+  console.error(error);
+  process.exitCode = 1;
+}

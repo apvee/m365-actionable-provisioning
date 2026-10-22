@@ -9,7 +9,8 @@
     "bundle": "gulp bundle",
     "clean": "gulp clean",
     "serve": "npm run build:deps && gulp serve",
-    "test": "gulp test"
+    "test": "gulp test",
+    "smoke:demo-plans": "node --import tsx scripts/smoke-demo-plans.ts"
   },
   "dependencies": {
     "@apvee/m365-actionable-provisioning": "1.0.0",

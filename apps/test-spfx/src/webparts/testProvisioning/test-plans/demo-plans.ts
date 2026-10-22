@@ -1,9 +1,11 @@
 import type { M365ProvisioningPlan } from '@apvee/m365-actionable-provisioning';
+import { createDemoListGroupGrants } from './group-demo-actions';
 
 /**
  * Provisioning template used by the TestProvisioning webpart.
  *
- * Creates two lists with a Lookup relationship and custom list views:
+ * Creates demo groups and two lists with separate role grants, a Lookup
+ * relationship and custom list views:
  * - customers
  * - orders (lookup -> customers)
  */
@@ -14,8 +16,47 @@ export const provisioningPlan: M365ProvisioningPlan = {
     { key: 'OrdersListName', value: 'orders' },
     { key: 'CustomersTitle', value: 'Customers' },
     { key: 'OrdersTitle', value: 'Orders' },
+    { key: 'DemoReadersGroupName', value: 'M365 Demo Readers' },
+    { key: 'DemoContributorsGroupName', value: 'M365 Demo Contributors' },
   ],
   actions: [
+    {
+      verb: 'modifySPSite',
+      subactions: [
+        {
+          verb: 'createSPGroup',
+          title: '{parameter:DemoReadersGroupName}',
+          description: 'Readers group created by the Property Pane demo',
+        },
+        {
+          verb: 'createSPGroup',
+          title: '{parameter:DemoContributorsGroupName}',
+          description: 'Contributors group created by the Property Pane demo',
+        },
+        {
+          verb: 'modifySPGroup',
+          groupName: '{parameter:DemoReadersGroupName}',
+          description: 'Read access to the demo site and its customer/order lists',
+        },
+        {
+          verb: 'modifySPGroup',
+          groupName: '{parameter:DemoContributorsGroupName}',
+          description: 'Read access to the demo site and contribute access to its customer/order lists',
+        },
+        {
+          verb: 'grantSPSiteRoleAssignment',
+          principalType: 'spGroupName',
+          principal: '{parameter:DemoReadersGroupName}',
+          roleType: 'read',
+        },
+        {
+          verb: 'grantSPSiteRoleAssignment',
+          principalType: 'spGroupName',
+          principal: '{parameter:DemoContributorsGroupName}',
+          roleType: 'read',
+        },
+      ],
+    },
     {
       verb: 'createSPList',
       listName: '{parameter:CustomersListName}',
@@ -52,6 +93,7 @@ export const provisioningPlan: M365ProvisioningPlan = {
           paged: true,
           defaultView: true,
         },
+        ...createDemoListGroupGrants('{parameter:DemoReadersGroupName}', '{parameter:DemoContributorsGroupName}'),
       ],
     },
     {
@@ -104,6 +146,7 @@ export const provisioningPlan: M365ProvisioningPlan = {
           paged: true,
           defaultView: true,
         },
+        ...createDemoListGroupGrants('{parameter:DemoReadersGroupName}', '{parameter:DemoContributorsGroupName}'),
       ],
     },
     {
@@ -123,7 +166,8 @@ export const provisioningPlan: M365ProvisioningPlan = {
 /**
  * Deprovisioning template used by the TestProvisioning webpart.
  *
- * Deletes the same lists created by provisioningPlan, in a safe order.
+ * Removes navigation, recycles lists, then revokes site grants and deletes
+ * the groups created by provisioningPlan.
  */
 export const deprovisioningPlan: M365ProvisioningPlan = {
   schemaVersion: '1.0',
@@ -131,6 +175,8 @@ export const deprovisioningPlan: M365ProvisioningPlan = {
     { key: 'CustomersListName', value: 'customers' },
     { key: 'OrdersListName', value: 'orders' },
     { key: 'OrdersTitle', value: 'Orders' },
+    { key: 'DemoReadersGroupName', value: 'M365 Demo Readers' },
+    { key: 'DemoContributorsGroupName', value: 'M365 Demo Contributors' },
   ],
   actions: [
     {
@@ -152,6 +198,31 @@ export const deprovisioningPlan: M365ProvisioningPlan = {
       verb: 'deleteSPList',
       listName: '{parameter:CustomersListName}',
       recycle: true,
+    },
+    {
+      verb: 'modifySPSite',
+      subactions: [
+        {
+          verb: 'removeSPSiteRoleAssignment',
+          principalType: 'spGroupName',
+          principal: '{parameter:DemoReadersGroupName}',
+          roleType: 'read',
+        },
+        {
+          verb: 'removeSPSiteRoleAssignment',
+          principalType: 'spGroupName',
+          principal: '{parameter:DemoContributorsGroupName}',
+          roleType: 'read',
+        },
+        {
+          verb: 'deleteSPGroup',
+          groupName: '{parameter:DemoReadersGroupName}',
+        },
+        {
+          verb: 'deleteSPGroup',
+          groupName: '{parameter:DemoContributorsGroupName}',
+        },
+      ],
     },
   ],
 };
