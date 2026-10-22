@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { runSharePointGroupSmoke } from "./smoke/sharepoint-groups";
+import { assertPermissionInheritanceReadsAreFresh } from "./smoke/permission-inheritance-cache";
 
 import { ActionDefinition, defaultActionResultSchema, type ActionRuntimeContext } from "../src/core/action";
 import { ProvisioningEngine } from "../src/core/engine";
@@ -4289,6 +4290,7 @@ async function main(): Promise<void> {
   await assertComplianceCancelContract();
   await assertCreateSPSiteColumnIgnoresStaleListScope();
   await assertSharePointGraphClientPreflight();
+  await assertPermissionInheritanceReadsAreFresh();
   await assertSharePointPermissionActionRuntime();
   await assertSharePointPermissionCompliance();
 

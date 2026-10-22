@@ -52,6 +52,8 @@ export function resolveListPermissionTarget(scope: M365Scope): PermissionSecurab
 }
 
 export async function getSecurableHasUniqueRoleAssignments(target: SecurableQueryable): Promise<boolean> {
-  const info = await target.select("HasUniqueRoleAssignments")<UniqueRoleAssignmentsInfo>();
+  // Permission changes can leave the entity ETag unchanged. Bypass HTTP
+  // revalidation so pre-break responses cannot mask the current security state.
+  const info = await target.select("HasUniqueRoleAssignments")<UniqueRoleAssignmentsInfo>({ cache: "no-store" });
   return info.HasUniqueRoleAssignments === true;
 }
