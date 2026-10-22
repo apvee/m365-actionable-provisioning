@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { deleteSPSiteSchema } from "../../src/actions/sharepoint/sites/delete-sp-site/schema";
-import { createGroupFixture } from "./sharepoint-group-fixtures";
+import { createGroupFixture, groupContext } from "./sharepoint-group-fixtures";
+import { PermissionKind } from "@pnp/sp/security";
+import { z } from "zod";
+import { ProvisioningEngine } from "../../src/core/engine";
+import { createProvisioningPlanSchema } from "../../src/core/provisioning-plan";
 
 async function assertSPGroupSchemas(): Promise<void> {
   const site = { verb: "deleteSPSite", siteUrl: "https://contoso.sharepoint.com/sites/groups" };
@@ -78,8 +82,80 @@ async function assertSPGroupPropertyComparison(): Promise<void> {
   ]);
 }
 
+async function assertSPGroupPermissions(): Promise<void> {
+  const { checkSPGroupPermissions } = await import("../../src/actions/sharepoint/groups/_shared/scope");
+  const fixture = createGroupFixture();
+  const ctx = groupContext({ verb: "createSPGroup", title: "Reviewers" }, fixture, "1/1");
+  assert.equal((await checkSPGroupPermissions({ ...ctx, clients: {} }, "create")).decision, "deny");
+  assert.equal((await checkSPGroupPermissions(ctx, "create")).decision, "unknown");
+  assert.deepEqual(fixture.probes, []);
+  ctx.out.byAction["1"] = { result: { outcome: "skipped", resource: "site", reason: "no_changes" } };
+  assert.equal((await checkSPGroupPermissions(ctx, "create")).decision, "allow");
+  assert.deepEqual(fixture.probes, [PermissionKind.CreateGroups]);
+  fixture.settings.createAllowed = false;
+  assert.equal((await checkSPGroupPermissions(ctx, "create")).decision, "deny");
+  for (const operation of ["modify", "delete"] as const) {
+    assert.equal((await checkSPGroupPermissions(ctx, operation)).decision, "allow");
+    fixture.settings.manageAllowed = false;
+    assert.equal((await checkSPGroupPermissions(ctx, operation)).decision, "unknown");
+    fixture.settings.manageAllowed = true;
+  }
+  fixture.settings.probeError = new Error("App-only probe unavailable");
+  assert.equal((await checkSPGroupPermissions(ctx, "create")).decision, "unknown");
+  fixture.settings.probeError = undefined;
+  assert.equal((await checkSPGroupPermissions({ ...ctx, scopeIn: {} }, "create")).decision, "unknown");
+  assert.equal((await checkSPGroupPermissions(groupContext(ctx.action.payload, fixture), "create")).decision, "deny");
+}
+
+async function assertCreateSPGroupRuntimeAndCompliance(): Promise<void> {
+  const { CreateSPGroupAction } = await import("../../src/actions/sharepoint/groups/create-sp-group");
+  const action = new CreateSPGroupAction();
+  const fixture = createGroupFixture();
+  const ctx = groupContext({ verb: "createSPGroup" as const, title: "Reviewers", description: "Document reviewers" }, fixture);
+  assert.equal((await action.checkCompliance(ctx)).outcome, "non_compliant");
+  assert.equal((await action.handler(ctx)).result?.outcome, "executed");
+  assert.deepEqual(fixture.writes, [{ operation: "add", id: 1, props: { Title: "Reviewers", Description: "Document reviewers" } }]);
+  fixture.writes.length = 0;
+  fixture.settings.forbidWrites = true;
+  const drift = { ...ctx, action: { ...ctx.action, payload: { ...ctx.action.payload, description: "Different" } } };
+  assert.deepEqual((await action.handler(drift)).result, { outcome: "skipped", reason: "already_exists", resource: "Reviewers" });
+  assert.equal((await action.checkCompliance(drift)).outcome, "compliant");
+  assert.deepEqual(fixture.writes, []);
+  const bare = createGroupFixture();
+  await action.handler(groupContext({ verb: "createSPGroup", title: "Bare" }, bare));
+  assert.deepEqual(bare.writes[0].props, { Title: "Bare" });
+  assert.equal((await action.handler({ ...ctx, scopeIn: {} })).result?.outcome, "skipped");
+  assert.equal((await action.checkCompliance({ ...ctx, scopeIn: {} })).reason, "missing_prerequisite");
+  assert.equal((await action.checkCompliance({ ...ctx, clients: {} })).outcome, "unverifiable");
+  for (const status of [401, 403, 404, 429, 500, undefined]) {
+    fixture.settings.readError = Object.assign(new Error("Read failed"), { status });
+    await assert.rejects(action.handler(ctx), /Read failed/);
+    assert.equal((await action.checkCompliance(ctx)).outcome, "unverifiable");
+  }
+  fixture.settings.readError = undefined;
+  fixture.settings.overrideResponse = true;
+  fixture.settings.response = {};
+  await assert.rejects(action.handler(ctx), /Invalid/);
+  assert.equal((await action.checkCompliance(ctx)).outcome, "unverifiable");
+  const denied = createGroupFixture();
+  denied.settings.createAllowed = false;
+  const deniedCtx = groupContext({ verb: "createSPGroup" as const, title: "Forbidden" }, denied);
+  const engine = new ProvisioningEngine({
+    definitions: [action],
+    provisioningSchema: createProvisioningPlanSchema(z.array(action.actionSchema)),
+    clients: deniedCtx.clients,
+    initialScope: deniedCtx.scopeIn,
+    planTemplate: { actions: [deniedCtx.action.payload] },
+    logger: deniedCtx.logger,
+  });
+  assert.equal((await engine.run()).status, "failed");
+  assert.deepEqual(denied.writes, []);
+}
+
 export async function runSharePointGroupSmoke(): Promise<void> {
   await assertSPGroupSchemas();
   await assertSPGroupLookup();
   await assertSPGroupPropertyComparison();
+  await assertSPGroupPermissions();
+  await assertCreateSPGroupRuntimeAndCompliance();
 }

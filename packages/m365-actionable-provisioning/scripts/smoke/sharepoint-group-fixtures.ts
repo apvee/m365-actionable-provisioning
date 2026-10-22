@@ -1,5 +1,8 @@
 import type { IWeb } from "@pnp/sp/webs";
 import { PermissionKind } from "@pnp/sp/security";
+import { createLogger } from "../../src/core/logger";
+import { buildInitialTrace } from "../../src/core/trace";
+import type { M365RuntimeContext } from "../../src/runtime";
 
 export type TestGroup = { Id: number; Title: string; Description?: string | null };
 export type GroupWrite = { operation: "add" | "update" | "remove" | "grant"; id: number; props?: unknown };
@@ -106,4 +109,18 @@ export function createGroupFixture(seed: readonly TestGroup[] = []) {
     ensureUser: async () => { throw new Error("Group actions must not ensure users"); },
   } as unknown as IWeb;
   return { web, groups, writes, queries, probes, bindings, settings };
+}
+
+export function groupContext<TPayload extends Record<string, unknown>>(
+  payload: TPayload,
+  fixture = createGroupFixture(),
+  path = "1"
+): M365RuntimeContext<TPayload> {
+  return {
+    scopeIn: { web: fixture.web, webUrl: "https://contoso.sharepoint.com/sites/groups" },
+    clients: { spfi: {} as NonNullable<M365RuntimeContext["clients"]["spfi"]> },
+    out: { byAction: {}, trace: buildInitialTrace([]) },
+    logger: createLogger({ sinks: [] }),
+    action: { path, verb: String(payload.verb), payload },
+  };
 }
