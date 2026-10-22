@@ -31,6 +31,7 @@
     "build": "npm run clean && tsc -p tsconfig.json",
     "clean": "node -e \"require('fs').rmSync('lib', { recursive: true, force: true })\"",
     "smoke:m365-engine": "tsx scripts/smoke-m365-engine.ts",
+    "smoke:sp-groups": "tsx scripts/smoke-sp-groups.ts",
     "prepack": "npm run build"
   },
   "dependencies": {

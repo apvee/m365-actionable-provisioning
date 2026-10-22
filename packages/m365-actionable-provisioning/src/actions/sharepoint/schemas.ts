@@ -1,5 +1,14 @@
 // Public schema exports; ownership lives with each action module.
 export {
+  createSPGroupSchema,
+  modifySPGroupSchema,
+  deleteSPGroupSchema,
+  type CreateSPGroupPayload,
+  type ModifySPGroupPayload,
+  type DeleteSPGroupPayload,
+} from "./groups";
+
+export {
   addSPContentTypeToListSchema,
   addSPFieldToContentTypeSchema,
   createSPContentTypeSchema,

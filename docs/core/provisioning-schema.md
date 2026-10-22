@@ -12,6 +12,7 @@ This document provides a complete reference for the `@apvee/m365-actionable-prov
 - [List Actions](#list-actions)
 - [List View Actions](#list-view-actions)
 - [Permission Actions](#permission-actions)
+- [SharePoint Group Actions](#sharepoint-group-actions)
 - [Field Actions](#field-actions)
 - [Content Type Actions](#content-type-actions)
 - [Schema Exports](#schema-exports)
@@ -61,7 +62,7 @@ The schema controls where every action can appear. Root actions are allowed dire
 | Placement | Allowed verbs |
 | --- | --- |
 | Root `actions[]` | `createSPSite`, `modifySPSite`, `deleteSPSite`, `createSPList`, `modifySPList`, `deleteSPList`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType` |
-| Site subactions | `createSPList`, `modifySPList`, `deleteSPList`, `createSPNavigationNode`, `modifySPNavigationNode`, `deleteSPNavigationNode`, `breakSPSiteRoleInheritance`, `resetSPSiteRoleInheritance`, `grantSPSiteRoleAssignment`, `removeSPSiteRoleAssignment`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType`, `createSPSiteColumn`, `modifySPField`, `deleteSPField` |
+| Site subactions | `createSPGroup`, `modifySPGroup`, `deleteSPGroup`, `createSPList`, `modifySPList`, `deleteSPList`, `createSPNavigationNode`, `modifySPNavigationNode`, `deleteSPNavigationNode`, `breakSPSiteRoleInheritance`, `resetSPSiteRoleInheritance`, `grantSPSiteRoleAssignment`, `removeSPSiteRoleAssignment`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType`, `createSPSiteColumn`, `modifySPField`, `deleteSPField` |
 | List subactions | `addSPField`, `modifySPField`, `deleteSPField`, `enableSPListRating`, `createSPListView`, `modifySPListView`, `deleteSPListView`, `breakSPListRoleInheritance`, `resetSPListRoleInheritance`, `grantSPListRoleAssignment`, `removeSPListRoleAssignment`, `addSPContentTypeToList`, `removeSPContentTypeFromList` |
 | Content type subactions | `addSPFieldToContentType`, `modifySPContentTypeField`, `removeSPFieldFromContentType` |
 
@@ -72,6 +73,9 @@ The registered SharePoint action catalog is:
 | `createSPSite` | Root | Creates a communication site or team site. |
 | `modifySPSite` | Root | Updates site mutable state and hosts site subactions. |
 | `deleteSPSite` | Root | Deletes a site collection. |
+| `createSPGroup` | Site subaction | Ensures a site-collection group exists. |
+| `modifySPGroup` | Site subaction | Updates declared group title/description by name or ID. |
+| `deleteSPGroup` | Site subaction | Ensures the referenced site-collection group is absent. |
 | `createSPList` | Root, site subaction | Creates a list or library. |
 | `modifySPList` | Root, site subaction | Updates list/library mutable state and hosts list subactions. |
 | `deleteSPList` | Root, site subaction | Deletes or recycles a list/library. |
@@ -773,6 +777,95 @@ Use `viewQuery` as a CAML query fragment, not a full `<View>` or `<Query>` docum
 
 ---
 
+## SharePoint Group Actions
+
+Groups are managed only inside `createSPSite`/`modifySPSite`, using the inherited
+web and SPFI. They are groups of the site collection; deleting one removes that
+group from the collection. A separate role-assignment removal affects only its
+binding on the selected site or list.
+
+| Verb | Required | Optional |
+| --- | --- | --- |
+| `createSPGroup` | `title` | `description` |
+| `modifySPGroup` | Exactly one of `groupName`, `groupId` | `title`, `description` |
+| `deleteSPGroup` | Exactly one of `groupName`, `groupId` | None |
+
+Names/titles are trimmed nonempty strings; IDs are positive integer numbers.
+Description is preserved verbatim: omission leaves it unchanged; `""` clears
+it on modify. Unknown fields are rejected. These are leaf actions: `subactions`
+may be omitted or empty; nonempty children are invalid. Root, list, content-type
+and delete-site placements are invalid.
+
+Create applies properties only to a missing group; existing description drift
+is accepted, including during compliance. Add modify when the description must
+be enforced. Modify skips missing groups and skips writes when declared fields
+already match; it also accepts a selector-only no-op. Delete skips an absent
+group. Read failures, including collection 404, fail execution and produce
+unverifiable compliance, rather than being interpreted as group absence.
+
+Create a site, then a group, then grant access using a separate action:
+
+```json
+{
+  "actions": [{
+    "verb": "createSPSite",
+    "siteType": "CommunicationSite",
+    "title": "Project",
+    "url": "https://contoso.sharepoint.com/sites/project",
+    "subactions": [
+      { "verb": "createSPGroup", "title": "Project Reviewers", "description": "Document reviewers" },
+      { "verb": "grantSPSiteRoleAssignment", "principalType": "spGroupName", "principal": "Project Reviewers", "roleType": "read" }
+    ]
+  }]
+}
+```
+
+For repeatable renames use the group's numeric ID, which remains stable. The
+example ID `42` must be replaced with the actual ID in the target collection.
+Omitted properties, including an existing description, are preserved:
+
+```json
+{
+  "actions": [{
+    "verb": "modifySPSite",
+    "siteUrl": "https://contoso.sharepoint.com/sites/project",
+    "subactions": [
+      { "verb": "modifySPGroup", "groupId": 42, "title": "Project Approvers" },
+      { "verb": "grantSPSiteRoleAssignment", "principalType": "spGroupName", "principal": "Project Approvers", "roleType": "read" }
+    ]
+  }]
+}
+```
+
+`{ "verb": "modifySPGroup", "groupName": "Project Reviewers", "title": "Project Approvers" }`
+is also valid, but after the first rename the old-name selector returns
+`not_found` and is noncompliant. No fallback to the new title occurs, since it
+could identify a different group. Subsequent grants by name use the new title.
+
+Delete an obsolete group:
+
+```json
+{
+  "actions": [{
+    "verb": "modifySPSite",
+    "siteUrl": "https://contoso.sharepoint.com/sites/project",
+    "subactions": [{ "verb": "deleteSPGroup", "groupName": "Project Approvers" }]
+  }]
+}
+```
+
+For lists use the existing `grantSPListRoleAssignment` and
+`removeSPListRoleAssignment`; site revocations use `removeSPSiteRoleAssignment`.
+Owner/membership changes, associated-group selectors, default-group generation
+and inline roles are outside V1. The new CRUD lookup escapes apostrophes;
+separate role-assignment lookup still uses the existing PnPjs `getByName`
+implementation, which has an apostrophe limitation.
+
+The package exports `CreateSPGroupAction`, `ModifySPGroupAction`,
+`DeleteSPGroupAction`, their `createSPGroupSchema`/`modifySPGroupSchema`/
+`deleteSPGroupSchema`, and `CreateSPGroupPayload`/`ModifySPGroupPayload`/
+`DeleteSPGroupPayload` for typed plans and validation.
+
 ## Permission Actions
 
 Permission actions manage SharePoint role inheritance and explicit role
@@ -1395,6 +1488,9 @@ import {
   createSPSiteSchema,
   modifySPSiteSchema,
   deleteSPSiteSchema,
+  createSPGroupSchema,
+  modifySPGroupSchema,
+  deleteSPGroupSchema,
   createSPListSchema,
   modifySPListSchema,
   deleteSPListSchema,

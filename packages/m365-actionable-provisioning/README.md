@@ -97,11 +97,28 @@ Runtime scope is reserved for propagated handles and identifiers such as `site`,
 | Placement | Verbs |
 | --- | --- |
 | Root | `createSPSite`, `modifySPSite`, `deleteSPSite`, `createSPList`, `modifySPList`, `deleteSPList`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType` |
-| Site subaction | `createSPList`, `modifySPList`, `deleteSPList`, `createSPNavigationNode`, `modifySPNavigationNode`, `deleteSPNavigationNode`, `breakSPSiteRoleInheritance`, `resetSPSiteRoleInheritance`, `grantSPSiteRoleAssignment`, `removeSPSiteRoleAssignment`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType`, `createSPSiteColumn`, `modifySPField`, `deleteSPField` |
+| Site subaction | `createSPGroup`, `modifySPGroup`, `deleteSPGroup`, `createSPList`, `modifySPList`, `deleteSPList`, `createSPNavigationNode`, `modifySPNavigationNode`, `deleteSPNavigationNode`, `breakSPSiteRoleInheritance`, `resetSPSiteRoleInheritance`, `grantSPSiteRoleAssignment`, `removeSPSiteRoleAssignment`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType`, `createSPSiteColumn`, `modifySPField`, `deleteSPField` |
 | List subaction | `addSPField`, `modifySPField`, `deleteSPField`, `enableSPListRating`, `createSPListView`, `modifySPListView`, `deleteSPListView`, `breakSPListRoleInheritance`, `resetSPListRoleInheritance`, `grantSPListRoleAssignment`, `removeSPListRoleAssignment`, `addSPContentTypeToList`, `removeSPContentTypeFromList` |
 | Content type subaction | `addSPFieldToContentType`, `modifySPContentTypeField`, `removeSPFieldFromContentType` |
 
 Use `addSPField` for list fields and `createSPSiteColumn` for site columns.
+
+## SharePoint Groups
+
+`createSPGroup`, `modifySPGroup`, and `deleteSPGroup` are leaf subactions of
+`createSPSite` and `modifySPSite`. Create accepts `title` and optional
+`description`; modify/delete identify the group using exactly one of numeric
+`groupId` or `groupName`. Modify accepts an optional new `title` and
+`description`; an empty description clears it. Use `groupId` for repeatable
+renames, since the old name no longer identifies a renamed group.
+
+Create ensures existence and leaves existing properties untouched. Modify
+enforces only declared properties; delete ensures absence. Group lifecycle
+uses SPFI alone. Grant access separately with `grantSPSiteRoleAssignment` or
+`grantSPListRoleAssignment`. Deletion removes the site-collection group;
+revoking a role assignment removes a binding on one resource.
+
+See [group contracts and complete examples](../../docs/core/provisioning-schema.md#sharepoint-group-actions).
 
 ## Action Semantics
 

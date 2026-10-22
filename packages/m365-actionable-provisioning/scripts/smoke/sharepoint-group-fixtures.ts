@@ -120,7 +120,7 @@ export function groupContext<TPayload extends Record<string, unknown>>(
     scopeIn: { web: fixture.web, webUrl: "https://contoso.sharepoint.com/sites/groups" },
     clients: { spfi: {} as NonNullable<M365RuntimeContext["clients"]["spfi"]> },
     out: { byAction: {}, trace: buildInitialTrace([]) },
-    logger: createLogger({ sinks: [] }),
+    logger: createLogger({ level: "silent", sink: { write: () => {} } }),
     action: { path, verb: String(payload.verb), payload },
   };
 }

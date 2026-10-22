@@ -35,6 +35,8 @@ export { extractPnPjsHttpErrorDetails } from "./utils";
    ======================================== */
 
 // Site actions
+export { CreateSPGroupAction, ModifySPGroupAction, DeleteSPGroupAction } from "./groups";
+
 export { CreateSPSiteAction } from "./sites";
 export { createSPSiteSchema, type CreateSPSitePayload } from "./sites/create-sp-site";
 

@@ -16,9 +16,9 @@ This module provides:
 
 SharePoint actions follow a deliberate create/modify/delete split:
 
-- `createSPSite`, `createSPList`, `createSPListView`, `addSPField`, `createSPSiteColumn`, and `createSPContentType` ensure that the target resource exists.
-- `modifySPSite`, `modifySPList`, `modifySPListView`, `modifySPField`, `modifySPContentType`, and `modifySPContentTypeField` enforce mutable configuration on existing resources.
-- `deleteSPSite`, `deleteSPList`, `deleteSPListView`, `deleteSPField`, `deleteSPContentType`, and `removeSPFieldFromContentType` ensure absence.
+- `createSPSite`, `createSPGroup`, `createSPList`, `createSPListView`, `addSPField`, `createSPSiteColumn`, and `createSPContentType` ensure that the target resource exists.
+- `modifySPSite`, `modifySPGroup`, `modifySPList`, `modifySPListView`, `modifySPField`, `modifySPContentType`, and `modifySPContentTypeField` enforce mutable configuration on existing resources.
+- `deleteSPSite`, `deleteSPGroup`, `deleteSPList`, `deleteSPListView`, `deleteSPField`, `deleteSPContentType`, and `removeSPFieldFromContentType` ensure absence.
 
 Create actions do not reconcile mutable properties on already-existing resources. For example, an existing list with the requested `listName` but a different `Title` still satisfies the create action. Add a `modifySPList` action when the title must be enforced.
 
@@ -29,11 +29,26 @@ Create actions do not reconcile mutable properties on already-existing resources
 | Placement | Verbs |
 | --- | --- |
 | Root | `createSPSite`, `modifySPSite`, `deleteSPSite`, `createSPList`, `modifySPList`, `deleteSPList`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType` |
-| Site subaction | `createSPList`, `modifySPList`, `deleteSPList`, `createSPNavigationNode`, `modifySPNavigationNode`, `deleteSPNavigationNode`, `breakSPSiteRoleInheritance`, `resetSPSiteRoleInheritance`, `grantSPSiteRoleAssignment`, `removeSPSiteRoleAssignment`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType`, `createSPSiteColumn`, `modifySPField`, `deleteSPField` |
+| Site subaction | `createSPGroup`, `modifySPGroup`, `deleteSPGroup`, `createSPList`, `modifySPList`, `deleteSPList`, `createSPNavigationNode`, `modifySPNavigationNode`, `deleteSPNavigationNode`, `breakSPSiteRoleInheritance`, `resetSPSiteRoleInheritance`, `grantSPSiteRoleAssignment`, `removeSPSiteRoleAssignment`, `createSPContentType`, `modifySPContentType`, `deleteSPContentType`, `createSPSiteColumn`, `modifySPField`, `deleteSPField` |
 | List subaction | `addSPField`, `modifySPField`, `deleteSPField`, `enableSPListRating`, `createSPListView`, `modifySPListView`, `deleteSPListView`, `breakSPListRoleInheritance`, `resetSPListRoleInheritance`, `grantSPListRoleAssignment`, `removeSPListRoleAssignment`, `addSPContentTypeToList`, `removeSPContentTypeFromList` |
 | Content type subaction | `addSPFieldToContentType`, `modifySPContentTypeField`, `removeSPFieldFromContentType` |
 
 Use `addSPField` for list fields and `createSPSiteColumn` for site columns.
+
+## SharePoint Groups
+
+Group actions manage site-collection groups through the parent site's web.
+Create takes `title`/`description`; modify/delete require exactly one of
+`groupName` or positive integer `groupId`. Modify updates only declared
+`title`/`description`, with `description: ""` clearing the value. Reference-only
+modify is a no-op if the group exists. Use ID selectors for repeatable renames.
+Creation checks existence only, including during compliance.
+
+Roles are managed by the separate permission actions. The new group actions
+produce no group scope state and do not use the Microsoft 365 UUID stored in
+`M365Scope.groupId`. Owner/membership changes and embedded grants are outside
+the strict V1 payloads. Read errors fail execution and are unverifiable during
+compliance; they never imply group absence.
 
 ## Content Types
 
@@ -60,6 +75,7 @@ packages/m365-actionable-provisioning/src/actions/sharepoint/
 ├── _composition/     # Site/list/content-type subaction schema composition
 ├── _shared/          # Cross-action runtime/schema utilities
 ├── sites/            # Site action modules
+├── groups/           # Site-collection group action modules
 ├── lists/            # List action modules
 ├── views/            # List/library view action modules
 ├── fields/           # Field action modules

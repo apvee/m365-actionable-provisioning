@@ -8,6 +8,7 @@ import {
 import { createSPSiteColumnActionModule } from "../fields/create-sp-site-column";
 import { deleteSPFieldActionModule } from "../fields/delete-sp-field";
 import { modifySPFieldActionModule } from "../fields/modify-sp-field";
+import { createSPGroupActionModule, modifySPGroupActionModule, deleteSPGroupActionModule } from "../groups";
 import { createSPListActionModule } from "../lists/create-sp-list";
 import { deleteSPListActionModule } from "../lists/delete-sp-list";
 import { modifySPListActionModule } from "../lists/modify-sp-list";
@@ -24,6 +25,9 @@ import {
 } from "../permissions";
 
 const siteSubactionSchemas = [
+  createSPGroupActionModule.schema,
+  modifySPGroupActionModule.schema,
+  deleteSPGroupActionModule.schema,
   createSPListActionModule.schema,
   modifySPListActionModule.schema,
   deleteSPListActionModule.schema,

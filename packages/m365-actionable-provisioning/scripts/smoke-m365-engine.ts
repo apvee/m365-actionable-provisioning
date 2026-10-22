@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { runSharePointGroupSmoke } from "./smoke/sharepoint-groups";
 
 import { ActionDefinition, defaultActionResultSchema, type ActionRuntimeContext } from "../src/core/action";
 import { ProvisioningEngine } from "../src/core/engine";
@@ -4241,6 +4242,7 @@ async function assertCreateSPSiteColumnIgnoresStaleListScope(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  await runSharePointGroupSmoke();
   assertSharePointCatalogComposition();
   assertSharePointPermissionsCatalogComposition();
   assertSharePointListViewPublicBarrelExports();

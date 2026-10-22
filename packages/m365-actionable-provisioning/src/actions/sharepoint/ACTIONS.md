@@ -155,6 +155,30 @@ nodes, ordering, audience targeting, or duplicate-title mutation. If multiple
 nodes in the selected location have the same title, handlers skip with an
 `unsupported` result and emit a `NAVIGATION_NODE_AMBIGUOUS_TITLE` warning.
 
+## SharePoint Groups V1
+
+`createSPGroup`, `modifySPGroup`, and `deleteSPGroup` are strict leaf actions
+under `createSPSite` or `modifySPSite`, backed by SPFI and `web.siteGroups`.
+They manage site-collection groups, independently of site/list role bindings.
+
+- Create requires `title`, accepts `description`, and skips an existing group.
+- Modify requires exactly one of `groupId`/`groupName` and applies declared
+  `title`/`description` only. Empty description clears; omission preserves.
+- Delete uses the same selector and skips an absent group.
+- Use a stable numeric ID for repeatable renames. Old-name selectors return
+  `not_found` after renaming; there is no fallback to the destination title.
+
+Execution/compliance share filtered, escaped lookups and validated responses.
+Only a successful empty collection means absence. Compliance reads only:
+create checks existence, modify checks declared properties, delete checks
+absence. HTTP errors and malformed responses are unverifiable.
+
+Permission checks wait for the site parent's result before probing its web.
+Create uses `CreateGroups`; modify/delete use a best-effort `ManagePermissions`
+probe, with REST enforcing group-specific authorization. Keep grants/revocations
+as separate permission actions. Their existing name resolver still uses PnPjs
+`getByName`; names containing apostrophes have that separate limitation.
+
 ## Permissions V1
 
 Permission actions are subactions only.

@@ -12,6 +12,7 @@ import { addSPFieldActionModule } from "./fields/add-sp-field";
 import { createSPSiteColumnActionModule } from "./fields/create-sp-site-column";
 import { deleteSPFieldActionModule } from "./fields/delete-sp-field";
 import { modifySPFieldActionModule } from "./fields/modify-sp-field";
+import { createSPGroupActionModule, modifySPGroupActionModule, deleteSPGroupActionModule } from "./groups";
 import { createSPListActionModule } from "./lists/create-sp-list";
 import { deleteSPListActionModule } from "./lists/delete-sp-list";
 import { enableSPListRatingActionModule } from "./lists/enable-sp-list-rating";
@@ -44,6 +45,9 @@ export const sharePointActionModules = [
   createSPSiteActionModule,
   modifySPSiteActionModule,
   deleteSPSiteActionModule,
+  createSPGroupActionModule,
+  modifySPGroupActionModule,
+  deleteSPGroupActionModule,
   createSPNavigationNodeActionModule,
   modifySPNavigationNodeActionModule,
   deleteSPNavigationNodeActionModule,
