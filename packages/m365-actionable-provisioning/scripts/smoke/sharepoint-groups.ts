@@ -152,10 +152,73 @@ async function assertCreateSPGroupRuntimeAndCompliance(): Promise<void> {
   assert.deepEqual(denied.writes, []);
 }
 
+async function assertModifySPGroupRuntimeAndCompliance(): Promise<void> {
+  const { ModifySPGroupAction } = await import("../../src/actions/sharepoint/groups/modify-sp-group");
+  const action = new ModifySPGroupAction();
+  const fixture = createGroupFixture([{ Id: 42, Title: "O'Brien", Description: "Old" }]);
+  const ctx = groupContext({ verb: "modifySPGroup" as const, groupName: "O'Brien", description: "" }, fixture);
+  fixture.settings.forbidWrites = true;
+  assert.deepEqual(await action.checkCompliance(ctx), {
+    outcome: "non_compliant", resource: "O'Brien", reason: "drift",
+    details: { mismatches: [{ key: "Description", expected: "", actual: "Old" }] },
+  });
+  fixture.settings.forbidWrites = false;
+  assert.equal((await action.handler(ctx)).result?.outcome, "executed");
+  assert.deepEqual(fixture.writes, [{ operation: "update", id: 42, props: { Description: "" } }]);
+  assert.equal(fixture.groups.get(42)?.Description, "");
+  assert.equal(fixture.groups.get(42)?.Title, "O'Brien");
+  fixture.settings.forbidWrites = true;
+  assert.equal((await action.checkCompliance(ctx)).outcome, "compliant");
+  assert.equal((await action.handler(ctx)).result?.outcome, "skipped");
+  const idCtx = groupContext({ verb: "modifySPGroup" as const, groupId: 42 }, fixture);
+  assert.deepEqual((await action.handler(idCtx)).result, { outcome: "skipped", resource: "42", reason: "no_changes" });
+  const missing = groupContext({ verb: "modifySPGroup" as const, groupName: "Missing", title: "O'Brien" }, fixture);
+  assert.equal((await action.handler(missing)).result?.outcome, "skipped");
+  assert.equal((await action.checkCompliance(missing)).reason, "not_found");
+  assert.equal((await action.handler({ ...ctx, scopeIn: {} })).result?.outcome, "skipped");
+  for (const change of [{ scopeIn: {} }, { clients: {} }]) {
+    assert.equal((await action.checkCompliance({ ...ctx, ...change })).outcome, "unverifiable");
+  }
+  for (const status of [401, 403, 404, 429, 500, undefined]) {
+    fixture.settings.readError = Object.assign(new Error("Read failed"), { status });
+    await assert.rejects(action.handler(ctx), /Read failed/);
+    assert.equal((await action.checkCompliance(ctx)).outcome, "unverifiable");
+  }
+  fixture.settings.readError = undefined;
+  fixture.settings.forbidWrites = false;
+  fixture.settings.writeError = new Error("Update failed");
+  await assert.rejects(action.handler({ ...ctx, action: { ...ctx.action, payload: { ...ctx.action.payload, description: "Changed" } } }), /Update failed/);
+  fixture.settings.overrideResponse = true;
+  fixture.settings.response = {};
+  await assert.rejects(action.handler(ctx), /Invalid/);
+  assert.equal((await action.checkCompliance(ctx)).outcome, "unverifiable");
+}
+
+async function assertSPGroupRenameIdentity(): Promise<void> {
+  const { ModifySPGroupAction } = await import("../../src/actions/sharepoint/groups/modify-sp-group");
+  const action = new ModifySPGroupAction();
+  const fixture = createGroupFixture([{ Id: 42, Title: "Reviewers", Description: "Keep" }, { Id: 77, Title: "Occupied" }]);
+  const ctx = groupContext({ verb: "modifySPGroup" as const, groupId: 42, title: "Approvers" }, fixture);
+  assert.equal((await action.handler(ctx)).result?.outcome, "executed");
+  assert.equal(fixture.groups.get(42)?.Title, "Approvers");
+  assert.equal(fixture.groups.get(42)?.Description, "Keep");
+  assert.deepEqual((await action.handler(ctx)).result, { outcome: "skipped", reason: "no_changes", resource: "42" });
+  assert.equal((await action.checkCompliance(ctx)).outcome, "compliant");
+  const nameCtx = groupContext({ verb: "modifySPGroup" as const, groupName: "Approvers", title: "Renamed" }, fixture);
+  await action.handler(nameCtx);
+  assert.deepEqual((await action.handler(nameCtx)).result, { outcome: "skipped", reason: "not_found", resource: "Approvers" });
+  assert.equal((await action.checkCompliance(nameCtx)).reason, "not_found");
+  await assert.rejects(action.handler(groupContext({ verb: "modifySPGroup", groupId: 42, title: "Occupied" }, fixture)), /already exists/);
+  assert.equal(fixture.groups.get(77)?.Title, "Occupied");
+  assert.equal(fixture.groups.get(42)?.Title, "Renamed");
+}
+
 export async function runSharePointGroupSmoke(): Promise<void> {
   await assertSPGroupSchemas();
   await assertSPGroupLookup();
   await assertSPGroupPropertyComparison();
   await assertSPGroupPermissions();
   await assertCreateSPGroupRuntimeAndCompliance();
+  await assertModifySPGroupRuntimeAndCompliance();
+  await assertSPGroupRenameIdentity();
 }
